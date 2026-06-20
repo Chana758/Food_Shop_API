@@ -17,6 +17,7 @@ export const khmerFoodCategories = [
     name: "ម្ហូបអាហារ​ (Main Dish)",
     description: "Experience authentic Cambodian main dishes packed with bold flavors, fresh ingredients, and traditional cooking techniques passed down through generations.",
     imageUrl: Cat_Food,
+    slug: "main-dish",
     linkUrl: "/MenuFood"
   },
   {
@@ -24,6 +25,7 @@ export const khmerFoodCategories = [
     name: "អាហារសម្រន់ (Snack)",
     description: "Delightful Khmer snacks perfect for any time of day. From crispy fritters to savory dumplings, each bite tells a story of Cambodia's rich street food culture.",
     imageUrl: Cat_Snack,
+    slug: "snack",
     linkUrl: "/MenuSnack"
   },
   {
@@ -31,6 +33,7 @@ export const khmerFoodCategories = [
     name: "បង្អែម (Dessert)",
     description: "Indulge in traditional Cambodian sweets featuring coconut, palm sugar, and tropical fruits. Each dessert is a perfect balance of flavor and texture.",
     imageUrl: Cat_Dessert,
+    slug: "dessert",
     linkUrl: "/MenuDessert"
   },
   {
@@ -38,6 +41,7 @@ export const khmerFoodCategories = [
     name: "ស៊ុប (Soup)",
     description: "Warm your soul with authentic Khmer soups. From tangy and sour to rich and savory, our soups are crafted with fresh herbs, vegetables, and aromatic spices.",
     imageUrl: Cat_Soup,
+    slug: "soup",
     linkUrl: "/MenuSoup"
   }
 ];

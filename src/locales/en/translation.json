@@ -37,7 +37,7 @@
     "excellentService": "Excellent Service",
     "happyCustomers": "Happy Customers",
     "whyChooseUs": "Why Choose Us",
-    "whatMakesUsSpecial": "What Makes Us Special",
+    "whatMakesUsSpecial": "What Makes <highlight>Us Special</highlight>",
     "featuresSubtitle": "We're committed to delivering the best dining experience with quality, authenticity, and care",
     "fastDelivery": "Fast Delivery",
     "fastDeliveryDesc": "Get your food delivered hot and fresh within 30 minutes or it's free!",
@@ -51,7 +51,12 @@
     "open247Desc": "Order anytime, anywhere. We're always here to serve you.",
     "madeWithLove": "Made with Love",
     "madeWithLoveDesc": "Every dish is prepared with passion and care by our expert chefs.",
-    "readyToOrder": "Ready to Order?"
+    "readyToOrder": "Ready to Order?",
+    "statDishes": "Dishes",
+    "statRating": "Rating",
+    "statCustomers": "Customers",
+    "readyToExperience": "Ready to experience the difference?",
+    "joinCustomers": "Join 12,000+ happy customers who trust Khmer-Fresh every day."
   },
   "menuSection": {
     "smallTitle": "Our Menu",
@@ -63,7 +68,6 @@
     "exploreMenu": "Explore Menu",
     "viewDetails": "View Details"
   },
-  
   "menu": {
     "allMenu": "All Menu",
     "filters": "Filters",
@@ -94,6 +98,13 @@
     "add": "Add",
     "viewDetails": "View Details",
     "searchPlaceholder": "Search dishes by name or description..."
+  },
+  "category": {
+    "subtitle": "Our Culinary Offerings",
+    "browseBy": "Browse by",
+    "active": "Active",
+    "recent": "Recent",
+    "noDescription": "No description available."
   },
   "cart": {
     "title": "Shopping Cart",
@@ -291,5 +302,5 @@
     "ctaTitle": "Ready to Experience Authentic Khmer Cuisine?",
     "ctaSubtitle": "Explore our menu and taste the difference that passion and tradition make",
     "browseMenu": "Browse Our Menu"
-}
+  }
 }

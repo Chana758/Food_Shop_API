@@ -33,7 +33,7 @@ export const initDummyUsers = () => {
     ];
 
     localStorage.setItem('users', JSON.stringify(dummyUsers));
-    console.log('✅ Dummy users initialized in localStorage');
+    console.log(' Dummy users initialized in localStorage');
   }
 };
 

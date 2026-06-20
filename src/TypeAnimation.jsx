@@ -9,13 +9,13 @@ const TypeAnimation = () => {
   const isKhmer = i18n.language === "kh";
 
   return (
-    /* 🔸 ការប្រើប្រាស់ Dynamic Class: 
+    /*  ការប្រើប្រាស់ Dynamic Class: 
        បើជាភាសាអង់គ្លេស យើងឱ្យវាចេញអក្សរធំទាំងអស់ (uppercase) 
        តែបើភាសាខ្មែរ យើងមិនប្រើ uppercase ទេ ដើម្បីកុំឱ្យខូចទម្រង់អក្សរ
     */
     <h1 className={`text-5xl lg:text-7xl pb-5 font-bold bg-white bg-clip-text text-transparent ${isKhmer ? '' : 'uppercase'}`}>
       <Typewriter
-        /* 💡 គន្លឹះសំខាន់: key={i18n.language} 
+        /* គន្លឹះសំខាន់: key={i18n.language} 
            ជួយឱ្យ Typewriter ចាប់ផ្តើមវាយអក្សរឡើងវិញភ្លាមៗ នៅពេលអ្នកប្រើប្រាស់ប្តូរភាសា។ 
            បើគ្មាន Key នេះទេ វានឹងនៅវាយភាសាចាស់ទាល់តែចប់ Loop ទើបប្តូរ។
         */
