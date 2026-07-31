@@ -2,8 +2,11 @@
 import api from '../api/axios';
 
 export const productService = {
-    getAll: async () => {
-        const response = await api.get('/products');
+    // add params: page, per_page, search
+    getAll: async ({ page = 1, per_page = 15, search = '', category_slug = '' } = {}) => {
+        const response = await api.get('/products', {
+            params: { page, per_page, search, category_slug }
+        });
         return response.data;
     },
 
@@ -13,25 +16,17 @@ export const productService = {
     },
 
     create: async (data) => {
-        // axios instance (api/axios.js) លុប Content-Type ស្វ័យប្រវត្តិពេលឃើញថា data ជា FormData
         const response = await api.post('/products', data);
         return response.data;
     },
 
     update: async (id, data) => {
-        // _method: 'PUT' ត្រូវ append ទៅក្នុង FormData ដោយខាង Component មុនពេលហៅ function នេះ
         const response = await api.post(`/products/${id}`, data);
         return response.data;
     },
 
     delete: async (id) => {
         const response = await api.delete(`/products/${id}`);
-        return response.data;
-    },
-
-    // ប្រើ 'q' ឱ្យត្រូវនឹង Controller, encodeURIComponent ការពារតួអក្សរពិសេសក្នុង query
-    search: async (query) => {
-        const response = await api.get(`/search?q=${encodeURIComponent(query)}`);
         return response.data;
     },
 

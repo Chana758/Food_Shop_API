@@ -7,19 +7,15 @@ const axiosInstance = axios.create({
     },
 });
 
-// Inject auth token
 axiosInstance.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('access_token');
+        //  sessionStorage ➜ ដាច់ដោយឡែកក្នុង tab នីមួយៗ — ការពារ admin/customer ជាន់គ្នា
+        const token = sessionStorage.getItem('access_token');
 
-        // ផ្ញើ token ជានិច្ច បើមាន — ឱ្យ backend middleware (auth:sanctum/auth:api)
-        // ជាអ្នកសម្រេចថា route ត្រូវការ auth ឬអត់ មិនមែន duplicate logic នៅ frontend ទេ
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
 
-        // កុំ set Content-Type ដោយដៃពេលផ្ញើ FormData (មាន file)
-        // ឱ្យ axios/browser គណនា boundary ស្វ័យប្រវត្តិ បើមិនដូច្នេះ Laravel parse multipart មិនបាន
         if (config.data instanceof FormData) {
             delete config.headers['Content-Type'];
         } else if (!config.headers['Content-Type']) {
@@ -31,14 +27,27 @@ axiosInstance.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Handle blocked account
 axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 403) {
-            alert('Your account has been blocked by the administrator.');
+            const message = error.response.data.message || 'Access Forbidden';
 
-            localStorage.removeItem('access_token');
+            if (message.toLowerCase().includes('blocked')) {
+                alert('Your account has been blocked by the administrator.');
+                sessionStorage.removeItem('access_token');
+                sessionStorage.removeItem('user');
+                sessionStorage.removeItem('currentUser');
+                window.location.href = '/login';
+            } else {
+                console.warn('Unauthorized access to this resource:', message);
+            }
+        }
+
+        if (error.response?.status === 401) {
+            sessionStorage.removeItem('access_token');
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('currentUser');
             window.location.href = '/login';
         }
 

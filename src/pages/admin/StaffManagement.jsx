@@ -1,25 +1,29 @@
+
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useOutletContext } from 'react-router-dom';
+import toast, { Toaster } from 'react-hot-toast';
+import { LuPlus, LuPencil, LuTrash, LuUsers, LuShieldCheck, LuUserCheck, LuSave } from "react-icons/lu";
+import axiosInstance from '../../api/axios';
 
 const StaffManagement = () => {
+  const { searchTerm = '' } = useOutletContext() || {};
+
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // States for handling Modal and form data
+
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('ADD'); // Can be 'ADD' or 'EDIT'
+  const [modalMode, setModalMode] = useState('ADD');
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', role: 'staff' });
 
-  // Fetch all staff members from Laravel API
   const fetchStaff = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://127.0.0.1:8000/api/admin/staff', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setStaffList(response.data.data);
+      setLoading(true);
+      const response = await axiosInstance.get('/admin/staff');
+      const data = response?.data?.data || response?.data || [];
+      setStaffList(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Error fetching staff:", error);
+      toast.error("Failed to load staff list");
     } finally {
       setLoading(false);
     }
@@ -29,92 +33,171 @@ const StaffManagement = () => {
     fetchStaff();
   }, []);
 
-  // Open modal and set mode (Add or Edit)
   const openModal = (mode, staff = null) => {
     setModalMode(mode);
     setFormData(staff ? { ...staff } : { name: '', email: '', phone: '', password: '', role: 'staff' });
     setIsModalOpen(true);
   };
 
-  // Handle Add/Edit logic
-  const handleSave = async () => {
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      
-      // 1. បង្កើត Object ថ្មី ដើម្បីសម្អាតទិន្នន័យមុនផ្ញើ
       let dataToSave = { ...formData };
 
-      // 2. សំខាន់៖ បើ Edit គឺដក password ចេញ (ព្រោះ backend update មិនត្រូវការ password)
       if (modalMode === 'EDIT') {
         delete dataToSave.password;
       }
 
-      const url = modalMode === 'EDIT' 
-        ? `http://127.0.0.1:8000/api/admin/staff/${formData.id}` 
-        : 'http://127.0.0.1:8000/api/admin/staff';
-      
+      const url = modalMode === 'EDIT'
+        ? `/admin/staff/${formData.id}`
+        : '/admin/staff';
+
       const method = modalMode === 'EDIT' ? 'put' : 'post';
 
-      // 3. ផ្ញើ Request
-      const response = await axios[method](url, dataToSave, { 
-        headers: { Authorization: `Bearer ${token}` } 
-      });
-      
-      // 4. បង្ហាញដំណឹងជោគជ័យ
-      alert(response.data.message || "Operation successful!");
-      
+      const response = await axiosInstance[method](url, dataToSave);
+
+      toast.success(response.data.message || "Operation successful!");
       setIsModalOpen(false);
-      fetchStaff(); // នេះគឺជាជំហានសំខាន់បំផុតដើម្បីឱ្យទិន្នន័យ Update ថ្មីភ្លាមៗ
+      fetchStaff();
     } catch (error) {
-      // 5. បង្ហាញ Error ពី Backend ឱ្យច្បាស់ (ដើម្បីងាយស្រួលដឹងថាខុសត្រង់ណា)
       const errorMessage = error.response?.data?.message || "Something went wrong!";
-      alert("Error: " + errorMessage);
-      console.error("Full Error:", error.response?.data);
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  const handleRemove = async (id) => {
+    if (!window.confirm("Are you sure you want to remove this staff member?")) return;
+    try {
+      await axiosInstance.delete(`/admin/staff/${id}`);
+      toast.success("Staff removed successfully");
+      fetchStaff();
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "Something went wrong!";
+      toast.error(errorMessage);
+    }
+  };
+
+  const filteredStaff = staffList.filter((s) =>
+    s.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="p-8 bg-[#FDFDFD] min-h-screen">
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-6 md:p-8 bg-slate-100 min-h-screen space-y-6">
+      <Toaster position="top-right" />
+
+      {/* ── HEADER & ADD BUTTON ── */}
+      <div className="bg-white rounded-xl border-2 border-slate-300 p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black text-[#1e922c] uppercase tracking-tight">Staff Management</h1>
-          <p className="text-xs text-gray-400 uppercase tracking-widest mt-1">Manage your restaurant team members</p>
+          <h1 className="text-sm font-black text-slate-900 uppercase tracking-wide">Staff Management</h1>
+          <p className="text-xs text-slate-500 font-semibold mt-0.5">Manage and organize your restaurant team members</p>
         </div>
-        <button 
+        <button
           onClick={() => openModal('ADD')}
-          className="bg-[#1d6105] hover:bg-[#1e3317] text-white text-xs font-black uppercase tracking-widest px-6 py-4 rounded-sm shadow-md transition-all"
+          className="bg-slate-900 text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition cursor-pointer shadow-sm whitespace-nowrap flex items-center gap-2"
         >
-          + Add New Staff
+          <LuPlus size={15} /> Add New Staff
         </button>
       </div>
 
-      <div className="bg-white border border-gray-100 shadow-sm rounded-sm overflow-hidden">
+      {/* ── STATS CARDS ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { 
+            title: "TOTAL STAFF", 
+            label: "All team members", 
+            val: staffList.length, 
+            icon: LuUsers, 
+            textColor: "text-emerald-700", 
+            bg: "bg-emerald-50",
+            border: "border-emerald-100" 
+          },
+          { 
+            title: "ADMINS", 
+            label: "System administrators", 
+            val: staffList.filter(s => s.role === 'admin').length, 
+            icon: LuShieldCheck,  
+            textColor: "text-blue-700", 
+            bg: "bg-blue-50",
+            border: "border-blue-100" 
+          },
+          { 
+            title: "ACTIVE STAFF", 
+            label: "Regular staff members", 
+            val: staffList.filter(s => s.role !== 'admin').length, 
+            icon: LuUserCheck, 
+            textColor: "text-amber-700", 
+            bg: "bg-amber-50",
+            border: "border-amber-100" 
+          },
+        ].map((item, i) => (
+          <div key={i} className="bg-white rounded-xl border-2 border-slate-300 p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">{item.title}</p>
+                <h2 className="text-3xl font-black text-slate-900 mb-2">{item.val}</h2>
+              </div>
+              <div className={`${item.bg} p-3 rounded-xl ${item.textColor} border ${item.border} shadow-2xs`}>
+                <item.icon size={20} />
+              </div>
+            </div>
+            <p className={`text-xs font-bold ${item.textColor}`}>{item.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── TABLE CONTAINER ── */}
+      <div className="bg-white rounded-xl shadow-sm border-2 border-slate-300 overflow-hidden">
         <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="p-4 text-[11px] font-black uppercase tracking-wider text-gray-500">Name</th>
-              <th className="p-4 text-[11px] font-black uppercase tracking-wider text-gray-500">Email</th>
-              <th className="p-4 text-[11px] font-black uppercase tracking-wider text-gray-500">Phone</th>
-              <th className="p-4 text-[11px] font-black uppercase tracking-wider text-gray-500">Role</th>
-              <th className="p-4 text-[11px] font-black uppercase tracking-wider text-gray-500 text-center">Actions</th>
+          <thead className="bg-slate-50 text-slate-600 text-[11px] font-black uppercase tracking-wider border-b-2 border-slate-300">
+            <tr>
+              <th className="px-5 py-3">Name</th>
+              <th className="px-5 py-3">Email</th>
+              <th className="px-5 py-3">Phone</th>
+              <th className="px-5 py-3">Role</th>
+              <th className="px-5 py-3 text-center w-28">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-200">
             {loading ? (
-              <tr><td colSpan="5" className="p-8 text-center text-sm font-bold text-gray-400">Loading...</td></tr>
-            ) : staffList.length === 0 ? (
-              <tr><td colSpan="5" className="p-8 text-center text-sm font-bold text-gray-400">No staff found.</td></tr>
+              <tr><td colSpan="5" className="text-center py-12 text-xs font-bold text-slate-500 uppercase tracking-widest">Loading...</td></tr>
+            ) : filteredStaff.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="text-center py-12 text-slate-500 font-bold text-xs uppercase tracking-wider">
+                  {searchTerm ? `No staff match "${searchTerm}"` : 'No staff found.'}
+                </td>
+              </tr>
             ) : (
-              staffList.map((staff) => (
-                <tr key={staff.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                  <td className="p-4 text-sm font-bold text-[#2D4A22]">{staff.name}</td>
-                  <td className="p-4 text-sm text-gray-600">{staff.email}</td>
-                  <td className="p-4 text-sm text-gray-600">{staff.phone || 'N/A'}</td>
-                  <td className="p-4">
-                    <span className="bg-blue-50 text-blue-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">{staff.role}</span>
+              filteredStaff.map((staff) => (
+                <tr key={staff.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-5 py-3.5 font-bold text-xs text-slate-900">{staff.name}</td>
+                  <td className="px-5 py-3.5 text-slate-600 text-xs font-medium">{staff.email}</td>
+                  <td className="px-5 py-3.5 text-slate-600 text-xs font-medium">{staff.phone || 'N/A'}</td>
+                  <td className="px-5 py-3.5">
+                    <span className="bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md shadow-2xs">
+                      {staff.role}
+                    </span>
                   </td>
-                  <td className="p-4 text-center space-x-4">
-                    <button onClick={() => openModal('EDIT', staff)} className="text-xs font-black text-blue-600 uppercase hover:text-blue-800 transition-colors">Edit</button>
-                    <button onClick={() => handleRemove(staff.id)} className="text-xs font-black text-red-500 uppercase hover:text-red-700 transition-colors">Remove</button>
+                  <td className="px-5 py-3.5">
+                    <div className="flex justify-center gap-1.5">
+                      <button
+                        onClick={() => openModal('EDIT', staff)}
+                        className="p-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg cursor-pointer transition shadow-2xs"
+                        title="Edit"
+                      >
+                        <LuPencil size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleRemove(staff.id)}
+                        className="p-2 bg-white border border-rose-300 hover:bg-rose-50 text-rose-600 rounded-lg cursor-pointer transition shadow-2xs"
+                        title="Remove"
+                      >
+                        <LuTrash size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -123,26 +206,96 @@ const StaffManagement = () => {
         </table>
       </div>
 
-      {/* ADD/EDIT Modal */}
+      {/* ── ADD / EDIT MODAL ── */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-sm w-96 shadow-xl space-y-4">
-            <h2 className="font-black text-lg text-[#038709] uppercase tracking-widest border-b pb-2">
-              {modalMode === 'ADD' ? 'Add New Staff' : 'Edit Staff'}
-            </h2>
-            <div className="space-y-3">
-              <input className="w-full p-2 border text-sm" placeholder="Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-              <input className="w-full p-2 border text-sm" placeholder="Email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
-              <input className="w-full p-2 border text-sm" placeholder="Phone" value={formData.phone || ''} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center p-4 z-50">
+          <form onSubmit={handleSave} className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl border-2 border-slate-300 space-y-4">
+            <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
+              <div className="p-2 bg-slate-900 text-white rounded-lg">
+                <LuPlus size={16} />
+              </div>
+              <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">
+                {modalMode === 'ADD' ? 'Add New Staff' : 'Edit Staff'}
+              </h2>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Full Name *</label>
+                <input
+                  className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
+                  placeholder="e.g. John Doe"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Email Address *</label>
+                <input
+                  type="email"
+                  className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
+                  placeholder="e.g. john@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Phone Number</label>
+                <input
+                  className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
+                  placeholder="e.g. 0972324523"
+                  value={formData.phone || ''}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Role *</label>
+                <select
+                  className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                >
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
               {modalMode === 'ADD' && (
-                <input className="w-full p-2 border text-sm" type="password" placeholder="Password" onChange={(e) => setFormData({...formData, password: e.target.value})} />
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Password *</label>
+                  <input
+                    type="password"
+                    className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
+                    placeholder="••••••••"
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                  />
+                </div>
               )}
             </div>
-            <div className="flex gap-2 pt-4">
-              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-2 border text-xs font-black uppercase">Cancel</button>
-              <button onClick={handleSave} className="flex-1 py-2 bg-[#1d6105] text-white text-xs font-black uppercase">Save</button>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 py-2.5 border-2 border-slate-300 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-100 cursor-pointer text-slate-700 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="flex-1 py-2.5 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-800 cursor-pointer transition shadow-sm flex items-center justify-center gap-1.5"
+              >
+                {isSaving ? "Saving..." : <><LuSave size={13} /> Save</>}
+              </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

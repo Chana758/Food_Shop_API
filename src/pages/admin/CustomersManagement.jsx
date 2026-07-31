@@ -1,31 +1,31 @@
+
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useOutletContext } from 'react-router-dom';
+import toast, { Toaster } from 'react-hot-toast';
+import { LuPlus, LuPencil, LuTrash, LuUsers, LuUserCheck, LuUserX, LuSave, LuEye, LuX } from "react-icons/lu";
+import axiosInstance from '../../api/axios';
 
 const CustomersManagement = () => {
-  // State management for customer data and UI states
+  const { searchTerm = '' } = useOutletContext() || {};
+
   const [customerList, setCustomerList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewData, setViewData] = useState(null);
-  
-  // Modals state
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  
-  // Form data: Added password field
-  const [formData, setFormData] = useState({ id: '', name: '', email: '', phone: '', password: '' });
-  const [searchTerm, setSearchTerm] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch initial data
+  const [formData, setFormData] = useState({ id: '', name: '', email: '', phone: '', password: '' });
+
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://127.0.0.1:8000/api/admin/customers', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setCustomerList(response.data.data);
+      const response = await axiosInstance.get('/admin/customers');
+      const data = response?.data?.data || response?.data || [];
+      setCustomerList(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Error fetching customers:", error);
+      toast.error("Failed to load customers");
     } finally {
       setLoading(false);
     }
@@ -34,40 +34,43 @@ const CustomersManagement = () => {
   useEffect(() => { fetchCustomers(); }, []);
 
   const filteredCustomers = customerList.filter((customer) =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase())
+    customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const openEditModal = (customer) => {
-    setFormData({ id: customer.id, name: customer.name, email: customer.email, phone: customer.phone });
+    setFormData({ id: customer.id, name: customer.name, email: customer.email, phone: customer.phone || '' });
     setIsEditModalOpen(true);
   };
 
-  const handleUpdate = async () => {
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`http://127.0.0.1:8000/api/admin/customers/${formData.id}`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert("Customer updated successfully!");
+      await axiosInstance.put(`/admin/customers/${formData.id}`, formData);
+      toast.success("Customer updated successfully!");
       setIsEditModalOpen(false);
       fetchCustomers();
     } catch (error) {
-      alert("Error updating customer: " + (error.response?.data?.message || "Server error"));
+      toast.error(error.response?.data?.message || "Error updating customer");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleAdd = async () => {
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('http://127.0.0.1:8000/api/admin/customers', formData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert("Customer added successfully!");
+      await axiosInstance.post('/admin/customers', formData);
+      toast.success("Customer added successfully!");
       setIsAddModalOpen(false);
-      setFormData({ name: '', email: '', phone: '', password: '' }); // Reset form
+      setFormData({ name: '', email: '', phone: '', password: '' });
       fetchCustomers();
     } catch (error) {
-      alert("Error adding customer: " + (error.response?.data?.message || "Server error"));
+      toast.error(error.response?.data?.message || "Error adding customer");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -75,15 +78,13 @@ const CustomersManagement = () => {
     const actionName = customer.status === 'blocked' ? 'unblock' : 'block';
     if (window.confirm(`Are you sure you want to ${actionName} this customer?`)) {
       try {
-        const token = localStorage.getItem('token');
-        setCustomerList(prevList => prevList.map(item => 
+        setCustomerList(prevList => prevList.map(item =>
           item.id === customer.id ? { ...item, status: item.status === 'blocked' ? 'active' : 'blocked' } : item
         ));
-        await axios.put(`http://127.0.0.1:8000/api/admin/customers/${customer.id}/toggle-status`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      } catch (error) { 
-        console.error(error);
+        await axiosInstance.put(`/admin/customers/${customer.id}/toggle-status`, {});
+        toast.success(`Customer ${actionName}ed successfully`);
+      } catch (error) {
+        toast.error("Failed to change status");
         fetchCustomers();
       }
     }
@@ -92,12 +93,12 @@ const CustomersManagement = () => {
   const handleDelete = async (id) => {
     if (window.confirm("WARNING: Are you sure you want to delete this customer?")) {
       try {
-        const token = localStorage.getItem('token');
-        await axios.delete(`http://127.0.0.1:8000/api/admin/customers/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axiosInstance.delete(`/admin/customers/${id}`);
+        toast.success("Customer deleted successfully");
         fetchCustomers();
-      } catch (error) { alert("Delete failed"); }
+      } catch (error) { 
+        toast.error("Delete failed"); 
+      }
     }
   };
 
@@ -105,104 +106,321 @@ const CustomersManagement = () => {
   const blockedCount = customerList.filter(c => c.status === 'blocked').length;
 
   return (
-    <div className="p-8 bg-[#FDFDFD] min-h-screen">
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-6 md:p-8 bg-slate-100 min-h-screen space-y-6">
+      <Toaster position="top-right" />
+
+      {/* ── HEADER & ADD BUTTON ── */}
+      <div className="bg-white rounded-xl border-2 border-slate-300 p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black text-[#1e922c] uppercase tracking-tight">Customers Management</h1>
-          <p className="text-xs text-gray-400 uppercase tracking-widest mt-1">View and manage registered clients</p>
+          <h1 className="text-sm font-black text-slate-900 uppercase tracking-wide">Customer Management</h1>
+          <p className="text-xs text-slate-500 font-semibold mt-0.5">View and manage registered clients</p>
         </div>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="bg-[#1e922c] text-white px-6 py-3 rounded-sm text-xs font-black uppercase hover:bg-[#16701a] transition"
+        <button
+          onClick={() => {
+            setFormData({ name: '', email: '', phone: '', password: '' });
+            setIsAddModalOpen(true);
+          }}
+          className="bg-slate-900 text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition cursor-pointer shadow-sm whitespace-nowrap flex items-center gap-2"
         >
-          + Add Customer
+          <LuPlus size={15} /> Add Customer
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-6 mb-8">
-        <div className="bg-white border border-gray-100 shadow-sm rounded-sm p-6">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Total</span>
-          <p className="text-3xl font-black text-[#1e922c]">{customerList.length}</p>
-        </div>
-        <div className="bg-white border border-gray-100 shadow-sm rounded-sm p-6">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Active</span>
-          <p className="text-3xl font-black text-[#1e922c]">{activeCount}</p>
-        </div>
-        <div className="bg-white border border-gray-100 shadow-sm rounded-sm p-6">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Blocked</span>
-          <p className="text-3xl font-black text-red-500">{blockedCount}</p>
-        </div>
+      {/* ── STATS CARDS ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { 
+            title: "TOTAL CUSTOMERS", 
+            label: "All registered clients", 
+            val: customerList.length, 
+            icon: LuUsers, 
+            textColor: "text-emerald-700", 
+            bg: "bg-emerald-50",
+            border: "border-emerald-100" 
+          },
+          { 
+            title: "ACTIVE", 
+            label: "Active accounts", 
+            val: activeCount, 
+            icon: LuUserCheck,  
+            textColor: "text-blue-700", 
+            bg: "bg-blue-50",
+            border: "border-blue-100" 
+          },
+          { 
+            title: "BLOCKED", 
+            label: "Restricted accounts", 
+            val: blockedCount, 
+            icon: LuUserX, 
+            textColor: "text-rose-700", 
+            bg: "bg-rose-50",
+            border: "border-rose-100" 
+          },
+        ].map((item, i) => (
+          <div key={i} className="bg-white rounded-xl border-2 border-slate-300 p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">{item.title}</p>
+                <h2 className="text-3xl font-black text-slate-900 mb-2">{item.val}</h2>
+              </div>
+              <div className={`${item.bg} p-3 rounded-xl ${item.textColor} border ${item.border} shadow-2xs`}>
+                <item.icon size={20} />
+              </div>
+            </div>
+            <p className={`text-xs font-bold ${item.textColor}`}>{item.label}</p>
+          </div>
+        ))}
       </div>
 
-      <input 
-        type="text" 
-        placeholder="Search customers..." 
-        className="w-full p-3 mb-6 border border-gray-200 rounded-sm text-sm"
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
-
-      <div className="bg-white border border-gray-100 shadow-sm rounded-sm overflow-hidden">
+      {/* ── TABLE CONTAINER ── */}
+      <div className="bg-white rounded-xl shadow-sm border-2 border-slate-300 overflow-hidden">
         <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="p-4 text-[11px] font-black text-gray-500 uppercase">No.</th>
-              <th className="p-4 text-[11px] font-black text-gray-500 uppercase">Name</th>
-              <th className="p-4 text-[11px] font-black text-gray-500 uppercase">Email</th>
-              <th className="p-4 text-[11px] font-black text-gray-500 uppercase">Status</th>
-              <th className="p-4 text-[11px] font-black text-gray-500 uppercase text-center">Actions</th>
+          <thead className="bg-slate-50 text-slate-600 text-[11px] font-black uppercase tracking-wider border-b-2 border-slate-300">
+            <tr>
+              <th className="px-5 py-3 w-16">No.</th>
+              <th className="px-5 py-3">Name</th>
+              <th className="px-5 py-3">Email</th>
+              <th className="px-5 py-3 w-32">Status</th>
+              <th className="px-5 py-3 text-center w-48">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {loading ? <tr><td colSpan="5" className="p-8 text-center text-gray-400">Loading...</td></tr> : 
-            filteredCustomers.slice(0, 6).map((c, i) => (
-              <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                <td className="p-4 text-xs font-mono text-gray-400">0{i+1}</td>
-                <td className="p-4 text-sm font-bold text-[#1a2e35]">{c.name}</td>
-                <td className="p-4 text-sm text-gray-600">{c.email}</td>
-                <td className="p-4"><span className={`text-[10px] font-black px-3 py-1 rounded-full border ${c.status === 'blocked' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{c.status}</span></td>
-                <td className="p-4 text-center space-x-2">
-                  <button onClick={() => setViewData(c)} className="text-[10px] font-black text-green-700 uppercase">View</button>
-                  <button onClick={() => openEditModal(c)} className="text-[10px] font-black text-blue-600 uppercase">Edit</button>
-                  <button onClick={() => toggleStatus(c)} className="text-[10px] font-black text-orange-600 uppercase">{c.status === 'blocked' ? 'Unblock' : 'Block'}</button>
-                  <button onClick={() => handleDelete(c.id)} className="text-[10px] font-black text-red-600 uppercase">Delete</button>
+          <tbody className="divide-y divide-slate-200">
+            {loading ? (
+              <tr><td colSpan="5" className="text-center py-12 text-xs font-bold text-slate-500 uppercase tracking-widest">Loading...</td></tr>
+            ) : filteredCustomers.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="text-center py-12 text-slate-500 font-bold text-xs uppercase tracking-wider">
+                  {searchTerm ? `No customers match "${searchTerm}"` : 'No customers found.'}
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredCustomers.map((c, i) => (
+                <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-5 py-3.5 font-black text-xs text-slate-400">0{i + 1}</td>
+                  <td className="px-5 py-3.5 font-bold text-xs text-slate-900">{c.name}</td>
+                  <td className="px-5 py-3.5 text-slate-600 text-xs font-medium">{c.email}</td>
+                  <td className="px-5 py-3.5">
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-md border uppercase tracking-widest shadow-2xs ${
+                      c.status === 'blocked' 
+                        ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}>
+                      {c.status || 'active'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <div className="flex justify-center gap-1.5">
+                      <button
+                        onClick={() => setViewData(c)}
+                        className="p-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg cursor-pointer transition shadow-2xs"
+                        title="View Details"
+                      >
+                        <LuEye size={13} />
+                      </button>
+                      <button
+                        onClick={() => openEditModal(c)}
+                        className="p-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg cursor-pointer transition shadow-2xs"
+                        title="Edit"
+                      >
+                        <LuPencil size={13} />
+                      </button>
+                      <button
+                        onClick={() => toggleStatus(c)}
+                        className={`px-2.5 py-1.5 border rounded-lg text-[10px] font-black uppercase transition cursor-pointer shadow-2xs ${
+                          c.status === 'blocked' 
+                            ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100' 
+                            : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+                        }`}
+                      >
+                        {c.status === 'blocked' ? 'Unblock' : 'Block'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c.id)}
+                        className="p-2 bg-white border border-rose-300 hover:bg-rose-50 text-rose-600 rounded-lg cursor-pointer transition shadow-2xs"
+                        title="Delete"
+                      >
+                        <LuTrash size={13} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Add Modal: Added Password Input */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-sm w-96 shadow-xl space-y-4">
-            <h2 className="font-black text-lg text-[#1e922c] border-b pb-2 uppercase">Add New Customer</h2>
-            <input className="w-full p-2 border text-sm" placeholder="Name" onChange={(e) => setFormData({...formData, name: e.target.value})} />
-            <input className="w-full p-2 border text-sm" placeholder="Email" onChange={(e) => setFormData({...formData, email: e.target.value})} />
-            <input className="w-full p-2 border text-sm" placeholder="Phone" onChange={(e) => setFormData({...formData, phone: e.target.value})} />
-            <input type="password" className="w-full p-2 border text-sm" placeholder="Password" onChange={(e) => setFormData({...formData, password: e.target.value})} />
-            <div className="flex gap-2 pt-4">
-              <button onClick={() => setIsAddModalOpen(false)} className="flex-1 py-2 border text-xs font-black uppercase">Cancel</button>
-              <button onClick={handleAdd} className="flex-1 py-2 bg-[#1e922c] text-white text-xs font-black uppercase">Create</button>
+      {/* ── VIEW MODAL ── */}
+      {viewData && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl border-2 border-slate-300 space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+              <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">Customer Details</h2>
+              <button onClick={() => setViewData(null)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                <LuX size={16} />
+              </button>
             </div>
+            <div className="space-y-3 text-xs">
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400">Full Name</span>
+                <p className="font-bold text-slate-900 mt-0.5">{viewData.name}</p>
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400">Email Address</span>
+                <p className="font-bold text-slate-900 mt-0.5">{viewData.email}</p>
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400">Phone Number</span>
+                <p className="font-bold text-slate-900 mt-0.5">{viewData.phone || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400">Account Status</span>
+                <p className="font-bold text-slate-900 mt-0.5 uppercase">{viewData.status || 'active'}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setViewData(null)}
+              className="w-full py-2.5 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-800 transition cursor-pointer"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
 
-      {/* Edit Modal */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-sm w-96 shadow-xl space-y-4">
-            <h2 className="font-black text-lg text-[#2D4A22] border-b pb-2 uppercase">Edit Customer</h2>
-            <input className="w-full p-2 border text-sm" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-            <input className="w-full p-2 border text-sm" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
-            <input className="w-full p-2 border text-sm" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
-            <div className="flex gap-2 pt-4">
-              <button onClick={() => setIsEditModalOpen(false)} className="flex-1 py-2 border text-xs font-black uppercase">Cancel</button>
-              <button onClick={handleUpdate} className="flex-1 py-2 bg-[#1d6105] text-white text-xs font-black uppercase">Save</button>
+      {/* ── ADD MODAL ── */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center p-4 z-50">
+          <form onSubmit={handleAdd} className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl border-2 border-slate-300 space-y-4">
+            <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
+              <div className="p-2 bg-slate-900 text-white rounded-lg">
+                <LuPlus size={16} />
+              </div>
+              <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">Add New Customer</h2>
             </div>
-          </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Full Name *</label>
+                <input
+                  className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
+                  placeholder="e.g. Sam Channa"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Email *</label>
+                <input
+                  type="email"
+                  className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
+                  placeholder="e.g. customer@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Phone</label>
+                <input
+                  className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
+                  placeholder="e.g. 0972324523"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Password *</label>
+                <input
+                  type="password"
+                  className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                className="flex-1 py-2.5 border-2 border-slate-300 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-100 cursor-pointer text-slate-700 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="flex-1 py-2.5 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-800 cursor-pointer transition shadow-sm flex items-center justify-center gap-1.5"
+              >
+                {isSaving ? "Saving..." : <><LuSave size={13} /> Create</>}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ── EDIT MODAL ── */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center p-4 z-50">
+          <form onSubmit={handleUpdate} className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl border-2 border-slate-300 space-y-4">
+            <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
+              <div className="p-2 bg-slate-900 text-white rounded-lg">
+                <LuPencil size={16} />
+              </div>
+              <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">Edit Customer</h2>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Full Name *</label>
+                <input
+                  className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Email *</label>
+                <input
+                  type="email"
+                  className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Phone</label>
+                <input
+                  className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="flex-1 py-2.5 border-2 border-slate-300 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-100 cursor-pointer text-slate-700 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="flex-1 py-2.5 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-800 cursor-pointer transition shadow-sm flex items-center justify-center gap-1.5"
+              >
+                {isSaving ? "Saving..." : <><LuSave size={13} /> Save</>}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

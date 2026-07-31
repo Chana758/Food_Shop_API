@@ -6,7 +6,7 @@ const Footer = () => {
   const { t } = useTranslation();
 
   return (
-    // ប្រើពណ៌ #1a3a32 ដូច Navbar ក្នុងរូបភាព
+    // #1a3a32 old coolor
     <footer className="bg-[#1a3a32] text-white pt-20 pb-10 font-[var(--font-khmer)]">
       <div className="max-w-7xl mx-auto px-6 md:px-14">
         
@@ -24,7 +24,6 @@ const Footer = () => {
               placeholder="Your email address" 
               className="bg-white/5 border border-white/10 px-6 py-4 outline-none focus:bg-white/10 transition-all sm:w-80 text-sm"
             />
-            {/* ប៊ូតុងពណ៌បៃតងដូចក្នុង Theme */}
             <button className="bg-[#2d5a27] hover:bg-orange-600 text-white px-8 py-4 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all">
               Subscribe <ArrowRight size={16} />
             </button>
@@ -34,10 +33,10 @@ const Footer = () => {
         {/* --- Main Grid Section --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
           
-          {/* Logo & Brand Info - ដូរតាមរូប Navbar ដែលបងផ្ញើមក */}
+          {/* Logo & Brand Info */}
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-               {/* រូប Logo ស្លឹកឈើ ដូចក្នុងរូបភាព Navbar */}
+               {/* Logo*/}
                <div className="bg-white p-1.5 rounded-lg">
                   <div className="bg-[#2d5a27] p-1 rounded-md">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -47,7 +46,7 @@ const Footer = () => {
                     </svg>
                   </div>
                </div>
-              {/* ឈ្មោះ Brand: KHMER-FRESH */}
+              {/*  Brand: KHMER-FRESH */}
               <div className="flex flex-col leading-none">
                 <span className="text-2xl font-black tracking-tighter text-white uppercase">
                   KHMER-<span className="text-[#4a8c44]">FRESH</span>
@@ -99,7 +98,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Contact Info - យកតាមលេខទូរស័ព្ទក្នុង Navbar */}
+          {/* Contact Info- */}
           <div className="space-y-6">
             <h3 className="text-white font-black uppercase tracking-widest text-xs mb-8 border-l-4 border-orange-500 pl-4">Contact</h3>
             <div className="space-y-4">

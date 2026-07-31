@@ -2,59 +2,62 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaPhone, FaArrowLeft } from 'react-icons/fa';
 import { authService } from '../../service/authService';
+
 const Register = () => {
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false); // ✅ ថែម loading state
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: ''
-  });
-  const [error, setError] = useState('');
 
-  // 🔸 Logic ដើមរបស់បង (មិនកែប្រែ)
+  const [showPassword, setShowPassword]           = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading]                     = useState(false);
+  const [error, setError]                         = useState('');
+  const [formData, setFormData] = useState({
+    name:             '',
+    email:            '',
+    phone:            '',
+    password:         '',
+    confirmPassword:  '',
+  });
+
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     setError('');
-  }; 
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match!');
-      setLoading(false);
       return;
     }
 
+    setLoading(true);
+
     try {
-      // ២. បាញ់ទៅ Laravel (Laravel ត្រូវការ field 'password_confirmation')
-      const registerData = {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        password: formData.password,
-        password_confirmation: formData.confirmPassword // ✅ Laravel ត្រូវការឈ្មោះនេះ
+      // Laravel expects 'password_confirmation' (not 'confirmPassword')
+      const payload = {
+        name:                  formData.name,
+        email:                 formData.email,
+        phone:                 formData.phone,
+        password:              formData.password,
+        password_confirmation: formData.confirmPassword,
       };
 
-      const data = await authService.register(registerData);
-      
+      const data = await authService.register(payload);
+
       if (data.status === 'success') {
-        alert('Account created successfully!');
-        navigate('/login'); // ចុះឈ្មោះហើយ រុញទៅ Login
+        navigate('/login', { replace: true });
       }
+
     } catch (err) {
-      // ៣. បង្ហាញ Error ពី Laravel (ឧទាហរណ៍៖ Email ជាន់គ្នា)
-      setError(err.message || 'Registration failed. Please try again.');
+      // Handle Laravel validation errors (err.errors is an object of arrays)
+      if (err.errors) {
+        const firstError = Object.values(err.errors)[0][0];
+        setError(firstError);
+      } else {
+        setError(err.message || 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -63,16 +66,16 @@ const Register = () => {
   return (
     <div className="w-full min-h-screen bg-[#FDFDFD] flex items-center justify-center py-20 px-6">
       <div className="max-w-md w-full">
-        
-        {/* --- Back Button --- */}
-        <button 
+
+        {/* Back button */}
+        <button
           onClick={() => navigate('/')}
           className="flex items-center gap-2 text-[#2D4A22] font-black text-[10px] uppercase tracking-[0.3em] hover:text-[#F58220] transition-colors mb-10 group"
         >
           <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back to Home
         </button>
 
-        {/* --- Header --- */}
+        {/* Title */}
         <div className="mb-10">
           <h1 className="text-5xl font-black text-[#2D4A22] uppercase tracking-tighter mb-4">
             Join <span className="text-[#F58220]">Us</span>
@@ -82,142 +85,127 @@ const Register = () => {
           </p>
         </div>
 
-        {/* --- Form --- */}
+        {/* Form */}
         <div className="bg-white border border-gray-100 p-8 md:p-10 shadow-sm rounded-sm">
           <form onSubmit={handleSubmit} className="space-y-7">
-            
+
+            {/* Error message */}
             {error && (
               <div className="bg-red-50 p-4 border-l-4 border-red-500 text-red-700 text-[10px] font-black uppercase tracking-widest">
                 {error}
               </div>
             )}
 
-            {/* Name Input */}
+            {/* Full Name */}
             <div className="space-y-2">
               <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Full Name</label>
               <div className="relative group">
                 <FaUser className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={13} />
                 <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
+                  type="text" name="name" value={formData.name} onChange={handleChange}
+                  placeholder="EX. JOHN DOE" required
                   className="w-full bg-transparent border-b-2 border-gray-100 py-2 pl-8 text-sm font-bold text-[#2D4A22] outline-none focus:border-[#2D4A22] transition-all"
-                  placeholder="EX. JOHN DOE"
-                  required
                 />
               </div>
             </div>
 
-            {/* Email & Phone (Grid) */}
-            <div className="grid grid-cols-1 gap-7">
-              <div className="space-y-2">
-                <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Email Address</label>
-                <div className="relative group">
-                  <FaEnvelope className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={13} />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full bg-transparent border-b-2 border-gray-100 py-2 pl-8 text-sm font-bold text-[#2D4A22] outline-none focus:border-[#2D4A22] transition-all"
-                    placeholder="NAME@EMAIL.COM"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Phone Number</label>
-                <div className="relative group">
-                  <FaPhone className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={13} />
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="w-full bg-transparent border-b-2 border-gray-100 py-2 pl-8 text-sm font-bold text-[#2D4A22] outline-none focus:border-[#2D4A22] transition-all"
-                    placeholder="+855 00 000 000"
-                    required
-                  />
-                </div>
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Email Address</label>
+              <div className="relative group">
+                <FaEnvelope className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={13} />
+                <input
+                  type="email" name="email" value={formData.email} onChange={handleChange}
+                  placeholder="NAME@EMAIL.COM" required
+                  className="w-full bg-transparent border-b-2 border-gray-100 py-2 pl-8 text-sm font-bold text-[#2D4A22] outline-none focus:border-[#2D4A22] transition-all"
+                />
               </div>
             </div>
 
-            {/* Passwords (Grid) */}
+            {/* Phone */}
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Phone Number</label>
+              <div className="relative group">
+                <FaPhone className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={13} />
+                <input
+                  type="tel" name="phone" value={formData.phone} onChange={handleChange}
+                  placeholder="+855 00 000 000" required
+                  className="w-full bg-transparent border-b-2 border-gray-100 py-2 pl-8 text-sm font-bold text-[#2D4A22] outline-none focus:border-[#2D4A22] transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Passwords */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-7">
+
+              {/* Password */}
               <div className="space-y-2">
                 <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Password</label>
                 <div className="relative group">
                   <FaLock className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={13} />
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
+                    name="password" value={formData.password} onChange={handleChange}
+                    placeholder="••••••" required
                     className="w-full bg-transparent border-b-2 border-gray-100 py-2 pl-8 pr-8 text-sm font-bold text-[#2D4A22] outline-none focus:border-[#2D4A22] transition-all"
-                    placeholder="••••••"
-                    required
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-300">
+                  <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-300">
                     {showPassword ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
                   </button>
                 </div>
               </div>
 
+              {/* Confirm Password */}
               <div className="space-y-2">
                 <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Confirm</label>
                 <div className="relative group">
                   <FaLock className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={13} />
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
+                    name="confirmPassword" value={formData.confirmPassword} onChange={handleChange}
+                    placeholder="••••••" required
                     className="w-full bg-transparent border-b-2 border-gray-100 py-2 pl-8 pr-8 text-sm font-bold text-[#2D4A22] outline-none focus:border-[#2D4A22] transition-all"
-                    placeholder="••••••"
-                    required
                   />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-300">
+                  <button type="button" onClick={() => setShowConfirmPassword(p => !p)} className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-300">
                     {showConfirmPassword ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
                   </button>
                 </div>
               </div>
+
             </div>
 
-            {/* Terms */}
+            {/* Terms checkbox */}
             <label className="flex items-center cursor-pointer group">
-              <input type="checkbox" className="w-4 h-4 accent-[#2D4A22] border-gray-200 rounded" required />
+              <input type="checkbox" className="w-4 h-4 accent-[#2D4A22]" required />
               <span className="ml-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-[#2D4A22] transition-colors">
                 I accept terms & conditions
               </span>
             </label>
 
-            {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-5 text-[11px] font-black uppercase tracking-[0.4em] transition-all shadow-xl active:scale-[0.98] 
-            ${loading 
-              ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-[#2D4A22] hover:bg-[#1e3317] text-white shadow-[#2D4A22]/10'
-            }`}
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Processing...
-              </span>
-            ) : (
-              'Create Account'
-            )}
-          </button>
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full py-5 text-[11px] font-black uppercase tracking-[0.4em] transition-all shadow-xl active:scale-[0.98]
+                ${loading
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-[#2D4A22] hover:bg-[#1e3317] text-white'
+                }`}
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Processing...
+                </span>
+              ) : 'Create Account'}
+            </button>
+
           </form>
 
-          {/* Login Link */}
+          {/* Login link */}
           <div className="mt-10 pt-8 border-t border-gray-50 text-center">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
               Already have an account?{' '}
@@ -227,6 +215,7 @@ const Register = () => {
             </p>
           </div>
         </div>
+
       </div>
     </div>
   );

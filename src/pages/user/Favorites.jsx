@@ -1,159 +1,154 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { FaHeart, FaShoppingCart, FaTrash, FaArrowRight } from 'react-icons/fa';
-import { VscHeartFilled } from "react-icons/vsc";
+import { FaHeart, FaShoppingCart, FaTrash, FaArrowLeft } from 'react-icons/fa';
+import useFavorite from '../../hooks/useFavorite';
 import Toast from '../../components/common/Toast';
+import { useState } from 'react';
+
+const getImageUrl = (image) => {
+  if (!image) return '/placeholder-food.jpg';
+  if (image.startsWith('http')) return image;
+  return `http://127.0.0.1:8000/storage/${image}`;
+};
 
 const Favorites = () => {
-  const { t } = useTranslation();
   const navigate = useNavigate();
-  const [favorites, setFavorites] = useState([]);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-
-  useEffect(() => {
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) { navigate('/login'); return; }
-    loadFavorites();
-  }, [navigate]);
-
-  const loadFavorites = () => {
-    const storedFavorites = localStorage.getItem('favorites');
-    if (storedFavorites) setFavorites(JSON.parse(storedFavorites));
-  };
-
-  const removeFromFavorites = (itemId) => {
-    const updatedFavorites = favorites.filter(item => item.id !== itemId);
-    setFavorites(updatedFavorites);
-    localStorage.setItem('favorites', JSON.stringify(updatedFavorites));
-    window.dispatchEvent(new Event('favoritesUpdated'));
-  };
-
-  const clearAllFavorites = () => {
-    setFavorites([]);
-    localStorage.removeItem('favorites');
-    window.dispatchEvent(new Event('favoritesUpdated'));
-  };
+  const { favorites, loading, error, toggleFavorite } = useFavorite();
+  const [showToast, setShowToast]   = useState(false);
+  const [toastMsg, setToastMsg]     = useState('');
 
   const addToCart = (item) => {
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
-      setToastMessage(t('auth.loginRequired'));
-      setShowToast(true);
-      setTimeout(() => navigate('/login'), 1500);
-      return;
-    }
+    if (!localStorage.getItem('currentUser')) { navigate('/login'); return; }
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingItemIndex = cart.findIndex(c => c.id === item.id && c.type === item.type);
-    if (existingItemIndex >= 0) { cart[existingItemIndex].quantity += 1; } 
-    else { cart.push({ ...item, quantity: 1 }); }
+    const idx  = cart.findIndex(i => i.id === item.id);
+    if (idx > -1) cart[idx].quantity += 1;
+    else cart.push({ ...item, quantity: 1, type: 'product' });
     localStorage.setItem('cart', JSON.stringify(cart));
-    window.dispatchEvent(new Event('cartUpdated'));
-    setToastMessage(`${item.name} ${t('cart.addedSuccess')}`);
+    setToastMsg(`${item.name} added to cart!`);
     setShowToast(true);
+    window.dispatchEvent(new Event('cartUpdated'));
   };
 
-  if (favorites.length === 0) {
-    return (
-      <div className="w-full min-h-screen bg-white flex flex-col items-center justify-center px-6">
-        <h2 className="text-2xl font-black text-gray-200 mb-2 uppercase tracking-widest italic">Empty</h2>
-        <p className="text-gray-400 mb-8 text-[10px] font-black uppercase tracking-[0.3em]">{t('favorites.emptyDesc')}</p>
-        <Link to="/MenuFood" className="px-8 py-3 bg-[#1a2e35] text-white font-black text-[10px] uppercase tracking-widest hover:bg-orange-500 transition-all">
-          {t('about.browseMenu')}
-        </Link>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen pt-32 flex items-center justify-center text-gray-400 font-bold animate-pulse">
+      Loading favorites...
+    </div>
+  );
+
+  if (error) return (
+    <div className="min-h-screen pt-32 flex items-center justify-center text-red-400 font-bold">
+      {error}
+    </div>
+  );
 
   return (
-    <>
-      {showToast && <Toast message={toastMessage} onClose={() => setShowToast(false)} />}
-      
-      <div className="w-full min-h-screen bg-white pt-16 pb-20 px-4 md:px-14">
-        <div className="max-w-7xl mx-auto">
-          
-          {/* Header Section */}
-          <div className="flex flex-col md:flex-row justify-between items-center mb-12 pb-4 border-b border-gray-100 gap-4">
-            <div className="flex items-center gap-4">
-              <h1 className="text-3xl font-black text-[#1a2e35] tracking-tighter uppercase leading-none">
-                {t('nav.favorites')}
-              </h1>
-              <div className="h-6 w-[1px] bg-gray-200 hidden md:block"></div>
-              <p className="text-orange-500 font-bold text-[10px] uppercase tracking-[0.3em]">
-                {favorites.length} {t('favorites.countSuffix')}
-              </p>
-            </div>
-            
-            <button 
-              onClick={clearAllFavorites} 
-              className="flex items-center gap-2 px-4 py-2 text-red-500 font-black text-[9px] uppercase tracking-widest transition-all hover:bg-red-50"
-            >
-              <FaTrash size={10} /> {t('favorites.clearAll')}
-            </button>
+    <div className="w-full min-h-screen bg-[#FDFDFD] pt-28 pb-20 px-6 md:px-14">
+      <div className="max-w-6xl mx-auto">
+
+        {/* Header */}
+        <div className="mb-12 border-b border-gray-100 pb-8">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-[#2D4A22] font-black text-[10px] uppercase tracking-[0.3em] hover:text-[#F58220] transition-colors mb-6 group"
+          >
+            <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back
+          </button>
+          <div className="flex items-center gap-3">
+            <FaHeart className="text-red-500" size={24} />
+            <h1 className="text-3xl font-black text-[#2D4A22] uppercase tracking-tighter">
+              My <span className="text-[#F58220]">Favorites</span>
+            </h1>
           </div>
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">
+            {favorites.length} {favorites.length === 1 ? 'item' : 'items'} saved
+          </p>
+        </div>
 
-          {/* Grid Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {favorites.map((item) => (
-              <div 
-                key={item.id} 
-                className="group relative bg-transparent hover:bg-orange-50/30 p-3 transition-all duration-300"
+        {/* Empty State */}
+        {favorites.length === 0 ? (
+          <div className="text-center py-24 border border-dashed border-gray-200">
+            <FaHeart className="text-gray-200 mx-auto mb-6" size={48} />
+            <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">
+              No favorites yet
+            </h2>
+            <p className="text-xs text-gray-400 mb-8">
+              Browse our menu and add items you love
+            </p>
+            <Link
+              to="/menu"
+              className="px-8 py-3 bg-[#2D4A22] text-white font-black text-[10px] uppercase tracking-[0.3em] hover:bg-[#F58220] transition-colors"
+            >
+              Browse Menu
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {favorites.map(item => (
+              <div
+                key={item.id}
+                className="group bg-white border border-gray-100 hover:border-[#2D4A22] transition-all shadow-sm flex flex-col"
               >
-                {/* Image Area */}
-                <div className="relative aspect-square w-full overflow-hidden bg-gray-50">
-                  <img 
-                    src={item.image} 
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-                    alt={item.name} 
-                  />
-                  
-                  {/* Remove Button */}
-                  <button 
-                    onClick={() => removeFromFavorites(item.id)}
-                    className="absolute top-0 right-0 p-3 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <VscHeartFilled size={20} />
-                  </button>
+                {/* Image */}
+                <div className="relative h-48 overflow-hidden bg-gray-50">
+                  <Link to={`/menu/product/${item.id}`}>
+                    <img
+                      src={getImageUrl(item.image)}
+                      alt={item.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      onError={e => { e.target.src = '/placeholder-food.jpg'; }}
+                    />
+                  </Link>
 
-                  {/* Price Tag */}
-                  <div className="absolute bottom-0 left-0 bg-[#1a2e35] group-hover:bg-orange-600 text-white px-3 py-1 font-black text-[10px] transition-colors">
-                    ${item.price}
-                  </div>
+                  {/* Remove from favorites */}
+                  <button
+                    onClick={() => toggleFavorite(item, navigate)}
+                    className="absolute top-3 right-3 w-8 h-8 bg-white border border-gray-100 flex items-center justify-center hover:bg-red-50 transition-colors shadow-sm"
+                    title="Remove from favorites"
+                  >
+                    <FaTrash className="text-red-400" size={11} />
+                  </button>
                 </div>
 
-                {/* Content Area */}
-                <div className="mt-4 space-y-3">
-                  <div>
-                    <p className="text-[8px] font-black text-orange-600 uppercase tracking-[0.2em] mb-1 opacity-80">{item.category}</p>
-                    <h3 className="text-base font-black text-[#1a2e35] uppercase tracking-tight group-hover:text-orange-600 transition-colors line-clamp-1">
+                {/* Info */}
+                <div className="p-5 flex flex-col flex-1">
+                  {item.category?.name && (
+                    <p className="text-[9px] font-black text-[#F58220] uppercase tracking-widest mb-1">
+                      {item.category.name}
+                    </p>
+                  )}
+                  <Link to={`/menu/product/${item.id}`}>
+                    <h3 className="font-bold text-[#2D4A22] uppercase truncate mb-1">
                       {item.name}
                     </h3>
-                  </div>
+                  </Link>
+                  <p className="text-xs text-gray-400 line-clamp-2 mb-4 flex-1">
+                    {item.description || 'Authentic Khmer taste'}
+                  </p>
 
-                  {/* Buttons - Hover changed to Orange */}
-                  <div className="flex flex-col gap-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300">
-                    <button 
-                      onClick={() => addToCart(item)} 
-                      className="w-full py-3 bg-[#1a2e35] text-white font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-orange-600 transition-all"
+                  {/* Price + Cart */}
+                  <div className="flex items-center justify-between border-t border-gray-50 pt-4">
+                    <div>
+                      <span className="text-lg font-black text-[#2D4A22]">
+                        ${parseFloat(item.price).toFixed(2)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => addToCart(item)}
+                      className="flex items-center gap-2 bg-[#2D4A22] text-white px-4 py-2 text-[10px] font-black uppercase hover:bg-[#F58220] transition-colors"
                     >
-                      <FaShoppingCart size={10} /> {t('nav.menu')}
+                      <FaShoppingCart size={10} /> Add
                     </button>
-                    
-                    <Link 
-                      to={item.detailLink} 
-                      className="w-full py-3 text-[#1a2e35] font-black text-[9px] uppercase tracking-widest text-center flex items-center justify-center gap-2 border border-transparent hover:border-orange-200 hover:text-orange-600 transition-all"
-                    >
-                      {t('favorites.viewDetails')} <FaArrowRight size={8} />
-                    </Link>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        )}
+
       </div>
-    </>
+
+      {showToast && <Toast message={toastMsg} onClose={() => setShowToast(false)} />}
+    </div>
   );
 };
 

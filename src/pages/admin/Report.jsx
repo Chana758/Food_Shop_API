@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -12,334 +11,320 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
 } from "recharts";
+import { 
+  LuDownload, LuTrendingUp, LuTrendingDown, 
+  LuDollarSign, LuShoppingCart, LuUsers, LuPackage, LuRefreshCw 
+} from "react-icons/lu";
 
-// ── Icons ────────────────────────────────────────────────────────────────────
-const Icon = ({ path, size = 16, color = "currentColor" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <path d={path} />
-  </svg>
-);
-const IconDownload = () => <Icon path="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />;
-const IconCalendar = () => <Icon path="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />;
-const IconTrendUp = () => <Icon path="M22 7L13.5 15.5 8.5 10.5 2 17M22 7h-6M22 7v6" size={14} color="#22c55e" />;
-const IconTrendDown = () => <Icon path="M22 17L13.5 8.5 8.5 13.5 2 7M22 17h-6M22 17v-6" size={14} color="#ef4444" />;
-const IconUsers = () => <Icon path="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />;
-const IconBox = () => <Icon path="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" />;
-const IconDollar = () => <Icon path="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />;
-const IconOrder = () => <Icon path="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 12l2 2 4-4" />;
-const IconChevron = ({ dir = "down" }) => (
-  <Icon path={dir === "down" ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"} size={14} />
-);
-
-// ── Data ─────────────────────────────────────────────────────────────────────
-const monthlySales = [
-  { month: "Jan", revenue: 3200, orders: 42 },
-  { month: "Feb", revenue: 4800, orders: 61 },
-  { month: "Mar", revenue: 5600, orders: 74 },
-  { month: "Apr", revenue: 8900, orders: 112 },
-  { month: "May", revenue: 8400, orders: 108 },
-  { month: "Jun", revenue: 6100, orders: 89 },
-];
-
-const categoryData = [
-  { name: "Main Dishes", value: 38, color: "#3b82f6" },
-  { name: "Beverages", value: 24, color: "#22c55e" },
-  { name: "Desserts", value: 18, color: "#f59e0b" },
-  { name: "Snacks", value: 12, color: "#8b5cf6" },
-  { name: "Soups", value: 8, color: "#ef4444" },
-];
-
-const topProducts = [
-  { name: "Fish Amok", category: "Main Dishes", sold: 234, revenue: "$1,170", trend: "up" },
-  { name: "Lok Lak", category: "Main Dishes", sold: 198, revenue: "$990", trend: "up" },
-  { name: "Sugar Cane Juice", category: "Beverages", sold: 187, revenue: "$374", trend: "down" },
-  { name: "Nom Banh Chok", category: "Soups", sold: 165, revenue: "$825", trend: "up" },
-  { name: "Kuy Teav", category: "Soups", sold: 142, revenue: "$710", trend: "down" },
-];
-
-const recentTransactions = [
-  { id: "#1021", customer: "Sophea Mak", amount: "$48.50", date: "Jun 20, 10:12 AM", status: "Delivered" },
-  { id: "#1020", customer: "Dara Nhem", amount: "$23.00", date: "Jun 20, 9:45 AM", status: "Pending" },
-  { id: "#1019", customer: "Bopha Ros", amount: "$67.20", date: "Jun 20, 9:10 AM", status: "Delivered" },
-  { id: "#1018", customer: "Virak Oum", amount: "$31.75", date: "Jun 19, 6:55 PM", status: "Cancelled" },
-  { id: "#1017", customer: "Leakhena Chan", amount: "$55.00", date: "Jun 19, 5:30 PM", status: "Delivered" },
-];
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-const StatCard = ({ icon, iconBg, label, value, change, positive }) => (
-  <div style={{
-    background: "#fff",
-    borderRadius: 12,
-    padding: "20px 22px",
-    display: "flex",
-    alignItems: "center",
-    gap: 16,
-    boxShadow: "0 1px 3px rgba(0,0,0,.07)",
-    flex: 1,
-    minWidth: 200,
-  }}>
-    <div style={{
-      width: 48, height: 48, borderRadius: 10,
-      background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-    }}>
-      {icon}
+// ── Sub-components styled like Delivery Page ─────
+const StatCard = ({ icon, iconBg, label, value, change, positive, subtext }) => (
+  <div className="bg-white rounded-2xl p-5 flex flex-col justify-between border border-[#E8E3D8] shadow-sm flex-1 min-w-[200px]">
+    <div className="flex items-center justify-between mb-3">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg} text-white shadow-sm`}>
+        {icon}
+      </div>
+      <span className="text-[10px] font-black uppercase tracking-wider text-gray-500">{label}</span>
     </div>
-    <div style={{ flex: 1 }}>
-      <div style={{ fontSize: 12, color: "#6b7280", fontWeight: 500, marginBottom: 2 }}>{label}</div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-        <span style={{ fontSize: 22, fontWeight: 700, color: "#111827" }}>{value}</span>
-        <span style={{ fontSize: 12, color: positive ? "#22c55e" : "#ef4444", fontWeight: 600 }}>
-          {positive ? "+" : ""}{change}
+    <div>
+      <div className="text-2xl font-black text-[#1E2A2E] tracking-tight">{value}</div>
+      <div className="flex items-center justify-between mt-1">
+        <span className="text-[11px] font-bold text-gray-500">{subtext}</span>
+        <span className={`text-sm font-black flex items-center gap-0.5 ${positive ? "text-[#2F6844]" : "text-[#C53030]"}`}>
+          {positive ? <LuTrendingUp size={15} /> : <LuTrendingDown size={15} />}
+          {positive ? "+" : ""}{change}%
         </span>
       </div>
     </div>
-    <div>{positive ? <IconTrendUp /> : <IconTrendDown />}</div>
   </div>
 );
 
 const statusStyle = (s) => {
-  if (s === "Delivered") return { background: "#dcfce7", color: "#16a34a" };
-  if (s === "Pending") return { background: "#fef9c3", color: "#ca8a04" };
-  return { background: "#fee2e2", color: "#dc2626" };
+  if (s === "Delivered" || s === "Paid" || s === "Success") return "bg-[#E4F0E7] text-[#2F6844] border-[#C8E1CE]";
+  if (s === "Pending") return "bg-[#FBEDD9] text-[#B9791F] border-[#F2D7B3]";
+  return "bg-[#FCE8E6] text-[#C53030] border-[#FAD2CF]";
 };
 
-const SectionCard = ({ title, children, action }) => (
-  <div style={{
-    background: "#fff",
-    borderRadius: 12,
-    padding: "20px 22px",
-    boxShadow: "0 1px 3px rgba(0,0,0,.07)",
-  }}>
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#111827" }}>{title}</h3>
+const SectionCard = ({ title, children, action, subtitle }) => (
+  <div className="bg-white rounded-2xl p-6 border border-[#E8E3D8] shadow-sm">
+    <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#F0ECE1]">
+      <div>
+        <h3 className="m-0 text-sm font-black uppercase text-[#1E2A2E] tracking-wider">{title}</h3>
+        {subtitle && <p className="text-[11px] font-bold text-gray-500 mt-0.5">{subtitle}</p>}
+      </div>
       {action}
     </div>
     {children}
   </div>
 );
 
-// ── Main Component ────────────────────────────────────────────────────────────
+// ── Main Component ────
 const Report = () => {
-  const [period, setPeriod] = useState("This Month");
-  const [open, setOpen] = useState(false);
-  const periods = ["Today", "This Week", "This Month", "This Year"];
+  const [period, setPeriod] = useState("this_month");
+  const [loading, setLoading] = useState(true);
+  const [reportData, setReportData] = useState({
+    stats: {
+      total_revenue: 0, revenue_change_pct: 0, revenue_positive: true,
+      total_orders: 0, orders_change_pct: 0, orders_positive: true,
+      new_customers: 0, customers_change_pct: 0, customers_positive: true,
+      avg_order_value: 0, avg_change_pct: 0, avg_positive: true,
+    },
+    monthly_sales: [],
+    category_data: [],
+    top_products: [],
+    recent_transactions: []
+  });
+
+  const periods = [
+    { label: "Today", value: "today" },
+    { label: "This Week", value: "this_week" },
+    { label: "This Month", value: "this_month" },
+    { label: "This Year", value: "this_year" }
+  ];
+
+  useEffect(() => {
+    fetchReportData(period);
+  }, [period]);
+
+  const fetchReportData = async (selectedPeriod) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token") || sessionStorage.getItem("access_token");
+      
+      // ✅ តភ្ជាប់ទៅកាន់ Laravel API Endpoint ខាង Backend
+      const response = await axios.get(`http://127.0.0.1:8000/api/admin/reports/stats?period=${selectedPeriod}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data && response.data.status === "success") {
+        setReportData(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching report stats:", error.response ?? error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div style={{ background: "#f3f4f6", minHeight: "100vh", padding: "28px 32px", fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div className="bg-[#F8F6F0] min-h-screen p-8 space-y-6 font-sans">
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+      {/* Header Banner */}
+      <div className="bg-white rounded-2xl p-6 border border-[#E8E3D8] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#111827" }}>Reports</h2>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>Track your sales, orders, and product performance</p>
+          <h1 className="text-xl font-black uppercase text-[#1E2A2E] tracking-wider m-0">Reports & Analytics</h1>
+          <p className="text-xs font-bold text-gray-500 mt-1 uppercase tracking-wider">
+            Daily, monthly, and yearly business metrics with actionable data
+          </p>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          {/* Period picker */}
-          <div style={{ position: "relative" }}>
-            <button
-              onClick={() => setOpen(!open)}
-              style={{
-                display: "flex", alignItems: "center", gap: 8,
-                padding: "9px 14px", borderRadius: 8, border: "1px solid #e5e7eb",
-                background: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 500, color: "#374151",
-              }}
-            >
-              <IconCalendar /> {period} <IconChevron dir={open ? "up" : "down"} />
-            </button>
-            {open && (
-              <div style={{
-                position: "absolute", top: "calc(100% + 4px)", right: 0, background: "#fff",
-                border: "1px solid #e5e7eb", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,.1)",
-                zIndex: 10, minWidth: 140, overflow: "hidden",
-              }}>
-                {periods.map((p) => (
-                  <div key={p}
-                    onClick={() => { setPeriod(p); setOpen(false); }}
-                    style={{
-                      padding: "9px 14px", fontSize: 13, cursor: "pointer", color: "#374151",
-                      background: p === period ? "#f0fdf4" : "transparent",
-                      fontWeight: p === period ? 600 : 400,
-                    }}
-                  >{p}</div>
-                ))}
-              </div>
-            )}
+        
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="bg-[#F8F6F0] p-1 rounded-xl border border-[#E8E3D8] flex items-center gap-1">
+            {periods.map((p) => (
+              <button
+                key={p.value}
+                onClick={() => setPeriod(p.value)}
+                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  period === p.value
+                    ? "bg-[#1E2A2E] text-white shadow-sm"
+                    : "text-gray-700 hover:text-[#1E2A2E]"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
-          {/* Export */}
-          <button style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "9px 16px", borderRadius: 8, border: "none",
-            background: "#16a34a", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#fff",
-          }}>
-            <IconDownload /> Export
+
+          <button 
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border-none bg-[#2F6844] cursor-pointer text-xs font-black uppercase tracking-wider text-white hover:bg-[#255235] transition-colors shadow-sm"
+          >
+            <LuDownload size={15} /> Export Report
           </button>
         </div>
       </div>
 
-      {/* Stat Cards */}
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
+      {/* Stat Cards Row */}
+      <div className="flex gap-4 flex-wrap">
         <StatCard
-          icon={<Icon path="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" size={20} color="#fff" />}
-          iconBg="#16a34a"
+          icon={<LuDollarSign size={20} />}
+          iconBg="bg-[#2F6844]"
           label="Total Revenue"
-          value="$37,000"
-          change="12%"
-          positive
+          value={`$${Number(reportData.stats.total_revenue || 0).toLocaleString()}`}
+          subtext="Total earnings"
+          change={reportData.stats.revenue_change_pct}
+          positive={reportData.stats.revenue_positive}
         />
         <StatCard
-          icon={<Icon path="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" size={20} color="#fff" />}
-          iconBg="#1d1d1d"
+          icon={<LuShoppingCart size={20} />}
+          iconBg="bg-[#1E2A2E]"
           label="Total Orders"
-          value="486"
-          change="8%"
-          positive
+          value={Number(reportData.stats.total_orders || 0).toLocaleString()}
+          subtext="Processed sales"
+          change={reportData.stats.orders_change_pct}
+          positive={reportData.stats.orders_positive}
         />
         <StatCard
-          icon={<Icon path="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" size={20} color="#fff" />}
-          iconBg="#3b82f6"
+          icon={<LuUsers size={20} />}
+          iconBg="bg-[#3B82F6]"
           label="New Customers"
-          value="124"
-          change="5%"
-          positive
+          value={Number(reportData.stats.new_customers || 0).toLocaleString()}
+          subtext="Registered users"
+          change={reportData.stats.customers_change_pct}
+          positive={reportData.stats.customers_positive}
         />
         <StatCard
-          icon={<Icon path="M21 16V8a2 2 0 0 0-1-1.73L13 2.27a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" size={20} color="#fff" />}
-          iconBg="#f59e0b"
+          icon={<LuPackage size={20} />}
+          iconBg="bg-[#F59E0B]"
           label="Avg. Order Value"
-          value="$76.13"
-          change="3%"
-          positive={false}
+          value={`$${Number(reportData.stats.avg_order_value || 0).toLocaleString()}`}
+          subtext="Per transaction"
+          change={reportData.stats.avg_change_pct}
+          positive={reportData.stats.avg_positive}
         />
       </div>
 
       {/* Charts Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 24 }}>
-        {/* Revenue & Orders bar chart */}
-        <SectionCard
-          title="Monthly Revenue (USD)"
-          action={
-            <div style={{ display: "flex", gap: 12, fontSize: 12, color: "#6b7280" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#3b82f6", display: "inline-block" }} /> Revenue
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: "#22c55e", display: "inline-block" }} /> Orders
-              </span>
-            </div>
-          }
-        >
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={monthlySales} barGap={6}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-              <Tooltip
-                contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12 }}
-                cursor={{ fill: "#f9fafb" }}
-              />
-              <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="orders" fill="#22c55e" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </SectionCard>
-
-        {/* Category Pie */}
-        <SectionCard title="Sales by Category">
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={categoryData} cx="50%" cy="50%" innerRadius={55} outerRadius={80}
-                dataKey="value" paddingAngle={3}>
-                {categoryData.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v) => `${v}%`} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-            {categoryData.map((c) => (
-              <div key={c.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color, display: "inline-block" }} />
-                  <span style={{ color: "#374151" }}>{c.name}</span>
-                </div>
-                <span style={{ color: "#6b7280", fontWeight: 600 }}>{c.value}%</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <SectionCard
+            title="Performance Breakdown"
+            subtitle="Comparative analysis of revenue and order volume"
+            action={
+              <div className="flex gap-4 text-xs font-bold text-gray-600">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#3B82F6] inline-block" /> Revenue ($)
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#2F6844] inline-block" /> Orders
+                </span>
               </div>
-            ))}
+            }
+          >
+            <div className="pt-2">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={reportData.monthly_sales} barGap={6}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F0ECE1" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#4B5563", fontWeight: 700 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#4B5563", fontWeight: 700 }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 12, border: "1px solid #E8E3D8", fontSize: 12, fontWeight: 700, backgroundColor: "#FFF" }}
+                    cursor={{ fill: "#FAF8F5" }}
+                  />
+                  <Bar dataKey="revenue" fill="#3B82F6" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="orders" fill="#2F6844" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </SectionCard>
+        </div>
+
+        <SectionCard title="Sales by Category" subtitle="Distribution share percentage">
+          <div className="flex flex-col items-center">
+            <ResponsiveContainer width="100%" height={165}>
+              <PieChart>
+                <Pie data={reportData.category_data} cx="50%" cy="50%" innerRadius={50} outerRadius={75}
+                  dataKey="value" paddingAngle={4}>
+                  {reportData.category_data.map((entry, i) => (
+                    <Cell key={i} fill={entry.color || "#3B82F6"} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v) => `${v}%`} contentStyle={{ borderRadius: 12, fontSize: 12, fontWeight: 700 }} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="w-full flex flex-col gap-2 mt-3 max-h-32 overflow-y-auto pr-1">
+              {reportData.category_data.map((c) => (
+                <div key={c.name} className="flex items-center justify-between text-xs font-bold">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: c.color || "#3B82F6" }} />
+                    <span className="text-gray-700">{c.name}</span>
+                  </div>
+                  <span className="text-gray-600">{c.value}%</span>
+                </div>
+              ))}
+              {reportData.category_data.length === 0 && (
+                <div className="text-xs text-gray-500 text-center py-4">No category data</div>
+              )}
+            </div>
           </div>
         </SectionCard>
       </div>
 
       {/* Bottom Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 16 }}>
-        {/* Recent Transactions */}
-        <SectionCard title="Recent Transactions"
-          action={<span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, cursor: "pointer" }}>View all →</span>}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SectionCard 
+          title="Recent Transactions" 
+          subtitle="Latest orders processed in the system"
+          action={
+            <button 
+              onClick={() => fetchReportData(period)}
+              className="p-2 rounded-xl border border-[#E8E3D8] hover:bg-[#FAF8F5] text-gray-600 transition-colors cursor-pointer"
+              title="Refresh Transactions"
+            >
+              <LuRefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            </button>
+          }
         >
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                {["Order ID", "Customer", "Amount", "Date", "Status"].map((h) => (
-                  <th key={h} style={{ textAlign: "left", fontSize: 11, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em", paddingBottom: 10 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {recentTransactions.map((t, i) => (
-                <tr key={t.id} style={{ borderTop: "1px solid #f3f4f6" }}>
-                  <td style={{ padding: "10px 0", fontSize: 13, fontWeight: 600, color: "#374151" }}>{t.id}</td>
-                  <td style={{ fontSize: 13, color: "#374151" }}>{t.customer}</td>
-                  <td style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{t.amount}</td>
-                  <td style={{ fontSize: 12, color: "#9ca3af" }}>{t.date}</td>
-                  <td>
-                    <span style={{
-                      ...statusStyle(t.status),
-                      fontSize: 11, fontWeight: 600,
-                      padding: "3px 8px", borderRadius: 20,
-                    }}>{t.status}</span>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[#F0ECE1]">
+                  {["Order ID", "Customer", "Amount", "Date", "Status"].map((h) => (
+                    <th key={h} className="text-[10px] font-black text-gray-500 uppercase tracking-wider pb-3">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="text-xs font-bold text-gray-700">
+                {reportData.recent_transactions.map((t) => (
+                  <tr key={t.id} className="border-b border-[#F4F1EA] hover:bg-[#FAF8F5] transition-colors">
+                    <td className="py-3 text-[#1E2A2E]">{t.id}</td>
+                    <td className="py-3 text-gray-800">{t.customer}</td>
+                    <td className="py-3 text-[#1E2A2E]">{t.amount}</td>
+                    <td className="py-3 text-gray-500 font-medium">{t.date}</td>
+                    <td className="py-3">
+                      <span className={`inline-block text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${statusStyle(t.status)}`}>
+                        {t.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {reportData.recent_transactions.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="py-8 text-center text-gray-500 font-medium">No recent transactions found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </SectionCard>
 
-        {/* Top Products */}
-        <SectionCard title="Top Products"
-          action={<span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, cursor: "pointer" }}>View all →</span>}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {topProducts.map((p, i) => (
-              <div key={p.name} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "10px 0",
-                borderBottom: i < topProducts.length - 1 ? "1px solid #f3f4f6" : "none",
-              }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: 6, background: "#f3f4f6",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 11, fontWeight: 700, color: "#6b7280", flexShrink: 0,
-                }}>
+        <SectionCard title="Top Products Performance" subtitle="Best-selling items by revenue and volume">
+          <div className="flex flex-col gap-3 max-h-72 overflow-y-auto pr-1">
+            {reportData.top_products.map((p, i) => (
+              <div key={p.name} className="flex items-center gap-3 p-2 rounded-xl bg-[#FAF8F5] border border-[#F0ECE1]">
+                <div className="w-8 h-8 rounded-lg bg-white border border-[#E8E3D8] flex items-center justify-center text-xs font-black text-[#1E2A2E] shrink-0">
                   {String(i + 1).padStart(2, "0")}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: "#9ca3af" }}>{p.category}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-black text-[#1E2A2E] truncate">{p.name}</div>
+                  <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{p.category}</div>
                 </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{p.revenue}</div>
-                  <div style={{ fontSize: 11, color: "#9ca3af" }}>{p.sold} sold</div>
+                <div className="text-right shrink-0">
+                  <div className="text-xs font-black text-[#1E2A2E]">{p.revenue}</div>
+                  <div className="text-[10px] font-bold text-gray-500">{p.sold} sold</div>
                 </div>
-                <div style={{ flexShrink: 0 }}>
-                  {p.trend === "up" ? <IconTrendUp /> : <IconTrendDown />}
+                <div className={`p-1.5 rounded-lg shrink-0 ${p.trend === "up" ? "bg-[#E4F0E7] text-[#2F6844]" : "bg-[#FCE8E6] text-[#C53030]"}`}>
+                  {p.trend === "up" ? <LuTrendingUp size={14} /> : <LuTrendingDown size={14} />}
                 </div>
               </div>
             ))}
+            {reportData.top_products.length === 0 && (
+              <div className="text-xs text-gray-500 text-center py-8 font-medium">No top products available.</div>
+            )}
           </div>
         </SectionCard>
       </div>
+
     </div>
   );
 };

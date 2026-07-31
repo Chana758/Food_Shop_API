@@ -8,23 +8,15 @@ const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
 
-  // ==================== IMAGE FIX (NEW) ====================
-  // មុខងារសម្រាប់ដោះស្រាយ Path រូបភាពពី Laravel Storage
-  // - គ្មាន path → placeholder
-  // - path ចាប់ http → external URL ប្រើដោយផ្ទាល់
-  // - path relative → បន្ថែម Laravel base URL
-  // =========================================================
   const getImageUrl = (imagePath) => {
     if (!imagePath) return '/placeholder-food.jpg';
     if (imagePath.startsWith('http')) return imagePath;
     return `http://127.0.0.1:8000/storage/${imagePath}`;
   };
 
-  // ==================== BUG FIX #1 ====================
-  // Auto-select all items on cart load → subtotal ≠ $0.00 on first render
-  // =====================================================
   useEffect(() => {
-    const currentUser = localStorage.getItem('currentUser');
+    // ✅ Fix: ប្តូរពី localStorage មក sessionStorage សម្រាប់ check login
+    const currentUser = sessionStorage.getItem('currentUser');
     if (!currentUser) {
       navigate('/login');
       return;
@@ -37,13 +29,12 @@ const Cart = () => {
     if (storedCart) {
       const parsed = JSON.parse(storedCart);
       setCartItems(parsed);
-      // Auto-select all items so summary shows real total immediately
       const allKeys = parsed.map(item => `${item.id}-${item.type}`);
       setSelectedItems(allKeys);
     }
   };
 
-  // ==================== SELECTION LOGIC ====================
+  // ======= SELECTION LOGIC ========
 
   const toggleItemSelection = (itemId, itemType) => {
     const itemKey = `${itemId}-${itemType}`;
@@ -71,7 +62,7 @@ const Cart = () => {
     return cartItems.length > 0 && selectedItems.length === cartItems.length;
   };
 
-  // ==================== QUANTITY LOGIC ====================
+  // ====== QUANTITY LOGIC =======
 
   const updateQuantity = (itemId, itemType, newQuantity) => {
     if (newQuantity < 1) return;
@@ -90,7 +81,6 @@ const Cart = () => {
     if (!isNaN(numValue) && numValue > 0) {
       updateQuantity(itemId, itemType, numValue);
     } else if (value === '') {
-      // Allow empty string temporarily while user types
       const updatedCart = cartItems.map(item =>
         item.id === itemId && item.type === itemType
           ? { ...item, quantity: '' }
@@ -101,13 +91,12 @@ const Cart = () => {
   };
 
   const handleQuantityBlur = (itemId, itemType, currentQty) => {
-    // Reset to 1 if user leaves input blank or invalid
     if (currentQty === '' || currentQty < 1) {
       updateQuantity(itemId, itemType, 1);
     }
   };
 
-  // ==================== REMOVE / CLEAR ====================
+  // ===== REMOVE / CLEAR ========
 
   const removeFromCart = (itemId, itemType) => {
     const updatedCart = cartItems.filter(
@@ -115,7 +104,6 @@ const Cart = () => {
     );
     setCartItems(updatedCart);
     localStorage.setItem('cart', JSON.stringify(updatedCart));
-    // Also remove from selection state
     const itemKey = `${itemId}-${itemType}`;
     setSelectedItems(prev => prev.filter(key => key !== itemKey));
     window.dispatchEvent(new Event('cartUpdated'));
@@ -124,16 +112,13 @@ const Cart = () => {
   const clearCart = () => {
     if (window.confirm('Are you sure you want to clear your entire cart?')) {
       setCartItems([]);
-      setSelectedItems([]); // BUG FIX: also reset selection
+      setSelectedItems([]);
       localStorage.removeItem('cart');
       window.dispatchEvent(new Event('cartUpdated'));
     }
   };
 
-  // ==================== BUG FIX #2: PRICE CALCULATIONS ====================
-  // - Delivery fee only applies when subtotal > 0 AND items are selected
-  // - FREE delivery unlocks at $20+
-  // =========================================================================
+  // ==== PRICE CALCULATIONS ======
 
   const calculateSubtotal = () => {
     const subtotal = cartItems
@@ -149,7 +134,7 @@ const Cart = () => {
   const getDeliveryFee = () => {
     const subtotal = parseFloat(calculateSubtotal());
     if (subtotal <= 0 || selectedItems.length === 0) return 0;
-    if (subtotal >= 20) return 0; // free delivery threshold
+    if (subtotal >= 20) return 0;
     return 2.0;
   };
 
@@ -159,7 +144,7 @@ const Cart = () => {
     return (subtotal + delivery).toFixed(2);
   };
 
-  // ==================== CHECKOUT ====================
+  // ==== CHECKOUT =====
 
   const handleProceedToCheckout = () => {
     if (selectedItems.length === 0) {
@@ -170,7 +155,7 @@ const Cart = () => {
     navigate('/checkout');
   };
 
-  // ==================== FREE DELIVERY PROGRESS ====================
+  // ===== FREE DELIVERY PROGRESS =======
 
   const getFreeDeliveryProgress = () => {
     const subtotal = parseFloat(calculateSubtotal());
@@ -183,7 +168,7 @@ const Cart = () => {
     return remaining > 0 ? remaining.toFixed(2) : 0;
   };
 
-  // ==================== EMPTY STATE ====================
+  // === EMPTY STATE ====
 
   if (cartItems.length === 0) {
     return (
@@ -209,14 +194,13 @@ const Cart = () => {
     );
   }
 
-  // Derived values for rendering
   const subtotal = calculateSubtotal();
   const deliveryFee = getDeliveryFee();
   const total = calculateTotal();
   const progress = getFreeDeliveryProgress();
   const remaining = getRemainingForFreeDelivery();
 
-  // ==================== MAIN CART UI ====================
+  // === MAIN CART UI ====
 
   return (
     <div className="w-full min-h-screen bg-[#FDFDFD] pt-32 pb-20 px-6 md:px-14">
@@ -264,14 +248,6 @@ const Cart = () => {
               </span>
             </div>
 
-            {/* ── COMPACT Cart item cards ──
-                ការផ្លាស់ប្តូរ (Changes from original):
-                - padding: p-6 → p-4 (compact)
-                - image: w-32 h-32 → w-20 h-20 (smaller)
-                - layout: flex-col sm:flex-row → flex-row always (tighter)
-                - text sizes reduced slightly
-                - IMAGE FIX: src={getImageUrl(item.image)} + onError fallback
-            */}
             {cartItems.map((item) => (
               <div
                 key={`${item.id}-${item.type}`}
@@ -283,25 +259,19 @@ const Cart = () => {
               >
                 <div className="flex flex-row gap-4 items-center">
 
-                  {/* IMAGE + CHECKBOX — compact w-20 h-20 */}
+                  {/* IMAGE + CHECKBOX */}
                   <div className="relative flex-shrink-0">
                     <div className="w-20 h-20 rounded-0 overflow-hidden bg-gray-50 border border-gray-100">
-                      {/*
-                        IMAGE FIX:
-                        - ប្រើ getImageUrl() ដើម្បីបំប្លែង relative path → Laravel storage URL
-                        - onError → fallback to placeholder if image still fails
-                      */}
                       <img
                         src={getImageUrl(item.image)}
                         alt={item.name}
                         className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-500"
                         onError={(e) => {
-                          e.target.onerror = null; // prevent infinite loop
+                          e.target.onerror = null;
                           e.target.src = '/placeholder-food.jpg';
                         }}
                       />
                     </div>
-                    {/* Checkbox over image corner */}
                     <input
                       type="checkbox"
                       checked={isItemSelected(item.id, item.type)}
@@ -310,26 +280,22 @@ const Cart = () => {
                     />
                   </div>
 
-                  {/* ITEM DETAILS — compact */}
+                  {/* ITEM DETAILS */}
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start gap-2">
                       <div className="min-w-0">
-                        {/* Category — handles string or object shape */}
                         <span className="text-[8px] uppercase font-black tracking-[0.2em] text-[#F58220]">
                           {typeof item.category === 'object'
                             ? item.category?.name
                             : item.category}
                         </span>
-                        {/* Name — truncate if long */}
                         <h3 className="text-sm font-black text-[#2D4A22] uppercase tracking-tight mt-0.5 truncate">
                           {item.name}
                         </h3>
-                        {/* Unit price — NaN guard */}
                         <p className="text-base font-black text-[#2D4A22] mt-0.5">
                           ${(parseFloat(item.price) || 0).toFixed(2)}
                         </p>
                       </div>
-                      {/* Remove button */}
                       <button
                         onClick={() => removeFromCart(item.id, item.type)}
                         className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
@@ -339,9 +305,7 @@ const Cart = () => {
                       </button>
                     </div>
 
-                    {/* Quantity + Line subtotal on same row */}
                     <div className="flex items-center justify-between mt-2">
-                      {/* Quantity stepper */}
                       <div className="flex items-center border border-gray-200 rounded-sm overflow-hidden">
                         <button
                           onClick={() =>
@@ -375,7 +339,6 @@ const Cart = () => {
                         </button>
                       </div>
 
-                      {/* Line-item subtotal — NaN guard */}
                       <div className="text-right">
                         <p className="text-[8px] text-gray-400 font-black uppercase tracking-tighter">
                           Subtotal
@@ -396,16 +359,14 @@ const Cart = () => {
             ))}
           </div>
 
-          {/* ══════════════ RIGHT: ORDER SUMMARY ══════════════ */}
+          {/* ═══ RIGHT: ORDER SUMMARY ═════ */}
           <div className="lg:col-span-4">
             <div className="bg-gray-50 p-8 rounded-sm sticky top-32">
 
-              {/* Summary title */}
               <h2 className="text-xs font-black text-[#2a6a12] uppercase tracking-[0.3em] mb-10 border-b border-gray-200 pb-4 flex items-center gap-2">
                 <MdOutlineReceiptLong size={16} /> Summary
               </h2>
 
-              {/* Price breakdown */}
               <div className="space-y-6 mb-10">
                 <div className="flex justify-between text-[11px] font-bold text-gray-500 uppercase tracking-widest">
                   <span>
@@ -417,7 +378,6 @@ const Cart = () => {
                   <span className="text-[#2D4A22]">${subtotal}</span>
                 </div>
 
-                {/* Delivery fee — FREE / $2.00 / $0.00 */}
                 <div className="flex justify-between text-[11px] font-bold text-gray-500 uppercase tracking-widest">
                   <span className="flex items-center gap-2">
                     <MdDeliveryDining size={16} className="text-[#F58220]" /> Delivery Fee
@@ -435,7 +395,6 @@ const Cart = () => {
                   </span>
                 </div>
 
-                {/* Grand Total */}
                 <div className="border-t border-gray-200 pt-6">
                   <div className="flex justify-between items-end">
                     <span className="text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">
@@ -446,7 +405,6 @@ const Cart = () => {
                 </div>
               </div>
 
-              {/* Checkout Button */}
               <button
                 onClick={handleProceedToCheckout}
                 className="w-full bg-[#2D4A22] text-white py-4 px-6 font-black text-[11px] uppercase tracking-[0.2em] hover:bg-orange-500 transition-all shadow-lg shadow-[#2D4A22]/20 mb-6 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -484,7 +442,6 @@ const Cart = () => {
                     </p>
                   )}
 
-                  {/* Progress bar toward $20 */}
                   <div className="mt-3 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
                     <div
                       className="h-full bg-[#F58220] rounded-full transition-all duration-500"
