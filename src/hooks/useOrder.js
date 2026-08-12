@@ -1,7 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import orderService from '../service/orderService';
+import useEcho from './useEcho';
 
-const STATUS_FLOW = ['pending', 'cooking', 'served', 'paid'];
+/**
+ * FIX: This used to be ['pending', 'cooking', 'served', 'paid'] here,
+ * while ManageOrders.jsx defined its OWN separate copy as just
+ * ['pending', 'cooking', 'served'] (no 'paid'). Two different arrays
+ * with the same name in two files is a drift hazard — and 'paid' was
+ * dead weight here anyway, since the UI never lets an order advance
+ * past 'served' (payment is a separate flow via PaymentController, not
+ * something the kitchen "advances" into). Kept in sync with the
+ * ADMIN_UPDATABLE_STATUSES kitchen workflow on the backend
+ * (OrderController::update): pending → cooking → served.
+ */
+const STATUS_FLOW = ['pending', 'cooking', 'served'];
 
 const useOrder = () => {
   const [orders, setOrders]         = useState([]);
@@ -10,7 +22,6 @@ const useOrder = () => {
   const [error, setError]           = useState(null);
 
   // ── Fetch all orders (admin) ──────────────────────────────────────────────
-  // now calls orderService.getAll() → GET /api/admin/orders
   const fetchOrders = useCallback(async (params = {}) => {
     try {
       setLoading(true);
@@ -42,8 +53,22 @@ const useOrder = () => {
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
-  // ── Advance order status: pending → cooking → served → paid ──────────────
-  //orderService.update() now hits /api/admin/orders/:id
+  // FIX: previously this hook never subscribed to real-time updates at
+  // all, even though the backend already broadcasts OrderStatusChanged /
+  // OrderPaid on the shared 'orders' channel (new orders via
+  // OrderController::store(), status changes, rider assignment, KHQR
+  // payment confirmation). Without this, the Order Management screen
+  // silently went stale until an admin manually clicked "Refresh" —
+  // wasting infrastructure that was already built and working elsewhere
+  // (e.g. the dashboard). Passing orderId = null puts this in
+  // "broadcast-wide" mode: any event on the channel triggers a refetch.
+  useEcho(null, {
+    onAnyChange: () => {
+      fetchOrders();
+    },
+  });
+
+  // ── Advance order status: pending → cooking → served ─────────────────────
   const advanceStatus = async (id) => {
     const order = orders.find(o => o.id === id);
     if (!order) return;
@@ -65,7 +90,6 @@ const useOrder = () => {
   };
 
   // ── Delete order (admin) ─────────────────────────────────────────────────
-  // ✅ FIXED: orderService.remove() now hits /api/admin/orders/:id
   const removeOrder = async (id) => {
     try {
       await orderService.remove(id);

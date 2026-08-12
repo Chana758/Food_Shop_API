@@ -42,14 +42,14 @@ const orderService = {
   },
 
   // PUT /api/admin/orders/:id  (status / notes / table_id)
-  // ✅ FIXED: was /orders/:id  → now /admin/orders/:id
+  // FIXED: was /orders/:id  → now /admin/orders/:id
   update: async (id, payload) => {
     const res = await axios.put(`/admin/orders/${id}`, payload);
     return res.data.data;
   },
 
   // DELETE /api/admin/orders/:id
-  // ✅ FIXED: was /orders/:id  → now /admin/orders/:id
+  // FIXED: was /orders/:id  → now /admin/orders/:id
   remove: async (id) => {
     const res = await axios.delete(`/admin/orders/${id}`);
     return res.data;

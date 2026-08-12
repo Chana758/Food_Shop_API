@@ -18,19 +18,19 @@ import {
 } from "react-icons/lu";
 
 // ── Sub-components styled like Delivery Page ─────
-const StatCard = ({ icon, iconBg, label, value, change, positive, subtext }) => (
-  <div className="bg-white rounded-2xl p-5 flex flex-col justify-between border border-[#E8E3D8] shadow-sm flex-1 min-w-[200px]">
+const StatCard = ({ icon, cardBg, label, value, change, positive, subtext }) => (
+  <div className={`${cardBg} rounded-2xl p-5 flex flex-col justify-between shadow-sm flex-1 min-w-[200px] text-white relative overflow-hidden`}>
     <div className="flex items-center justify-between mb-3">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconBg} text-white shadow-sm`}>
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/15 text-white">
         {icon}
       </div>
-      <span className="text-[10px] font-black uppercase tracking-wider text-gray-500">{label}</span>
+      <span className="text-[10px] font-black uppercase tracking-wider text-white/70">{label}</span>
     </div>
     <div>
-      <div className="text-2xl font-black text-[#1E2A2E] tracking-tight">{value}</div>
+      <div className="text-2xl font-black tracking-tight">{value}</div>
       <div className="flex items-center justify-between mt-1">
-        <span className="text-[11px] font-bold text-gray-500">{subtext}</span>
-        <span className={`text-sm font-black flex items-center gap-0.5 ${positive ? "text-[#2F6844]" : "text-[#C53030]"}`}>
+        <span className="text-[11px] font-bold text-white/60">{subtext}</span>
+        <span className={`text-sm font-black flex items-center gap-0.5 ${positive ? "text-emerald-300" : "text-rose-300"}`}>
           {positive ? <LuTrendingUp size={15} /> : <LuTrendingDown size={15} />}
           {positive ? "+" : ""}{change}%
         </span>
@@ -91,7 +91,7 @@ const Report = () => {
       setLoading(true);
       const token = localStorage.getItem("token") || sessionStorage.getItem("access_token");
       
-      // ✅ តភ្ជាប់ទៅកាន់ Laravel API Endpoint ខាង Backend
+      // connect to Laravel API Endpoint -> Backend
       const response = await axios.get(`http://127.0.0.1:8000/api/admin/reports/stats?period=${selectedPeriod}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -107,7 +107,7 @@ const Report = () => {
   };
 
   return (
-    <div className="bg-[#F8F6F0] min-h-screen p-8 space-y-6 font-sans">
+    <div className="min-h-screen p-8 space-y-6 font-sans" style={{ background: 'var(--page-bg)' }}>
 
       {/* Header Banner */}
       <div className="bg-white rounded-2xl p-6 border border-[#E8E3D8] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -144,11 +144,11 @@ const Report = () => {
         </div>
       </div>
 
-      {/* Stat Cards Row */}
+      {/* Stat Cards Row (solid color state) */}
       <div className="flex gap-4 flex-wrap">
         <StatCard
           icon={<LuDollarSign size={20} />}
-          iconBg="bg-[#2F6844]"
+          cardBg="bg-[#2F6844]"
           label="Total Revenue"
           value={`$${Number(reportData.stats.total_revenue || 0).toLocaleString()}`}
           subtext="Total earnings"
@@ -157,7 +157,7 @@ const Report = () => {
         />
         <StatCard
           icon={<LuShoppingCart size={20} />}
-          iconBg="bg-[#1E2A2E]"
+          cardBg="bg-[#1E2A2E]"
           label="Total Orders"
           value={Number(reportData.stats.total_orders || 0).toLocaleString()}
           subtext="Processed sales"
@@ -166,7 +166,7 @@ const Report = () => {
         />
         <StatCard
           icon={<LuUsers size={20} />}
-          iconBg="bg-[#3B82F6]"
+          cardBg="bg-[#3B82F6]"
           label="New Customers"
           value={Number(reportData.stats.new_customers || 0).toLocaleString()}
           subtext="Registered users"
@@ -175,7 +175,7 @@ const Report = () => {
         />
         <StatCard
           icon={<LuPackage size={20} />}
-          iconBg="bg-[#F59E0B]"
+          cardBg="bg-[#B9791F]"
           label="Avg. Order Value"
           value={`$${Number(reportData.stats.avg_order_value || 0).toLocaleString()}`}
           subtext="Per transaction"

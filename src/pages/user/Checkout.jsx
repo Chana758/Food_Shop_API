@@ -35,8 +35,8 @@ const Checkout = () => {
   const [orderId, setOrderId]                   = useState(null);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
 
-  // ✅ NEW — refs ដើម្បីអាន state ចុងក្រោយក្នុង cleanup/unmount
-  // (closure ធម្មតាក្នុង useEffect cleanup នឹងឃើញតែ state ចាស់ ពេលហៅ)
+  // ✅ refs to read latest state inside cleanup/unmount
+  // (a plain closure in a useEffect cleanup only ever sees stale state)
   const orderIdRef          = useRef(null);
   const paymentConfirmedRef = useRef(false);
 
@@ -64,7 +64,13 @@ const Checkout = () => {
 
   // ─── Load cart from localStorage ──────────────────────────
   useEffect(() => {
-    const user = localStorage.getItem('user') || localStorage.getItem('currentUser');
+    // ✅ FIX: login state was migrated to sessionStorage (see
+    // ProductDetail.jsx's `isBlocked` / `addToCart` checks, which read
+    // sessionStorage.getItem('currentUser')). This screen was still
+    // reading localStorage('user' / 'currentUser'), which meant a
+    // logged-in customer could get redirected to /login here even
+    // though every other page correctly recognized them as logged in.
+    const user = sessionStorage.getItem('currentUser');
     if (!user) { navigate('/login'); return; }
 
     const storedCart     = localStorage.getItem('cart');
@@ -80,9 +86,10 @@ const Checkout = () => {
     setSelectedItems(selected);
   }, [navigate]);
 
-  // ✅ NEW — បោះបង់ order (restore stock) បើនៅ pending
-  // ត្រូវហៅរាល់ពេល user បោះបង់ការទូទាត់ (expire / close / navigate away)
-  // ស្ងាត់ស្ងៀមបើ fail (ឧ. order ត្រូវបានបង់រួចហើយចេញពី poll ចុងក្រោយ — harmless race)
+  // ✅ cancel order (restore stock) if still pending
+  // called whenever the user abandons payment (expire / close / navigate away)
+  // silently no-ops on failure (e.g. order was just paid by a last-second
+  // poll — harmless race)
   const cancelPendingOrder = useCallback(async (oid) => {
     if (!oid) return;
     try {
@@ -93,7 +100,7 @@ const Checkout = () => {
   }, []);
 
   // ─── Countdown timer ──────────────────────────────────────
-  // ✅ FIX: ពេល expire (timeLeft = 0) → cancel order ដើម្បី restore stock
+  // ✅ FIX: on expire (timeLeft = 0) → cancel order to restore stock
   useEffect(() => {
     if (!showPaymentModal || paymentConfirmed) return;
     if (timeLeft <= 0) {
@@ -121,8 +128,9 @@ const Checkout = () => {
     return () => clearInterval(interval);
   }, [showPaymentModal, paymentId, paymentConfirmed]);
 
-  // ✅ NEW — Safety net: បើ component unmount ខណៈ modal នៅតែបើក ហើយមិនទាន់ paid
-  // (ឧ. user ចុច back button, navigate ចេញភ្លាមៗ) → cancel order ដដែល
+  // ✅ Safety net: if component unmounts while modal is still open and
+  // not yet paid (e.g. user hits back button, navigates away abruptly)
+  // → cancel the order the same way
   useEffect(() => {
     return () => {
       if (orderIdRef.current && !paymentConfirmedRef.current) {
@@ -165,7 +173,7 @@ const Checkout = () => {
     setShowErrorModal(true);
   };
 
-  // ✅ NEW — Close button handler: cancel order មុនពេលបិទ modal
+  // ✅ Close button handler: cancel order before closing modal
   const handleCloseModal = () => {
     cancelPendingOrder(orderId);
     setShowPaymentModal(false);

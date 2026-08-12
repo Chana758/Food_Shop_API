@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
@@ -7,26 +6,47 @@ import {
 } from 'react-icons/lu';
 import usePayment from '../../hooks/usePayment';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+/*
+  Palette matched to the Khmer-Fresh admin (see Dashboard / Contacts /
+  Delivery / Categories / Reservations / Reviews): Ink #1E2A2E ·
+  Gold #D99A3D · Herb #3F7D58 · Sky #3B6E91 · Plum #7A4F6D · Chili #B5453B
+*/
+const FONT_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
+const CARD = "bg-white rounded-xl border border-[#E8E3D8] shadow-[0_1px_3px_rgba(30,42,46,0.05)]";
+const PAGE_BG = "var(--page-bg)";
+
+//  Constants
 const STATUS_STYLES = {
-  pending:  'bg-yellow-50 text-yellow-700 border-yellow-200',
-  paid:     'bg-emerald-50 text-emerald-700 border-emerald-200',
-  failed:   'bg-rose-50 text-rose-700 border-rose-200',
-  refunded: 'bg-slate-100 text-slate-600 border-slate-300',
+  pending:  'bg-[#FBEDD9] text-[#8A5A12] border-[#F1D9AE]',
+  paid:     'bg-[#E4F0E7] text-[#2F6844] border-[#C7E0CD]',
+  failed:   'bg-[#F5E1DE] text-[#8C3327] border-[#EBC7C1]',
+  refunded: 'bg-[#F1EFE9] text-[#6B6259] border-[#E3DFD3]',
 };
 
 const METHOD_LABELS = { cash: 'Cash', khqr: 'KHQR', card: 'Card' };
 const FILTERS = ['all', 'pending', 'paid', 'refunded', 'failed'];
-const STORAGE_BASE = 'http://127.0.0.1:8000/storage/';
 
-// ── Modal Wrapper ─────────────────────────────────────────────────────────────
+//  FIX: was hardcoded to 'http://127.0.0.1:8000/storage/', which only
+// ever works on a developer's own machine. Any receipt image would
+// silently 404 for every other admin, and break entirely as soon as the
+// app was deployed to a real server (Reverb / API domain won't be
+// 127.0.0.1 there). Now derived from the same API base URL the rest of
+// the app already uses (see src/api/axios.js / VITE_API_BASE_URL),
+// falling back to the old local dev address only if that env var is
+// missing, so local development still works out of the box.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
+const STORAGE_BASE = `${API_BASE_URL.replace(/\/$/, '')}/storage/`;
+
+const ITEMS_PER_PAGE = 10;
+
+// Modal Wrapper 
 const Modal = ({ onClose, children }) => (
   <div
-    className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center p-4 z-50"
+    className="fixed inset-0 bg-[#1E2A2E]/60 backdrop-blur-2xs flex items-center justify-center p-4 z-50"
     onClick={onClose}
   >
     <div
-      className="bg-white rounded-xl p-6 w-full max-w-lg shadow-2xl border-2 border-slate-300 max-h-[90vh] overflow-y-auto"
+      className="bg-white rounded-xl p-6 w-full max-w-lg shadow-2xl border border-[#E8E3D8] max-h-[90vh] overflow-y-auto"
       onClick={e => e.stopPropagation()}
     >
       {children}
@@ -34,7 +54,7 @@ const Modal = ({ onClose, children }) => (
   </div>
 );
 
-// ── Main Component ────────────────────────────────────────────────────────────
+//  Main Component 
 const PaymentManagement = () => {
   const { searchTerm = '' } = useOutletContext() || {};
 
@@ -48,8 +68,9 @@ const PaymentManagement = () => {
   const [deleting,  setDeleting]        = useState(null);
   const [submitting, setSubmitting]     = useState(false);
   const [toastMsg,  setToastMsg]        = useState(null);
+  const [currentPage, setCurrentPage]   = useState(1);
 
-  // ── Filter & Search ───────────────────────────────────────────────────────
+  // Filter & Search 
   const filtered = payments.filter(p => {
     const matchesFilter = activeFilter === 'all' || p.status === activeFilter;
     const matchesSearch = 
@@ -59,6 +80,14 @@ const PaymentManagement = () => {
     return matchesFilter && matchesSearch;
   });
 
+  const totalPages   = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const pagedPayments = filtered.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  React.useEffect(() => { setCurrentPage(1); }, [activeFilter, searchTerm]);
+
   const counts = payments.reduce(
     (acc, p) => ({ ...acc, [p.status]: (acc[p.status] || 0) + 1 }), {}
   );
@@ -67,13 +96,13 @@ const PaymentManagement = () => {
     .filter(p => p.status === 'paid')
     .reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
 
-  // ── Toast helper ──────────────────────────────────────────────────────────
+  // Toast helper
   const showToast = (msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  // ── Confirm ───────────────────────────────────────────────────────────────
+  //Confirm
   const handleConfirm = async (id) => {
     try {
       await confirmPayment(id);
@@ -112,15 +141,15 @@ const PaymentManagement = () => {
   // ── Loading state ─────────────────────────────────────────────────────────
   if (loading) return (
     <div className="p-8 flex flex-col items-center justify-center min-h-[300px] gap-3">
-      <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
-      <p className="text-xs font-black uppercase tracking-widest text-slate-400">Loading payments...</p>
+      <div className="w-8 h-8 border-4 border-[#E8E3D8] border-t-[#1E2A2E] rounded-full animate-spin" />
+      <p className="text-xs font-black uppercase tracking-widest text-[#9AA0A0]">Loading payments...</p>
     </div>
   );
 
   if (error) return (
-    <div className="p-8 text-center text-rose-500 font-bold text-xs uppercase tracking-wider">
+    <div className="p-8 text-center text-[#B5453B] font-bold text-xs uppercase tracking-wider">
       {error}
-      <button onClick={fetchPayments} className="ml-3 underline text-slate-500 hover:text-slate-900 cursor-pointer">
+      <button onClick={fetchPayments} className="ml-3 underline text-[#5B6B6F] hover:text-[#1E2A2E] cursor-pointer">
         Retry
       </button>
     </div>
@@ -128,22 +157,22 @@ const PaymentManagement = () => {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="p-6 md:p-8 bg-slate-100 min-h-screen space-y-6 relative">
+    <div className="p-6 md:p-8 min-h-screen space-y-6 relative" style={{ background: PAGE_BG }}>
 
       {/* ── Toast Notification ──────────────────────────────────────────── */}
       {toastMsg && (
-        <div className="fixed top-6 right-6 z-[999] bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl text-xs font-bold uppercase tracking-wider animate-fade-in border border-slate-700">
+        <div className="fixed top-6 right-6 z-[999] bg-[#1E2A2E] text-white px-5 py-3 rounded-xl shadow-2xl text-xs font-bold uppercase tracking-wider animate-fade-in border border-[#2A3B3F]">
           {toastMsg}
         </div>
       )}
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border-2 border-slate-300 p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className={`${CARD} p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4`}>
         <div>
-          <h1 className="text-sm font-black text-slate-900 uppercase tracking-wide">Payment Management</h1>
-          <p className="text-xs text-slate-500 font-semibold mt-0.5">Track and verify customer invoices</p>
+          <h1 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">Payment Management</h1>
+          <p className="text-xs text-[#8B9296] font-semibold mt-0.5">Track and verify customer invoices</p>
           {lastUpdated && (
-            <p className="text-[10px] text-slate-400 font-bold mt-1 flex items-center gap-1">
+            <p className="text-[10px] text-[#9AA0A0] font-bold mt-1 flex items-center gap-1">
               <LuClock size={11} /> Auto-refresh — Last: {lastUpdated.toLocaleTimeString()}
             </p>
           )}
@@ -151,39 +180,39 @@ const PaymentManagement = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={fetchPayments}
-            className="bg-white border-2 border-slate-300 text-slate-700 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-50 transition cursor-pointer shadow-sm flex items-center gap-2"
+            className="bg-white border border-[#E8E3D8] text-[#5B6B6F] px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#FBF9F5] transition cursor-pointer shadow-sm flex items-center gap-2"
           >
             <LuRefreshCw size={14} /> Refresh
           </button>
         </div>
       </div>
 
-      {/* ── STATS CARDS ─────────────────────────────────────────────────── */}
+      {/* ── STATS CARDS — bold solid fills ─────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border-2 border-slate-300 p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
+        <div className="bg-[#B5453B] rounded-xl p-5 shadow-[0_4px_14px_rgba(30,42,46,0.12)] relative overflow-hidden flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">PENDING INVOICES</p>
-              <h2 className="text-3xl font-black text-slate-900 mb-2">{pendingCount}</h2>
+              <p className="text-[10px] font-black uppercase text-white/70 tracking-wider mb-2">PENDING INVOICES</p>
+              <h2 className="text-3xl font-black text-white mb-2">{pendingCount}</h2>
             </div>
-            <div className="bg-yellow-50 p-3 rounded-xl text-yellow-700 border border-yellow-100 shadow-2xs">
+            <div className="bg-white/20 p-3 rounded-xl text-white">
               <LuBell size={20} />
             </div>
           </div>
-          <p className="text-xs font-bold text-yellow-700">Awaiting confirmation</p>
+          <p className="text-xs font-bold text-[#F3D4D0]">Awaiting confirmation</p>
         </div>
 
-        <div className="bg-white rounded-xl border-2 border-slate-300 p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
+        <div className="bg-[#3F7D58] rounded-xl p-5 shadow-[0_4px_14px_rgba(30,42,46,0.12)] relative overflow-hidden flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">TOTAL REVENUE (PAID)</p>
-              <h2 className="text-3xl font-black text-emerald-600 mb-2">${totalRevenue.toFixed(2)}</h2>
+              <p className="text-[10px] font-black uppercase text-white/70 tracking-wider mb-2">TOTAL REVENUE (PAID)</p>
+              <h2 className="text-3xl font-black text-white mb-2">${totalRevenue.toFixed(2)}</h2>
             </div>
-            <div className="bg-emerald-50 p-3 rounded-xl text-emerald-700 border border-emerald-100 shadow-2xs">
+            <div className="bg-white/20 p-3 rounded-xl text-white">
               <LuDollarSign size={20} />
             </div>
           </div>
-          <p className="text-xs font-bold text-emerald-700">Verified transactions</p>
+          <p className="text-xs font-bold text-[#CFE7D7]">Verified transactions</p>
         </div>
       </div>
 
@@ -195,27 +224,27 @@ const PaymentManagement = () => {
             onClick={() => setActiveFilter(f)}
             className={`px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider whitespace-nowrap transition cursor-pointer shadow-2xs border ${
               activeFilter === f
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+                ? 'bg-[#1E2A2E] text-white border-[#1E2A2E]'
+                : 'bg-white border-[#E8E3D8] text-[#5B6B6F] hover:bg-[#FBF9F5]'
             }`}
           >
             {f}
             {f !== 'all' && counts[f] > 0 && (
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] ${activeFilter === f ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600'}`}>
+              <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] ${activeFilter === f ? 'bg-white/20 text-white' : 'bg-[#F1EFE9] text-[#5B6B6F]'}`}>
                 {counts[f]}
               </span>
             )}
             {f === 'pending' && pendingCount > 0 && activeFilter !== 'pending' && (
-              <span className="ml-1 inline-block w-2 h-2 bg-rose-500 rounded-full" />
+              <span className="ml-1 inline-block w-2 h-2 bg-[#B5453B] rounded-full" />
             )}
           </button>
         ))}
       </div>
 
       {/* ── Payments Table ───────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm border-2 border-slate-300 overflow-hidden">
+      <div className={`${CARD} overflow-hidden`}>
         <table className="w-full text-left border-collapse">
-          <thead className="bg-slate-50 text-slate-600 text-[11px] font-black uppercase tracking-wider border-b-2 border-slate-300">
+          <thead className="bg-[#FBF9F5] text-[#8B9296] text-[11px] font-black uppercase tracking-wider border-b border-[#EFEBE2]">
             <tr>
               <th className="px-5 py-3 w-16">ID</th>
               <th className="px-5 py-3 w-20">Order</th>
@@ -227,30 +256,30 @@ const PaymentManagement = () => {
               <th className="px-5 py-3 text-center w-40">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
-            {filtered.map(payment => (
+          <tbody className="divide-y divide-[#EFEBE2]">
+            {pagedPayments.map(payment => (
               <tr
                 key={payment.id}
-                className={`hover:bg-slate-50/80 transition-colors ${payment.status === 'pending' ? 'bg-yellow-50/20' : ''}`}
+                className={`hover:bg-[#FBF9F5] transition-colors ${payment.status === 'pending' ? 'bg-[#FBEDD9]/20' : ''}`}
               >
-                <td className="px-5 py-3.5 font-black text-xs text-slate-400">#{payment.id}</td>
-                <td className="px-5 py-3.5 font-bold text-xs text-slate-500">#{payment.order_id}</td>
-                <td className="px-5 py-3.5 font-bold text-xs text-slate-900">{payment.user?.name ?? '—'}</td>
-                <td className="px-5 py-3.5 font-black text-xs text-emerald-700">
+                <td className="px-5 py-3.5 font-black text-xs text-[#C4C0B4]">#{payment.id}</td>
+                <td className="px-5 py-3.5 font-bold text-xs text-[#9AA0A0]">#{payment.order_id}</td>
+                <td className="px-5 py-3.5 font-bold text-xs text-[#1E2A2E]">{payment.user?.name ?? '—'}</td>
+                <td className="px-5 py-3.5 font-black text-xs text-[#2F6844]">
                   ${Number(payment.amount ?? 0).toFixed(2)}
                 </td>
-                <td className="px-5 py-3.5 text-slate-600 text-xs font-bold uppercase">
+                <td className="px-5 py-3.5 text-[#5B6B6F] text-xs font-bold uppercase">
                   {METHOD_LABELS[payment.method] ?? payment.method}
                 </td>
                 <td className="px-5 py-3.5">
-                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-md border uppercase tracking-widest shadow-2xs ${STATUS_STYLES[payment.status] ?? STATUS_STYLES.pending}`}>
+                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-md border uppercase tracking-widest ${STATUS_STYLES[payment.status] ?? STATUS_STYLES.pending}`}>
                     {payment.status}
                   </span>
                 </td>
-                <td className="px-5 py-3.5 text-slate-500 text-xs font-medium">
+                <td className="px-5 py-3.5 text-[#8B9296] text-xs font-medium">
                   {payment.paid_at
                     ? new Date(payment.paid_at).toLocaleString()
-                    : <span className="text-slate-300">—</span>
+                    : <span className="text-[#C4C0B4]">—</span>
                   }
                 </td>
                 <td className="px-5 py-3.5">
@@ -258,7 +287,7 @@ const PaymentManagement = () => {
                     {/* View details */}
                     <button
                       onClick={() => setViewing(payment)}
-                      className="p-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg cursor-pointer transition shadow-2xs"
+                      className="p-2 bg-white border border-[#E8E3D8] hover:bg-[#FBF9F5] text-[#5B6B6F] rounded-lg cursor-pointer transition shadow-2xs"
                       title="View details"
                     >
                       <LuEye size={13} />
@@ -268,7 +297,7 @@ const PaymentManagement = () => {
                     {payment.status === 'pending' && (
                       <button
                         onClick={() => handleConfirm(payment.id)}
-                        className="p-2 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 text-emerald-700 rounded-lg cursor-pointer transition shadow-2xs"
+                        className="p-2 bg-[#E4F0E7] border border-[#C7E0CD] hover:bg-[#D3E7D9] text-[#2F6844] rounded-lg cursor-pointer transition shadow-2xs"
                         title="Confirm payment"
                       >
                         <LuCircleCheck size={13} />
@@ -279,7 +308,7 @@ const PaymentManagement = () => {
                     {payment.status === 'paid' && (
                       <button
                         onClick={() => handleRefund(payment.id)}
-                        className="p-2 bg-amber-50 border border-amber-300 hover:bg-amber-100 text-amber-700 rounded-lg cursor-pointer transition shadow-2xs"
+                        className="p-2 bg-[#FBEDD9] border border-[#F1D9AE] hover:bg-[#F6E2C0] text-[#8A5A12] rounded-lg cursor-pointer transition shadow-2xs"
                         title="Refund payment"
                       >
                         <LuUndo size={13} />
@@ -289,7 +318,7 @@ const PaymentManagement = () => {
                     {/* Delete */}
                     <button
                       onClick={() => setDeleting(payment)}
-                      className="p-2 bg-white border border-rose-300 hover:bg-rose-50 text-rose-600 rounded-lg cursor-pointer transition shadow-2xs"
+                      className="p-2 bg-white border border-[#EBC7C1] hover:bg-[#F5E1DE] text-[#B5453B] rounded-lg cursor-pointer transition shadow-2xs"
                       title="Delete"
                     >
                       <LuTrash2 size={13} />
@@ -301,23 +330,56 @@ const PaymentManagement = () => {
 
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="text-center py-12 text-slate-500 font-bold text-xs uppercase tracking-wider">
+                <td colSpan={8} className="text-center py-12 text-[#9AA0A0] font-bold text-xs uppercase tracking-wider">
                   {searchTerm ? `No payments match "${searchTerm}"` : 'No payment transactions found.'}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+
+        {/* ── PAGINATION ── */}
+        {totalPages > 1 && (
+          <div className="p-3 flex justify-center items-center gap-1.5 border-t border-[#EFEBE2] bg-[#FBF9F5]">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 h-8 rounded-lg font-bold text-xs transition cursor-pointer border border-[#E8E3D8] bg-white text-[#5B6B6F] hover:bg-[#F3F0E9] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Prev
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentPage(i + 1)}
+                className={`w-8 h-8 rounded-lg font-bold text-xs transition cursor-pointer border shadow-2xs ${
+                  currentPage === i + 1
+                    ? "bg-[#1E2A2E] text-white border-[#1E2A2E]"
+                    : "bg-white border-[#E8E3D8] text-[#5B6B6F] hover:bg-[#FBF9F5]"
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 h-8 rounded-lg font-bold text-xs transition cursor-pointer border border-[#E8E3D8] bg-white text-[#5B6B6F] hover:bg-[#F3F0E9] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── VIEW Modal ───────────────────────────────────────────────────── */}
       {viewing && (
         <Modal onClose={() => setViewing(null)}>
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-            <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">
+          <div className="flex items-center justify-between pb-3 border-b border-[#EFEBE2]">
+            <h2 className="text-xs font-black uppercase text-[#1E2A2E] tracking-wider">
               Payment Details #{viewing.id}
             </h2>
-            <button onClick={() => setViewing(null)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+            <button onClick={() => setViewing(null)} className="text-[#9AA0A0] hover:text-[#1E2A2E] cursor-pointer">
               <LuX size={16} />
             </button>
           </div>
@@ -333,9 +395,9 @@ const PaymentManagement = () => {
               { label: 'Paid At',     value: viewing.paid_at ? new Date(viewing.paid_at).toLocaleString() : '—' },
               { label: 'Created At',  value: new Date(viewing.created_at).toLocaleString() },
             ].map(({ label, value }) => (
-              <div key={label} className="flex justify-between items-center py-1.5 border-b border-slate-100">
-                <span className="text-[10px] font-black uppercase text-slate-400">{label}</span>
-                <span className={`font-bold uppercase ${label === 'Status' ? `px-2 py-0.5 rounded text-[10px] border ${STATUS_STYLES[value] ?? ''}` : 'text-slate-900'}`}>
+              <div key={label} className="flex justify-between items-center py-1.5 border-b border-[#F1EFE9]">
+                <span className="text-[10px] font-black uppercase text-[#9AA0A0]">{label}</span>
+                <span className={`font-bold uppercase ${label === 'Status' ? `px-2 py-0.5 rounded text-[10px] border ${STATUS_STYLES[value] ?? ''}` : 'text-[#1E2A2E]'}`}>
                   {value}
                 </span>
               </div>
@@ -344,20 +406,20 @@ const PaymentManagement = () => {
             {/* ── Receipt Image ── */}
             {viewing.receipt_image && (
               <div className="pt-3">
-                <span className="block text-[10px] font-black uppercase text-slate-400 mb-2">
+                <span className="block text-[10px] font-black uppercase text-[#9AA0A0] mb-2">
                   KHQR Receipt Screenshot
                 </span>
                 <img
                   src={`${STORAGE_BASE}${viewing.receipt_image}`}
                   alt="Payment Receipt"
-                  className="w-full rounded-lg border-2 border-slate-300 shadow-sm object-contain max-h-[250px] bg-slate-50"
+                  className="w-full rounded-lg border border-[#E8E3D8] shadow-sm object-contain max-h-[250px] bg-[#FBF9F5]"
                   onError={e => {
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'flex';
                   }}
                 />
                 <div
-                  className="hidden items-center justify-center h-20 bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 text-xs font-bold uppercase"
+                  className="hidden items-center justify-center h-20 bg-[#FBF9F5] border-2 border-dashed border-[#E8E3D8] rounded-lg text-[#9AA0A0] text-xs font-bold uppercase"
                 >
                   Receipt image not found
                 </div>
@@ -367,17 +429,17 @@ const PaymentManagement = () => {
             {/* ── Order Items ── */}
             {viewing.order?.items?.length > 0 && (
               <div className="pt-2">
-                <span className="block text-[10px] font-black uppercase text-slate-400 mb-2">
+                <span className="block text-[10px] font-black uppercase text-[#9AA0A0] mb-2">
                   Order Items
                 </span>
-                <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 space-y-2">
+                <div className="bg-[#FBF9F5] rounded-lg border border-[#E8E3D8] p-3 space-y-2">
                   {viewing.order.items.map(item => (
                     <div
                       key={item.id}
-                      className="flex justify-between text-xs font-bold text-slate-700 pb-1.5 border-b border-slate-200 last:border-0 last:pb-0"
+                      className="flex justify-between text-xs font-bold text-[#3A4548] pb-1.5 border-b border-[#EFEBE2] last:border-0 last:pb-0"
                     >
                       <span>{item.product?.name ?? `#${item.product_id}`} × {item.quantity}</span>
-                      <span className="text-emerald-700">${Number(item.subtotal ?? 0).toFixed(2)}</span>
+                      <span className="text-[#2F6844]">${Number(item.subtotal ?? 0).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -386,18 +448,18 @@ const PaymentManagement = () => {
           </div>
 
           {/* Action buttons inside modal */}
-          <div className="flex gap-2.5 pt-4 mt-2 border-t border-slate-200">
+          <div className="flex gap-2.5 pt-4 mt-2 border-t border-[#EFEBE2]">
             {viewing.status === 'pending' && (
               <button
                 onClick={() => { handleConfirm(viewing.id); setViewing(null); }}
-                className="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-emerald-700 transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                className="flex-1 bg-[#3F7D58] text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-[#35674A] transition cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
               >
                 <LuCircleCheck size={14} /> Confirm Payment
               </button>
             )}
             <button
               onClick={() => setViewing(null)}
-              className="flex-1 bg-slate-900 text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-slate-800 transition cursor-pointer shadow-sm"
+              className="flex-1 bg-[#1E2A2E] text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-[#2A3B3F] transition cursor-pointer shadow-sm"
             >
               Close
             </button>
@@ -408,29 +470,29 @@ const PaymentManagement = () => {
       {/* ── DELETE Confirm Modal ─────────────────────────────────────────── */}
       {deleting && (
         <Modal onClose={() => setDeleting(null)}>
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-            <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">Delete Payment</h2>
-            <button onClick={() => setDeleting(null)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+          <div className="flex items-center justify-between pb-3 border-b border-[#EFEBE2]">
+            <h2 className="text-xs font-black uppercase text-[#1E2A2E] tracking-wider">Delete Payment</h2>
+            <button onClick={() => setDeleting(null)} className="text-[#9AA0A0] hover:text-[#1E2A2E] cursor-pointer">
               <LuX size={16} />
             </button>
           </div>
           <div className="py-4 space-y-1 text-xs">
-            <p className="text-slate-700 font-bold">
-              Are you sure you want to delete <span className="font-black text-slate-900">Payment #{deleting.id}</span>?
+            <p className="text-[#3A4548] font-bold">
+              Are you sure you want to delete <span className="font-black text-[#1E2A2E]">Payment #{deleting.id}</span>?
             </p>
-            <p className="text-slate-400 font-semibold">This action cannot be undone.</p>
+            <p className="text-[#9AA0A0] font-semibold">This action cannot be undone.</p>
           </div>
           <div className="flex gap-2.5 pt-2">
             <button
               onClick={() => setDeleting(null)}
-              className="flex-1 py-2.5 border-2 border-slate-300 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-100 cursor-pointer text-slate-700 transition"
+              className="flex-1 py-2.5 border border-[#E8E3D8] rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-[#FBF9F5] cursor-pointer text-[#5B6B6F] transition"
             >
               Cancel
             </button>
             <button
               onClick={handleDelete}
               disabled={submitting}
-              className="flex-1 py-2.5 bg-rose-600 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-rose-700 cursor-pointer transition shadow-sm disabled:opacity-50"
+              className="flex-1 py-2.5 bg-[#B5453B] text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-[#9C3B32] cursor-pointer transition shadow-sm disabled:opacity-50"
             >
               {submitting ? 'Deleting...' : 'Delete'}
             </button>

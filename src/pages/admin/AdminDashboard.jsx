@@ -27,6 +27,17 @@ import * as XLSX from 'xlsx';
   Sky (info)          #3B6E91   Plum (messages)     #7A4F6D
   Chili (urgent)      #B5453B
 
+  SIDEBAR TIE-IN — the sidebar is dark navy (#1E2A2E) with a gold krama
+  accent. Two things in the main content now echo that instead of sitting
+  as an unrelated white/cream area next to it:
+    1. The hero "Today's sales" card uses the same dark-navy + gold
+       gradient as the sidebar, so the money metric reads as the page's
+       one "premium" surface — same family as the brand mark.
+    2. The three secondary stat cards are now fully color-filled (not
+       just a tinted icon chip on white) using the same hue family as
+       the status chips/alerts elsewhere on the page, so the card grid
+       doesn't look like a second, disconnected palette.
+
   SPACING SCALE — one card padding for the whole page (p-6). Only the
   hero card (Today's Sales) and the chart get p-8 because they carry
   more visual weight — every other card uses the same p-6 rhythm so
@@ -116,6 +127,38 @@ const ALERT_TONES = {
 // routine confirmations (messages, reservations) trail behind money/logistics.
 const ALERT_PRIORITY = ['urgent', 'delivery', 'payment', 'reservation', 'message'];
 
+// Full-fill palette for the secondary stat cards — bold, saturated brand
+// hues (not light tints) with white text and a translucent icon chip, so
+// each card reads as a solid color block rather than a white card with a
+// hint of color. Same hue family as the status chips elsewhere, just
+// pushed to full saturation.
+const STAT_FILL = {
+  sky:   { bg: 'bg-[#3B6E91]', text: 'text-white', sub: 'text-[#CFE1EC]', chip: 'bg-white/20 text-white', badge: 'bg-white/20 text-white' },
+  herb:  { bg: 'bg-[#3F7D58]', text: 'text-white', sub: 'text-[#CFE7D7]', chip: 'bg-white/20 text-white', badge: 'bg-white/20 text-white' },
+  chili: { bg: 'bg-[#B5453B]', text: 'text-white', sub: 'text-[#F3D4D0]', chip: 'bg-white/20 text-white', badge: 'bg-white/20 text-white' },
+};
+
+// Bold solid fills for the big queue-summary chips (Live order queue /
+// Live delivery queue). Kept separate from STATUS_STYLES / DELIVERY_STATUS_
+// STYLES above, which stay as light pills for small inline tags (order row
+// badges, recent-orders list) — those need to stay quiet next to text,
+// while these chips are meant to read as bold color blocks like the stat
+// cards above them.
+const QUEUE_FILL = {
+  pending: 'bg-[#D99A3D]',
+  cooking: 'bg-[#3B6E91]',
+  served:  'bg-[#7A4F6D]',
+};
+
+const DELIVERY_FILL = {
+  unassigned: 'bg-[#B5453B]',
+  assigned:   'bg-[#3B6E91]',
+  picked_up:  'bg-[#D99A3D]',
+  on_the_way: 'bg-[#C1653D]',
+  delivered:  'bg-[#3F7D58]',
+  failed:     'bg-[#8C3327]',
+};
+
 const EMPTY_STATE = {
   stats: {
     today_sales: 0, yesterday_sales: 0, sales_change_pct: 0,
@@ -137,17 +180,18 @@ const GREETING_BY_HOUR = (hour) => {
 };
 
 // Small decorative accent inspired by the krama — Cambodia's woven checkered
-// scarf. Used once, sparingly, as this page's one signature detail.
-const KramaAccent = ({ className = '' }) => (
-  <svg width="56" height="6" viewBox="0 0 56 6" className={className} aria-hidden="true">
-    {Array.from({ length: 7 }).map((_, i) => (
+// scarf. Same motif as the sidebar logo strip, repeated here (and, wider,
+// as the header divider below) so the two panels read as one product.
+const KramaAccent = ({ className = '', count = 7 }) => (
+  <svg width={count * 8} height="6" viewBox={`0 0 ${count * 8} 6`} className={className} aria-hidden="true">
+    {Array.from({ length: count }).map((_, i) => (
       <rect
         key={i}
         x={i * 8}
         width="8"
         height="6"
         fill={i % 2 === 0 ? '#D99A3D' : '#1E2A2E'}
-        opacity={i === 6 ? 0.35 : 1}
+        opacity={i === count - 1 ? 0.35 : 1}
       />
     ))}
   </svg>
@@ -304,7 +348,7 @@ const AdminDashboard = () => {
   alerts.sort((a, b) => ALERT_PRIORITY.indexOf(a.tone) - ALERT_PRIORITY.indexOf(b.tone));
 
   return (
-    <div className="min-h-screen bg-[#FBF9F5]">
+    <div className="min-h-screen bg-[#FBF9F5]" style={{ background: 'var(--page-bg)' }} >
       <main className="p-10 space-y-6">
 
         {/* Header */}
@@ -338,6 +382,15 @@ const AdminDashboard = () => {
               <LuRefreshCw size={14} /> Refresh
             </button>
           </div>
+        </div>
+
+        {/* Header → sidebar bridge: a full-width krama strip in the same
+            dark/gold rhythm as the sidebar logo accent, so the cream content
+            area doesn't read as a separate palette from the navy sidebar. */}
+        <div className="rounded-full overflow-hidden h-[3px] flex">
+          {Array.from({ length: 48 }).map((_, i) => (
+            <div key={i} className="flex-1" style={{ background: i % 2 === 0 ? '#D99A3D' : '#1E2A2E', opacity: i % 2 === 0 ? 0.9 : 0.15 }} />
+          ))}
         </div>
 
         {/* Needs attention — sorted so the one thing that's actually urgent
@@ -390,8 +443,12 @@ const AdminDashboard = () => {
         )}
 
         {/* Stat Cards — Today's Sales is the metric everything else in the
-            business rolls up to, so it gets its own wider hero card instead
-            of competing as one of four equal boxes. */}
+            business rolls up to, so it gets its own wider hero card in the
+            same dark-navy + gold treatment as the sidebar, instead of
+            competing as one of four equal white boxes. The three cards
+            beside it are now fully color-filled (not just a tinted icon
+            chip on white) using the same hue family as the status chips
+            elsewhere on the page, so the whole row reads as one palette. */}
         <div className="grid grid-cols-12 gap-5">
           <div className="col-span-4">
             <HeroStatCard
@@ -406,21 +463,24 @@ const AdminDashboard = () => {
           <div className="col-span-8 grid grid-cols-3 gap-5">
             <StatCard
               icon={<LuClipboardList size={19} />}
-              tint="bg-[#E3EDF3] text-[#2E5975]"
+              fill="sky"
+              badge="Orders"
               title="Orders today"
               value={loading ? '—' : stats.orders_today ?? 0}
               sub="all statuses"
             />
             <StatCard
               icon={<LuUserPlus size={19} />}
-              tint="bg-[#E4F0E7] text-[#2F6844]"
+              fill="herb"
+              badge="Users"
               title="New customers"
               value={loading ? '—' : stats.new_customers_today ?? 0}
               sub="today"
             />
             <StatCard
               icon={<LuPackageX size={19} />}
-              tint="bg-[#F5E1DE] text-[#9C3327]"
+              fill="chili"
+              badge="Alert"
               title="Low stock items"
               value={loading ? '—' : stats.low_stock_count ?? 0}
               sub="needs restock"
@@ -446,12 +506,12 @@ const AdminDashboard = () => {
             </div>
             <div className="grid grid-cols-4 gap-4">
               {[
-                { label: 'Total',     value: reservationStats.total,     tint: 'bg-[#F4F1EA] text-[#5B6B6F]' },
-                { label: 'Pending',   value: reservationStats.pending,   tint: 'bg-[#FBEDD9] text-[#B9791F]' },
-                { label: 'Confirmed', value: reservationStats.confirmed, tint: 'bg-[#E4F0E7] text-[#2F6844]' },
-                { label: 'Today',     value: reservationStats.today,     tint: 'bg-[#E3EDF3] text-[#2E5975]' },
+                { label: 'Total',     value: reservationStats.total,     tint: 'bg-[#1E2A2E] text-white' },
+                { label: 'Pending',   value: reservationStats.pending,   tint: 'bg-[#D99A3D] text-white' },
+                { label: 'Confirmed', value: reservationStats.confirmed, tint: 'bg-[#3F7D58] text-white' },
+                { label: 'Today',     value: reservationStats.today,     tint: 'bg-[#3B6E91] text-white' },
               ].map(s => (
-                <div key={s.label} className={`${s.tint} rounded-xl p-4 text-center`}>
+                <div key={s.label} className={`${s.tint} rounded-xl p-4 text-center shadow-[0_4px_14px_rgba(30,42,46,0.1)]`}>
                   <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">{s.label}</p>
                   <p className="text-2xl font-bold">{s.value ?? 0}</p>
                 </div>
@@ -647,25 +707,30 @@ const AdminDashboard = () => {
   );
 };
 
-// The hero card for Today's Sales — same anatomy as StatCard (icon, title,
-// value, trend) but larger type and a subtle gold-tinted border so it
-// visually anchors the row instead of matching the three cards beside it.
+// The hero card for Today's Sales — same dark-navy + gold treatment as the
+// sidebar (down to the mini krama strip in the corner), so this is the one
+// card that visually "belongs" to the brand panel instead of the cream
+// content area. Bigger type, gold-tinted icon chip, white value text.
 const HeroStatCard = ({ icon, title, value, sub, trendPct, loading }) => {
   const showTrend = typeof trendPct === 'number' && !loading;
   const isUp   = showTrend && trendPct > 0;
   const isDown = showTrend && trendPct < 0;
   return (
-    <div className="h-full bg-white border-[1.5px] border-[#EAD9B4] rounded-2xl p-6 shadow-[0_1px_3px_rgba(30,42,46,0.05)] flex flex-col justify-between">
-      <div className="flex items-center gap-3">
-        <div className="bg-[#FBEDD9] text-[#B9791F] p-3 rounded-xl">{icon}</div>
-        <p className="text-[#9AA0A0] text-[12px] font-semibold">{title}</p>
+    <div
+      className="h-full rounded-2xl p-6 shadow-[0_8px_24px_rgba(30,42,46,0.22)] flex flex-col justify-between relative overflow-hidden"
+      style={{ background: 'linear-gradient(135deg, #1E2A2E 0%, #223339 55%, #2A3B3F 100%)' }}
+    >
+      <div className="flex items-start justify-between">
+        <div className="bg-[#D99A3D]/15 text-[#E8C97A] p-3 rounded-xl border border-[#D99A3D]/30">{icon}</div>
+        <span className="text-[9px] font-bold uppercase tracking-widest bg-white/10 text-[#E8C97A] px-2.5 py-1 rounded-full">Today</span>
       </div>
       <div>
-        <h3 style={FONT_SERIF} className="font-semibold text-[#1E2A2E] text-[34px] leading-none mt-4">{value}</h3>
+        <p className="text-[#B9C2C4] text-[12px] font-semibold mt-4">{title}</p>
+        <h3 style={FONT_SERIF} className="font-semibold text-white text-[34px] leading-none mt-1.5">{value}</h3>
         <div className="flex items-center gap-2 mt-2">
-          <span className="font-medium text-[#B3AFA3] text-[11px]">{sub}</span>
+          <span className="font-medium text-[#8B9296] text-[11px]">{sub}</span>
           {showTrend && (
-            <span className={`flex items-center gap-0.5 text-[11px] font-bold ${isUp ? 'text-[#2F6844]' : isDown ? 'text-[#B5453B]' : 'text-[#9AA0A0]'}`}>
+            <span className={`flex items-center gap-0.5 text-[11px] font-bold ${isUp ? 'text-[#7FC79A]' : isDown ? 'text-[#E8938A]' : 'text-[#8B9296]'}`}>
               {isUp ? <LuArrowUp size={11} /> : isDown ? <LuArrowDown size={11} /> : <LuMinus size={11} />}
               {Math.abs(trendPct).toFixed(1)}%
             </span>
@@ -676,40 +741,54 @@ const HeroStatCard = ({ icon, title, value, sub, trendPct, loading }) => {
   );
 };
 
-const StatCard = ({ icon, tint, title, value, sub, onClick }) => (
-  <div
-    onClick={onClick}
-    className={`h-full ${CARD} p-5 flex items-center justify-between group hover:shadow-[0_4px_16px_rgba(30,42,46,0.08)] transition-shadow ${onClick ? 'cursor-pointer' : ''}`}
-  >
-    <div className="flex items-center gap-3.5">
-      <div className={`${tint} p-3 rounded-xl`}>{icon}</div>
-      <div>
-        <p className="text-[#9AA0A0] text-[12px] font-semibold">{title}</p>
-        <h3 className="font-bold text-[#1E2A2E] text-[21px] mt-0.5">{value}</h3>
-        <span className="font-medium text-[#B3AFA3] text-[11px]">{sub}</span>
+// Secondary stat cards — bold solid-color blocks (icon chip top-left,
+// small uppercase badge pill top-right, big white number below) rather
+// than a white card with a light tint. `fill` picks the hue from
+// STAT_FILL; `badge` is the short corner label (e.g. "Orders", "Alert").
+const StatCard = ({ icon, fill = 'sky', badge, title, value, sub, onClick }) => {
+  const f = STAT_FILL[fill];
+  return (
+    <div
+      onClick={onClick}
+      className={`h-full rounded-2xl p-5 flex flex-col justify-between group shadow-[0_4px_14px_rgba(30,42,46,0.12)] transition-transform ${f.bg} ${onClick ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
+    >
+      <div className="flex items-start justify-between">
+        <div className={`${f.chip} p-2.5 rounded-xl`}>{icon}</div>
+        {badge && (
+          <span className={`text-[9px] font-bold uppercase tracking-widest ${f.badge} px-2.5 py-1 rounded-full`}>
+            {badge}
+          </span>
+        )}
+      </div>
+      <div className="mt-4">
+        <h3 className={`${f.text} font-bold text-[26px] leading-none`}>{value}</h3>
+        <p className={`${f.text} text-[12px] font-semibold mt-1.5 opacity-90`}>{title}</p>
+        <div className="flex items-center justify-between mt-1">
+          <span className={`${f.sub} font-medium text-[11px]`}>{sub}</span>
+          {onClick && <LuArrowUpRight className={`${f.text} opacity-50 group-hover:opacity-90 transition-opacity flex-shrink-0`} size={16} />}
+        </div>
       </div>
     </div>
-    {onClick && <LuArrowUpRight className="text-[#E3DFD3] group-hover:text-[#9AA0A0] transition-colors flex-shrink-0" size={18} />}
-  </div>
-);
+  );
+};
 
 const QueueChip = ({ label, count, icon, styleKey }) => (
-  <div className={`rounded-xl border p-4 flex items-center gap-3 ${STATUS_STYLES[styleKey]}`}>
-    <div className="text-lg">{icon}</div>
+  <div className={`rounded-xl p-4 flex items-center gap-3 shadow-[0_4px_14px_rgba(30,42,46,0.12)] ${QUEUE_FILL[styleKey]}`}>
+    <div className="text-lg text-white/85">{icon}</div>
     <div>
-      <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{label}</p>
-      <p className="text-xl font-bold">{count}</p>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">{label}</p>
+      <p className="text-xl font-bold text-white">{count}</p>
     </div>
   </div>
 );
 
 const DeliveryChip = ({ label, count, styleKey, needsAction }) => (
   <div
-    className={`relative rounded-xl border p-3 text-center ${DELIVERY_STATUS_STYLES[styleKey]}
-      ${needsAction ? 'ring-2 ring-[#C1653D] ring-offset-1 ring-offset-white' : ''}`}
+    className={`relative rounded-xl p-3 text-center shadow-[0_4px_14px_rgba(30,42,46,0.12)] ${DELIVERY_FILL[styleKey]}
+      ${needsAction ? 'ring-2 ring-white ring-offset-2 ring-offset-[#FBF9F5]' : ''}`}
   >
-    <p className="text-[9px] font-bold uppercase tracking-widest opacity-70 mb-1">{label}</p>
-    <p className="text-lg font-bold">{count}</p>
+    <p className="text-[9px] font-bold uppercase tracking-widest text-white/70 mb-1">{label}</p>
+    <p className="text-lg font-bold text-white">{count}</p>
   </div>
 );
 

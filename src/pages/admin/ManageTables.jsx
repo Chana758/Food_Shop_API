@@ -132,7 +132,7 @@ const ManageTables = () => {
   if (error)   return <div className="p-8 text-center text-red-400 font-bold">{error}</div>;
 
   return (
-    <div className="p-8 bg-[#FDFDFD] min-h-screen">
+    <div className="p-8 min-h-screen" style={{ background: 'var(--page-bg)' }}>
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-8">

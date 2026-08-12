@@ -1,8 +1,9 @@
-
-import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
+import { useSettings } from '../../../context/SettingsContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const PAGE_META = {
   '/admin':              { title: 'Dashboard Overview',   placeholder: 'Search menu...' },
@@ -27,20 +28,55 @@ const PAGE_META = {
   '/admin/settings':     { title: 'Settings',             placeholder: 'Search menu...' },
 };
 
+const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const location = useLocation();
+  const navigate = useNavigate();
   const meta = PAGE_META[location.pathname] ?? { title: 'Admin', placeholder: 'Search menu...' };
 
-  // Clear search term ពេលប្ដូរទៅទំព័រផ្សេង
+  const { settings } = useSettings();
+  const { logout }   = useAuth();
+
+  const idleTimerRef = useRef(null);
+
   useEffect(() => {
     setSearchTerm('');
   }, [location.pathname]);
 
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+
+    if (settings.auto_logout === false) return;
+
+    const minutes = parseInt(settings.logout_time, 10) || 30;
+    idleTimerRef.current = setTimeout(() => {
+      logout();
+      navigate('/login');
+    }, minutes * 60 * 1000);
+  }, [settings.auto_logout, settings.logout_time, logout, navigate]);
+
+  useEffect(() => {
+    resetIdleTimer();
+
+    ACTIVITY_EVENTS.forEach(evt => window.addEventListener(evt, resetIdleTimer));
+
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      ACTIVITY_EVENTS.forEach(evt => window.removeEventListener(evt, resetIdleTimer));
+    };
+  }, [resetIdleTimer]);
+
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-100">
+    // ✅ CHANGED — was `bg-slate-100 dark:bg-[#0F1A1D]`. This is the
+    // outermost page canvas visible behind every route, so it now reads
+    // the same --page-bg variable every content page uses. Whichever
+    // Appearance > "Apply Accent Color To" option is active decides
+    // whether this stays neutral or picks up the customer's color.
+    <div style={{ background: 'var(--page-bg)' }} className="flex h-screen overflow-hidden transition-colors duration-300">
       <AdminSidebar collapsed={collapsed} />
 
       <div
@@ -57,7 +93,6 @@ const AdminLayout = () => {
         />
 
         <main className="flex-1 overflow-y-auto">
-          {/* បញ្ជូនទាំង searchTerm និង setSearchTerm ទៅឱ្យ Outlet ដើម្បីឱ្យ ManageOrders និង Favorites អាចយកទៅប្រើបាន */}
           <Outlet context={{ searchTerm, setSearchTerm }} />
         </main>
       </div>

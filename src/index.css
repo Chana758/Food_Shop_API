@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+/* Tailwind v4 dark mode via class strategy — dark: utilities respond to
+   the `.dark` class on <html>, toggled by SettingsContext.jsx based on
+   the `dark_mode` setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Fallback defaults — immediately overwritten by SettingsContext.jsx
+     on mount, once real settings load from the API. Having sane
+     defaults here avoids a flash of unstyled color before that fetch
+     resolves. */
+  --accent: #10b981;
+  --sidebar-bg: #1E2A2E;
+  --header-bg: #ffffff;
+  --header-accent: #1E2A2E;
+  --header-fg: #1e292b;
+  --header-fg-muted: #6b7280;
+  --page-bg: #FBF9F5;
+  --page-accent: #10b981;
+}

@@ -29,6 +29,9 @@ import Register from './pages/auth/Register';
 // ── Admin Guard ──────────────────────────────────────────────────────────────
 import AdminRoute from './components/guards/AdminRoute';
 
+// ── Settings Context ─────────────────────────────────────────────────────────
+import { SettingsProvider } from './context/SettingsContext'; // ✅ NEW
+
 // ── Admin Pages ──────────────────────────────────────────────────────────────
 import AdminDashboard       from './pages/admin/AdminDashboard';
 import ManageOrders         from './pages/admin/ManageOrders';
@@ -44,10 +47,11 @@ import Backup               from './pages/admin/Backup.jsx';
 import Trash                from './pages/admin/Trash.jsx';
 import Report               from './pages/admin/Report.jsx';
 import FavoriteManagement   from './pages/admin/FavoriteManagement.jsx';
-import DeliveryManagement   from './pages/admin/DeliveryManagement.jsx'; 
+import DeliveryManagement   from './pages/admin/DeliveryManagement.jsx';
 import ReservationManagement from './pages/admin/ReservationManagement.jsx';
 import ContactManagement     from './pages/admin/ContactManagement.jsx';
-import ReviewManagement      from './pages/admin/ReviewManagement.jsx'; 
+import ReviewManagement      from './pages/admin/ReviewManagement.jsx';
+
 // ── Menu Pages ───────────────────────────────────────────────────────────────
 import AllMenu           from './pages/user/menu/AllMenu';
 import MenuCategoryDetail from './pages/user/menu/MenuCategoryDetail';
@@ -100,11 +104,16 @@ const App = () => {
         <Route path="/order-history" element={<><Navbar /><OrderHistory /><Footer /></>} />
 
         {/* ── Admin Routes (Protected) ──────────────────────────────────── */}
+        {/* ✅ CHANGED — wrapped in <SettingsProvider> so every admin page
+            (Dashboard, POS, Header, Sidebar, etc.) can call useSettings()
+            and immediately react to whatever was saved in Settings. */}
         <Route
           path="/admin"
           element={
             <AdminRoute>
-              <AdminLayout />
+              <SettingsProvider>
+                <AdminLayout />
+              </SettingsProvider>
             </AdminRoute>
           }
         >
@@ -116,12 +125,11 @@ const App = () => {
           <Route path="pos"        element={<ManagementSaler />} />
           <Route path="orders"     element={<ManageOrders />} />
           <Route path="payments"   element={<PaymentManagement />} />
-
-          {/* NEW — Delivery management page (admin only) */}
           <Route path="delivery"   element={<DeliveryManagement />} />
           <Route path="reservations" element={<ReservationManagement />} />
           <Route path="contacts"   element={<ContactManagement />} />
-           <Route path="reviews"    element={<ReviewManagement />} />
+          <Route path="reviews"    element={<ReviewManagement />} />
+
           {/* Admin-only */}
           <Route path="staff"      element={<StaffManagement />} />
           <Route path="customers"  element={<CustomersManagement />} />

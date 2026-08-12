@@ -16,14 +16,47 @@ import { useAuth } from '../../../context/AuthContext';
   Line (dividers)       #32444A   Gold (active accent)       #D99A3D
   Chili (logout hover)  #B5453B
 
-  Display face is 'Fraunces' for the brand wordmark only, matching the
-  dashboard's page titles. Falls back to Georgia if not loaded:
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+  CHANGED — Live theme support. The sidebar background now reads
+  `var(--sidebar-bg)`, set globally by SettingsContext.jsx from
+  Settings > Appearance & Branding. If the customer chose "Sidebar &
+  Header" as the theme target, this becomes their accent color; if they
+  chose "Page Content" instead, this stays pinned to the fixed navy
+  brand color (#1E2A2E / #161F22 in dark mode) — SettingsContext decides
+  which value the variable holds, this component just consumes it.
+
+  Icon accents (SECTION_TONE), the gold active-state highlight, and text
+  colors are intentionally left as fixed brand tones — only the base
+  background responds to the customer's color choice, so the sidebar
+  never becomes unreadable regardless of which accent is picked.
 */
 const FONT_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
 
-// Same krama motif used on the dashboard header — ties the two surfaces
-// together as one visual identity instead of two unrelated color systems.
+const BrandSeal = ({ size = 44 }) => (
+  <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <circle cx="32" cy="32" r="30" stroke="#D99A3D" strokeOpacity="0.3" strokeWidth="1" />
+    <circle cx="32" cy="32" r="27" fill="#161F22" stroke="#D99A3D" strokeWidth="2" />
+
+    <g fill="#D99A3D">
+      <ellipse cx="14" cy="44" rx="3" ry="5.5" opacity="0.65" transform="rotate(-55 14 44)" />
+      <ellipse cx="11" cy="37" rx="3" ry="5.5" opacity="0.75" transform="rotate(-30 11 37)" />
+      <ellipse cx="9.5" cy="29" rx="3" ry="5.5" opacity="0.85" transform="rotate(-5 9.5 29)" />
+      <ellipse cx="11" cy="21" rx="3" ry="5.5" opacity="0.95" transform="rotate(20 11 21)" />
+      <ellipse cx="50" cy="44" rx="3" ry="5.5" opacity="0.65" transform="rotate(55 50 44)" />
+      <ellipse cx="53" cy="37" rx="3" ry="5.5" opacity="0.75" transform="rotate(30 53 37)" />
+      <ellipse cx="54.5" cy="29" rx="3" ry="5.5" opacity="0.85" transform="rotate(5 54.5 29)" />
+      <ellipse cx="53" cy="21" rx="3" ry="5.5" opacity="0.95" transform="rotate(-20 53 21)" />
+    </g>
+
+    <path d="M32 8 L33.2 11.2 L36.6 11.4 L34 13.6 L34.9 17 L32 15 L29.1 17 L30 13.6 L27.4 11.4 L30.8 11.2 Z" fill="#D99A3D" />
+
+    <g transform="translate(10,10)">
+      <path d="M21 32 C21 32 21 24 18 19 C15 14 10 12 10 12 C10 12 10 20 14 25 C17 29 21 32 21 32Z" fill="#F4E3B8" />
+      <path d="M23 32 C23 32 23 24 26 19 C29 14 34 12 34 12 C34 12 34 20 30 25 C27 29 23 32 23 32Z" fill="#F4E3B8" />
+      <line x1="22" y1="32" x2="22" y2="27" stroke="#161F22" strokeWidth="2" strokeLinecap="round" />
+    </g>
+  </svg>
+);
+
 const KramaAccent = ({ className = '' }) => (
   <svg width="40" height="5" viewBox="0 0 40 5" className={className} aria-hidden="true">
     {Array.from({ length: 5 }).map((_, i) => (
@@ -39,8 +72,15 @@ const KramaAccent = ({ className = '' }) => (
   </svg>
 );
 
-// Grouped sections instead of one flat 16-item list — each label tells you
-// what kind of work lives underneath it, so scanning the nav is faster.
+const SECTION_TONE = {
+  'Overview':          { bg: 'bg-[#332B1E]', ic: 'text-[#D9A94D]' },
+  'Operations':        { bg: 'bg-[#33251C]', ic: 'text-[#E0895A]' },
+  'Engagement':        { bg: 'bg-[#1E2A38]', ic: 'text-[#7BA7E0]' },
+  'Catalog':           { bg: 'bg-[#2A2438]', ic: 'text-[#B08AE0]' },
+  'People & reports':  { bg: 'bg-[#1E332A]', ic: 'text-[#6FBF8C]' },
+  'System':            { bg: 'bg-[#332222]', ic: 'text-[#D97878]' },
+};
+
 const NAV_SECTIONS = [
   {
     label: 'Overview',
@@ -104,28 +144,27 @@ const AdminSidebar = ({ collapsed }) => {
 
   return (
     <div
-      className={`h-screen bg-[#1E2A2E] text-[#A9B2B0] flex flex-col fixed left-0 top-0 z-50
-        border-r border-[#32444A] transition-all duration-300
+      // ✅ CHANGED — was `bg-[#1E2A2E] dark:bg-[#161F22]`, now driven by
+      // the live --sidebar-bg CSS variable (see SettingsContext.jsx).
+      style={{ background: 'var(--sidebar-bg)' }}
+      className={`h-screen text-[#A9B2B0] flex flex-col fixed left-0 top-0 z-50
+        border-r border-[#32444A] transition-colors duration-300
         ${collapsed ? 'w-20' : 'w-72'}`}
     >
       {/* Brand */}
       <div
-        className={`flex items-center border-b border-[#32444A] gap-3
-          ${collapsed ? 'py-5 px-0 justify-center' : 'p-6'}`}
+        className={`flex flex-col items-center border-b border-[#32444A] gap-2.5
+          ${collapsed ? 'py-5 px-0' : 'py-7 px-6'}`}
       >
-        <div className="flex-shrink-0">
-          <svg width="40" height="40" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="44" height="44" rx="9" fill="#28383D" />
-            <path d="M21 32 C21 32 21 24 18 19 C15 14 10 12 10 12 C10 12 10 20 14 25 C17 29 21 32 21 32Z" fill="#F4E3B8" />
-            <path d="M23 32 C23 32 23 24 26 19 C29 14 34 12 34 12 C34 12 34 20 30 25 C27 29 23 32 23 32Z" fill="#F4E3B8" />
-            <line x1="22" y1="32" x2="22" y2="27" stroke="#28383D" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </div>
+        <BrandSeal size={collapsed ? 40 : 56} />
         {!collapsed && (
-          <div className="flex flex-col gap-1.5 min-w-0">
+          <div className="flex flex-col items-center gap-1.5 min-w-0">
             <h1 style={FONT_SERIF} className="text-[#FBF9F5] font-semibold text-[19px] leading-tight tracking-tight truncate">
               Khmer-Fresh
             </h1>
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#D99A3D]">
+              Authentic Taste
+            </p>
             <KramaAccent />
           </div>
         )}
@@ -146,13 +185,14 @@ const AdminSidebar = ({ collapsed }) => {
               <div className="space-y-0.5">
                 {visibleItems.map(item => {
                   const isActive = location.pathname === item.path;
+                  const tone = SECTION_TONE[section.label];
                   return (
                     <Link
                       key={item.name}
                       to={item.path}
                       title={collapsed ? item.name : undefined}
-                      className={`relative flex items-center gap-3 py-2.5 rounded-lg transition-colors duration-150
-                        ${collapsed ? 'px-0 justify-center' : 'px-3'}
+                      className={`group relative flex items-center gap-3 py-2 rounded-lg transition-colors duration-150
+                        ${collapsed ? 'px-0 justify-center' : 'px-2'}
                         ${isActive
                           ? 'bg-[#28383D] text-[#F0CE83]'
                           : 'text-[#9AA5A3] hover:text-[#FBF9F5] hover:bg-[#243338]'}`}
@@ -160,7 +200,10 @@ const AdminSidebar = ({ collapsed }) => {
                       {isActive && !collapsed && (
                         <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r bg-[#D99A3D]" />
                       )}
-                      <span className={`text-[17px] flex-shrink-0 ${isActive ? 'text-[#D99A3D]' : 'text-[#7C8A8D]'}`}>
+                      <span
+                        className={`w-8 h-8 flex items-center justify-center text-[17px] flex-shrink-0 transition-all duration-150
+                          ${isActive ? 'text-[#D99A3D]' : `${tone.ic} group-hover:brightness-125`}`}
+                      >
                         {item.icon}
                       </span>
                       {!collapsed && (

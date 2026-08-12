@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import useBackup from '../../hooks/useBackup';
 
-// ── SVG ICON ──────
 const Icon = ({ d, size = 18, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -16,16 +15,12 @@ const I = {
   refresh:   "M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15",
   database:  "M12 2C6.48 2 2 4.24 2 7s4.48 5 10 5 10-2.24 10-5-4.48-5-10-5zM2 7v5c0 2.76 4.48 5 10 5s10-2.24 10-5V7M2 12v5c0 2.76 4.48 5 10 5s10-2.24 10-5v-5",
   shield:    "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
-  alert:     "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01",
   cloud:     "M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z",
   folder:    "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z",
 };
 
-const Card = ({ title, subtitle, icon, iconBg, children, style = {} }) => (
-  <div style={{
-    background: '#ffffff', borderRadius: 12, border: '1px solid #e7e2db',
-    boxShadow: '0 1px 3px rgba(0,0,0,.03)', overflow: 'hidden', ...style,
-  }}>
+const Card = ({ title, subtitle, icon, iconBg, children }) => (
+  <div style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #e7e2db', boxShadow: '0 1px 3px rgba(0,0,0,.03)', overflow: 'hidden' }}>
     {(title || icon) && (
       <div style={{ padding: '18px 24px 0', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
         {icon && (
@@ -43,12 +38,30 @@ const Card = ({ title, subtitle, icon, iconBg, children, style = {} }) => (
   </div>
 );
 
+const StatCard = ({ title, subtitle, icon, cardBg, value, valueSub }) => (
+  <div style={{ background: cardBg, borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,.08)', overflow: 'hidden', color: '#fff' }}>
+    <div style={{ padding: '18px 24px 0', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+      <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Icon d={icon} size={20} color="#fff" />
+      </div>
+      <div>
+        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff' }}>{title}</h3>
+        {subtitle && <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>{subtitle}</p>}
+      </div>
+    </div>
+    <div style={{ padding: '16px 24px 20px' }}>
+      <p style={{ margin: '12px 0 0', fontSize: 22, fontWeight: 800, color: '#fff' }}>{value}</p>
+      <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>{valueSub}</p>
+    </div>
+  </div>
+);
+
 const Btn = ({ label, icon, variant = 'primary', onClick, disabled }) => {
   const styles = {
-    primary:   { bg: '#1e292b', color: '#fff', border: 'none' },
-    green:     { bg: '#2d6a4f', color: '#fff', border: 'none' },
-    outline:   { bg: '#fff', color: '#475569', border: '1px solid #dcd6ce' },
-    danger:    { bg: '#fee2e2', color: '#dc2626', border: 'none' },
+    primary: { bg: '#1e292b', color: '#fff', border: 'none' },
+    green:   { bg: '#2d6a4f', color: '#fff', border: 'none' },
+    outline: { bg: '#fff', color: '#475569', border: '1px solid #dcd6ce' },
+    danger:  { bg: '#fee2e2', color: '#dc2626', border: 'none' },
   };
   const s = styles[variant];
   return (
@@ -56,7 +69,7 @@ const Btn = ({ label, icon, variant = 'primary', onClick, disabled }) => {
       padding: '10px 18px', borderRadius: 8, fontSize: 12, fontWeight: 700,
       background: s.bg, color: s.color, border: s.border,
       cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
-      transition: 'opacity .15s', display: 'inline-flex', alignItems: 'center', gap: 6,
+      display: 'inline-flex', alignItems: 'center', gap: 6,
       textTransform: 'uppercase', letterSpacing: '0.04em'
     }}>
       {icon && <Icon d={I[icon]} size={14} color={s.color} />}
@@ -66,77 +79,54 @@ const Btn = ({ label, icon, variant = 'primary', onClick, disabled }) => {
 };
 
 const Backup = () => {
-  const [running, setRunning] = useState(false);
-  const [schedule, setSchedule] = useState('daily');
-  const [time, setTime]         = useState('02:00');
-  const [keep, setKeep]         = useState('7');
-  const [toast, setToast]       = useState(null);
-  const [history, setHistory]   = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const {
+    history, loading, running,
+    schedule, savingSchedule,
+    fetchBackups, runBackup, saveSchedule,
+    downloadBackup, deleteBackup,
+  } = useBackup();
 
+  const [localSchedule, setLocalSchedule] = useState(schedule);
+  useEffect(() => setLocalSchedule(schedule), [schedule]);
+
+  const [toast, setToast] = useState(null);
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const fetchBackups = async () => {
+  const handleRunBackup = async () => {
     try {
-      setLoading(true);
-      const token = localStorage.getItem("token") || sessionStorage.getItem("access_token");
-      const response = await axios.get('http://127.0.0.1:8000/api/admin/backups', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data && response.data.status === 'success') {
-        setHistory(response.data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching backups:", error);
-      showToast('Failed to load backup history', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchBackups();
-  }, []);
-
-  const runBackup = async () => {
-    try {
-      setRunning(true);
-      const token = localStorage.getItem("token") || sessionStorage.getItem("access_token");
-      const response = await axios.post('http://127.0.0.1:8000/api/admin/backups', {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.data && response.data.status === 'success') {
-        showToast('Database backup generated successfully!');
-        fetchBackups();
-      }
-    } catch (error) {
-      console.error("Error running backup:", error);
+      await runBackup();
+      showToast('Database backup generated successfully!');
+    } catch {
       showToast('Backup generation failed', 'error');
-    } finally {
-      setRunning(false);
     }
   };
 
-  const handleDownload = (fileName) => {
-    const token = localStorage.getItem("token") || sessionStorage.getItem("access_token");
-    window.open(`http://127.0.0.1:8000/api/admin/backups/download?file=${fileName}&token=${token}`, '_blank');
+  const handleSaveSchedule = async () => {
+    try {
+      await saveSchedule(localSchedule);
+      showToast('Schedule saved successfully!');
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Failed to save schedule', 'error');
+    }
+  };
+
+  const handleDownload = async (fileName) => {
+    try {
+      await downloadBackup(fileName);
+    } catch {
+      showToast('Download failed', 'error');
+    }
   };
 
   const handleDelete = async (fileName) => {
     if (!window.confirm(`Are you sure you want to delete ${fileName}?`)) return;
     try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("access_token");
-      await axios.delete(`http://127.0.0.1:8000/api/admin/backups/${fileName}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      showToast('Backup record deleted', 'success');
-      fetchBackups();
-    } catch (error) {
-      console.error("Error deleting backup:", error);
+      await deleteBackup(fileName);
+      showToast('Backup deleted successfully.');
+    } catch {
       showToast('Failed to delete backup file', 'error');
     }
   };
@@ -144,7 +134,7 @@ const Backup = () => {
   const select = { padding: '8px 12px', borderRadius: 8, border: '1px solid #dcd6ce', fontSize: 13, color: '#1e292b', background: '#fff', outline: 'none' };
 
   return (
-    <div style={{ background: '#f5f2eb', minHeight: '100vh', padding: '28px 32px', fontFamily: 'Inter, system-ui, sans-serif', position: 'relative' }}>
+    <div style={{ background: 'var(--page-bg)', minHeight: '100vh', padding: '28px 32px', fontFamily: 'Inter, system-ui, sans-serif', position: 'relative' }}>
 
       {toast && (
         <div style={{
@@ -158,41 +148,23 @@ const Backup = () => {
         </div>
       )}
 
-      {/* 🌟 Report-style Header Card */}
       <div style={{
-        background: '#ffffff',
-        borderRadius: 12,
-        border: '1px solid #e7e2db',
-        boxShadow: '0 1px 3px rgba(0,0,0,.03)',
-        padding: '20px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 20
+        background: '#ffffff', borderRadius: 12, border: '1px solid #e7e2db',
+        boxShadow: '0 1px 3px rgba(0,0,0,.03)', padding: '20px 24px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 42, height: 42, borderRadius: 10, background: '#2d6a4f', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Icon d={I.database} size={20} color="#fff" />
           </div>
           <div>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#1e292b', letterSpacing: '0.04em' }}>
-              BACKUP & RECOVERY
-            </h2>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#1e292b', letterSpacing: '0.04em' }}>BACKUP & RECOVERY</h2>
             <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Protect your data — schedule automatic backups or run one now
             </p>
           </div>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Btn 
-            label={running ? 'Backing up…' : 'Run Backup Now'} 
-            icon="database" 
-            variant="green" 
-            onClick={runBackup} 
-            disabled={running} 
-          />
-        </div>
+        <Btn label={running ? 'Backing up…' : 'Run Backup Now'} icon="database" variant="green" onClick={handleRunBackup} disabled={running} />
       </div>
 
       {running && (
@@ -207,22 +179,13 @@ const Backup = () => {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
-        <Card icon={I.check} iconBg="#78b78a" title="Last Backup" subtitle="Status: Successful">
-          <p style={{ margin: '12px 0 0', fontSize: 22, fontWeight: 800, color: '#1e292b' }}>
-            {history.length > 0 ? history[0].date : 'No backups yet'}
-          </p>
-          <p style={{ margin: '2px 0 0', fontSize: 12, color: '#94a3b8' }}>
-            {history.length > 0 ? history[0].size : '0 MB'}
-          </p>
-        </Card>
-        <Card icon={I.clock} iconBg="#1e292b" title="Next Scheduled" subtitle="Auto backup">
-          <p style={{ margin: '12px 0 0', fontSize: 22, fontWeight: 800, color: '#1e292b' }}>Tomorrow</p>
-          <p style={{ margin: '2px 0 0', fontSize: 12, color: '#94a3b8' }}>{time} · {schedule}</p>
-        </Card>
-        <Card icon={I.folder} iconBg="#3b82f6" title="Total Backups" subtitle="Stored on server">
-          <p style={{ margin: '12px 0 0', fontSize: 22, fontWeight: 800, color: '#1e292b' }}>{history.length} files</p>
-          <p style={{ margin: '2px 0 0', fontSize: 12, color: '#94a3b8' }}>Active storage</p>
-        </Card>
+        <StatCard icon={I.check} cardBg="#2d6a4f" title="Last Backup" subtitle="Status: Successful"
+          value={history.length > 0 ? history[0].date : 'No backups yet'}
+          valueSub={history.length > 0 ? history[0].size : '0 MB'} />
+        <StatCard icon={I.clock} cardBg="#1e292b" title="Next Scheduled" subtitle="Auto backup"
+          value="Tomorrow" valueSub={`${schedule.time} · ${schedule.frequency}`} />
+        <StatCard icon={I.folder} cardBg="#3b82f6" title="Total Backups" subtitle="Stored on server"
+          value={`${history.length} files`} valueSub="Active storage" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
@@ -230,7 +193,7 @@ const Backup = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 16 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>Frequency</label>
-              <select value={schedule} onChange={e => setSchedule(e.target.value)} style={select}>
+              <select value={localSchedule.frequency} onChange={e => setLocalSchedule({ ...localSchedule, frequency: e.target.value })} style={select}>
                 <option value="hourly">Every Hour</option>
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
@@ -239,18 +202,18 @@ const Backup = () => {
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>Run at (time)</label>
-              <input type="time" value={time} onChange={e => setTime(e.target.value)} style={select} />
+              <input type="time" value={localSchedule.time} onChange={e => setLocalSchedule({ ...localSchedule, time: e.target.value })} style={select} />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>Keep last N backups</label>
-              <select value={keep} onChange={e => setKeep(e.target.value)} style={select}>
-                <option value="3">3 backups</option>
-                <option value="7">7 backups</option>
-                <option value="14">14 backups</option>
-                <option value="30">30 backups</option>
+              <select value={localSchedule.keep} onChange={e => setLocalSchedule({ ...localSchedule, keep: Number(e.target.value) })} style={select}>
+                <option value={3}>3 backups</option>
+                <option value={7}>7 backups</option>
+                <option value={14}>14 backups</option>
+                <option value={30}>30 backups</option>
               </select>
             </div>
-            <Btn label="Save Schedule" icon="check" variant="green" onClick={() => showToast('Schedule saved successfully!')} />
+            <Btn label={savingSchedule ? 'Saving…' : 'Save Schedule'} icon="check" variant="green" onClick={handleSaveSchedule} disabled={savingSchedule} />
           </div>
         </Card>
 
@@ -322,7 +285,6 @@ const Backup = () => {
           </tbody>
         </table>
       </div>
-
     </div>
   );
 };

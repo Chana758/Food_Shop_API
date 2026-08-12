@@ -6,16 +6,19 @@ import {
   LuGlassWater, LuZap, LuSalad, LuSearch,
   LuSunrise, LuWaves, LuLeaf, LuWheat, LuFish,
   LuTag, LuPrinter, LuX, LuBanknote, LuCreditCard, LuQrCode,
-  LuFlame
+  LuFlame, LuFlaskConical, LuClock
 } from 'react-icons/lu';
 import { FaSpinner } from 'react-icons/fa';
 import { categoryService } from '../../service/categoryService';
 import { productService }  from '../../service/productService';
 import orderService   from '../../service/orderService';
 import paymentService from '../../service/paymentService';
-import { hasDiscount, getFinalPrice, getDiscountPercent, fmt } from '../../utils/priceUtils';
+import { hasDiscount, getFinalPrice, getDiscountPercent, getDiscountExpiryLabel, fmt } from '../../utils/priceUtils';
+import { ENABLE_TEST_PAYMENT } from '../../config/khqrConfig';
+import POSKhqrModal from '../../components/payment/POSKhqrModal';
+import { useSettings } from '../../context/SettingsContext'; 
 
-// ─── STATIC DATA ──────────────────────────────────────────────────────────────
+// STATIC DATA 
 const AVAILABLE_TABLES = [
   { id: 1, name: 'Table 01' },
   { id: 3, name: 'Table 03' },
@@ -23,13 +26,7 @@ const AVAILABLE_TABLES = [
   { id: 7, name: 'Table 07' },
 ];
 
-const PAYMENT_METHODS = [
-  { id: 'cash',  label: 'Cash',   icon: LuBanknote   },
-  { id: 'card',  label: 'Card',   icon: LuCreditCard  },
-  { id: 'khqr',  label: 'KHQR',   icon: LuQrCode      },
-];
-
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
+// HELPERS 
 const getImageUrl = (image) => {
   if (!image) return null;
   if (image.startsWith('http')) return image;
@@ -54,57 +51,110 @@ const CategoryIcon = ({ category, size = 18, className = '' }) => {
   }
 };
 
-// ─── RECEIPT PRINT HELPER ─────────────────────────────────────────────────────
-const printReceipt = ({ cart, subtotal, discountAmt, grandTotal, paymentMethod, cashReceived, change, orderType, tableId, notes, orderNo }) => {
+//RECEIPT PRINT HELPER (Standard POS format) 
+// CHANGED — now accepts `settings` so the store name/tagline/logo/tax/
+// footer note/currency all come from Settings > General & Receipt & POS
+// Rules instead of the previously hardcoded STORE_INFO constant.
+const printReceipt = ({
+  cart, subtotal, discountAmt, grandTotal, paymentMethod, cashReceived, change,
+  orderType, tableId, notes, orderNo, cashierName, isTest, settings = {},
+}) => {
   const tableLabel = AVAILABLE_TABLES.find(t => String(t.id) === String(tableId))?.name || '';
+
+  const restaurantName = settings.restaurant_name || 'Khmer-Fresh';
+  const tagline        = settings.tagline || 'Authentic Traditional Food';
+  const address         = settings.address || '';
+  const phone           = settings.phone || '';
+  const currency        = settings.currency || 'USD';
+  const showLogo         = settings.show_logo_receipt !== false;
+  const showTax           = settings.show_tax_receipt === true;
+  const taxRate            = parseFloat(settings.tax_rate) || 0;
+  const footerNote          = settings.receipt_note || 'Thank you for dining with us!';
+
+  const taxAmount = showTax && taxRate > 0
+    ? Math.round((grandTotal * (taxRate / 100)) * 100) / 100
+    : 0;
+  const finalTotal = grandTotal + taxAmount;
+
+  const paymentMethods = [
+    { id: 'cash',  label: 'Cash' },
+    { id: 'card',  label: 'Card' },
+    { id: 'khqr',  label: 'KHQR' },
+    { id: 'test',  label: 'ក្លែងបង់' },
+  ];
+  const methodLabel = paymentMethods.find(m => m.id === paymentMethod)?.label
+    || (paymentMethod === 'khqr' ? 'KHQR' : paymentMethod);
+
   const html = `
 <!DOCTYPE html><html><head><meta charset="UTF-8"/>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:'Courier New',monospace;font-size:12px;width:280px;padding:12px;}
   h1{font-size:16px;text-align:center;font-weight:bold;margin-bottom:2px;}
-  .sub{text-align:center;font-size:10px;color:#555;margin-bottom:8px;}
+  .sub{text-align:center;font-size:10px;color:#555;margin-bottom:2px;}
+  .contact{text-align:center;font-size:9px;color:#777;margin-bottom:2px;}
   hr{border:none;border-top:1px dashed #999;margin:6px 0;}
   .row{display:flex;justify-content:space-between;margin:2px 0;}
   .row.bold{font-weight:bold;}
   .row.total{font-size:14px;font-weight:bold;border-top:1px solid #000;padding-top:4px;margin-top:4px;}
   .row.discount{color:#e11d48;}
+  .row.tax{color:#334155;}
   .row.change{color:#059669;}
   .center{text-align:center;}
   .small{font-size:10px;color:#777;}
+  .test-badge{display:inline-block;border:1.5px dashed #d97706;color:#b45309;background:#fffbeb;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:bold;margin:6px 0;letter-spacing:0.5px;}
+  .table-box{
+    display:flex;justify-content:space-between;align-items:center;
+    background:#111827;color:#fbbf24;
+    border-radius:6px;padding:8px 12px;margin:8px 0;
+  }
+  .table-box .label{font-size:10px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;color:#cbd5e1;}
+  .table-box .value{font-size:18px;font-weight:900;}
 </style>
 </head><body>
-<h1>🍃 Khmer-Fresh</h1>
-<div class="sub">Authentic Traditional POS System</div>
+${showLogo ? `<h1>🍃 ${restaurantName}</h1>` : `<h1>${restaurantName}</h1>`}
+<div class="sub">${tagline}</div>
+${(address || phone) ? `<div class="contact">${[address, phone].filter(Boolean).join(' · ')}</div>` : ''}
+${isTest ? `<div class="center"><span class="test-badge">⚠ DEMO / TEST TRANSACTION</span></div>` : ''}
 <hr/>
-<div class="row"><span>Order #</span><span>${orderNo}</span></div>
-<div class="row"><span>Type</span><span>${orderType === 'dine-in' ? `Dine-In${tableLabel ? ' · ' + tableLabel : ''}` : 'Takeaway'}</span></div>
+<div class="row bold"><span>Receipt No.</span><span>${orderNo}</span></div>
+<div class="row"><span>Type</span><span>${orderType === 'dine-in' ? 'Dine-In' : 'Takeaway'}</span></div>
 <div class="row"><span>Date</span><span>${new Date().toLocaleString('km-KH',{hour12:false})}</span></div>
+<div class="row"><span>Cashier</span><span>${cashierName || 'Staff'}</span></div>
+
+${orderType === 'dine-in' && tableLabel ? `
+<div class="table-box">
+  <span class="label">Table No.</span>
+  <span class="value">${tableLabel.replace('Table ', '')}</span>
+</div>` : ''}
+
 <hr/>
 ${cart.map(item => {
-  const fp = getFinalPrice(item.price, item.discount_price);
-  const disc = hasDiscount(item.price, item.discount_price);
+  const fp   = getFinalPrice(item.price, item.discount_price, item.discount_expires_at);
+  const disc = hasDiscount(item.price, item.discount_price, item.discount_expires_at);
   return `
 <div class="row">
   <span style="max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${item.name}</span>
-  <span>${fmt(fp * item.qty)}</span>
+  <span>${fmt(fp * item.qty, currency)}</span>
 </div>
 <div class="small row">
-  <span>  x${item.qty} @ ${fmt(fp)}${disc ? ` (was ${fmt(item.price)})` : ''}</span>
+  <span>  x${item.qty} @ ${fmt(fp, currency)}${disc ? ` (was ${fmt(item.price, currency)})` : ''}</span>
 </div>`;
 }).join('')}
 <hr/>
-<div class="row"><span>Subtotal</span><span>${fmt(subtotal)}</span></div>
-${discountAmt > 0 ? `<div class="row discount"><span>Order Discount</span><span>-${fmt(discountAmt)}</span></div>` : ''}
-<div class="row total"><span>TOTAL</span><span>${fmt(grandTotal)}</span></div>
+<div class="row"><span>Subtotal</span><span>${fmt(subtotal, currency)}</span></div>
+${discountAmt > 0 ? `<div class="row discount"><span>Order Discount</span><span>-${fmt(discountAmt, currency)}</span></div>` : ''}
+${showTax && taxAmount > 0 ? `<div class="row tax"><span>Tax (${taxRate}%)</span><span>${fmt(taxAmount, currency)}</span></div>` : ''}
+<div class="row total"><span>TOTAL</span><span>${fmt(finalTotal, currency)}</span></div>
 <hr/>
-<div class="row"><span>Payment</span><span>${PAYMENT_METHODS.find(m=>m.id===paymentMethod)?.label || paymentMethod}</span></div>
+<div class="row"><span>Payment</span><span>${methodLabel}</span></div>
 ${paymentMethod === 'cash' ? `
-<div class="row"><span>Cash</span><span>${fmt(cashReceived)}</span></div>
-<div class="row change bold"><span>Change</span><span>${fmt(change)}</span></div>` : ''}
+<div class="row"><span>Cash</span><span>${fmt(cashReceived, currency)}</span></div>
+<div class="row change bold"><span>Change</span><span>${fmt(change, currency)}</span></div>` : ''}
 ${notes ? `<hr/><div class="small">Notes: ${notes}</div>` : ''}
 <hr/>
-<div class="center small">Thank you for dining with us! 🙏</div>
+<div class="center small">${footerNote}</div>
+${isTest ? `<div class="center small" style="margin-top:4px;color:#b45309;">This receipt is for testing only — not a real sale.</div>` : ''}
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=320,height=600');
@@ -114,9 +164,21 @@ ${notes ? `<hr/><div class="small">Notes: ${notes}</div>` : ''}
   setTimeout(() => { w.print(); w.close(); }, 400);
 };
 
-// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+// MAIN COMPONENT 
 const ManagementSaler = () => {
   const { searchTerm = '' } = useOutletContext() || {};
+  const { settings } = useSettings(); //  NEW — live settings
+
+  const currency = settings.currency || 'USD'; // NEW
+
+  // NEW — payment method list now built from settings-aware currency
+  // display; ENABLE_TEST_PAYMENT still controls the demo option.
+  const PAYMENT_METHODS = [
+    { id: 'cash',  label: 'Cash',   icon: LuBanknote   },
+    { id: 'card',  label: 'Card',   icon: LuCreditCard  },
+    { id: 'khqr',  label: 'KHQR',   icon: LuQrCode      },
+    ...(ENABLE_TEST_PAYMENT ? [{ id: 'test', label: 'ក្លែងបង់', icon: LuFlaskConical }] : []),
+  ];
 
   const [categories, setCategories] = useState([]);
   const [products,   setProducts]   = useState([]);
@@ -138,6 +200,10 @@ const ManagementSaler = () => {
   const [placed,         setPlaced]         = useState(false);
   const [isPlacing,  setIsPlacing]  = useState(false);
   const [placeError, setPlaceError] = useState(null);
+
+  const [pendingOrder,  setPendingOrder]  = useState(null);
+  const [showKhqrScan,  setShowKhqrScan]  = useState(false);
+  const [cancellingOrder, setCancellingOrder] = useState(false);
 
   const cashInputRef = useRef(null);
 
@@ -168,6 +234,15 @@ const ManagementSaler = () => {
     }
   }, [showPayment, paymentMethod]);
 
+  // NEW — if Table Service is disabled in Settings and the current
+  // selection is dine-in, force it to takeaway.
+  useEffect(() => {
+    if (settings.table_service === false && orderType === 'dine-in') {
+      setOrderType('takeaway');
+      setTableId('');
+    }
+  }, [settings.table_service]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const categoryTabs = ['All', ...categories.map(c => c.name)];
 
   const filtered = products.filter(p => {
@@ -192,7 +267,7 @@ const ManagementSaler = () => {
   const cartQty    = (id) => cart.find(i => i.id === id)?.qty ?? 0;
 
   const subtotal = cart.reduce((sum, i) => {
-    const price = getFinalPrice(i.price, i.discount_price);
+    const price = getFinalPrice(i.price, i.discount_price, i.discount_expires_at);
     return sum + price * i.qty;
   }, 0);
 
@@ -203,12 +278,49 @@ const ManagementSaler = () => {
     return Math.min(subtotal, v);
   })();
 
-  const grandTotal  = Math.max(0, subtotal - discountAmt);
+  // NEW — tax computed from Settings > Receipt & POS Rules
+  const preTaxTotal = Math.max(0, subtotal - discountAmt);
+  const showTax      = settings.show_tax_receipt === true;
+  const taxRate        = parseFloat(settings.tax_rate) || 0;
+  const taxAmt          = showTax && taxRate > 0
+    ? Math.round((preTaxTotal * (taxRate / 100)) * 100) / 100
+    : 0;
+
+  const grandTotal  = preTaxTotal + taxAmt; //  CHANGED — includes tax now
   const totalItems  = cart.reduce((s, i) => s + i.qty, 0);
   const cashNum     = parseFloat(cashReceived) || 0;
   const change      = Math.max(0, cashNum - grandTotal);
   const canPlace    = cart.length > 0 && (orderType === 'takeaway' || tableId);
   const cashValid   = paymentMethod !== 'cash' || cashNum >= grandTotal;
+  const isTestPay   = paymentMethod === 'test';
+  const isKhqrPay   = paymentMethod === 'khqr';
+
+  const finishOrder = ({ orderNo, methodOverride }) => {
+    printReceipt({
+      cart, subtotal, discountAmt, grandTotal: preTaxTotal, // pass pre-tax; printReceipt re-applies from settings
+      paymentMethod: methodOverride || paymentMethod,
+      cashReceived: cashNum, change,
+      orderType, tableId, notes,
+      orderNo,
+      cashierName: sessionStorage.getItem('cashierName'),
+      isTest: isTestPay,
+      settings, 
+    });
+
+    setPlaced(true);
+    setTimeout(() => {
+      setPlaced(false);
+      setCart([]);
+      setNotes('');
+      setTableId('');
+      setDiscountValue('');
+      setCashReceived('');
+      setPaymentMethod('cash');
+      setShowPayment(false);
+      setIsPlacing(false);
+      setPendingOrder(null);
+    }, 2000);
+  };
 
   const handlePlaceOrder = async () => {
     if (!canPlace || !cashValid || isPlacing) return;
@@ -218,7 +330,8 @@ const ManagementSaler = () => {
       const orderPayload = {
         order_type: orderType,
         table_id:   orderType === 'dine-in' ? tableId : null,
-        notes,
+        notes: isTestPay ? `${notes ? notes + ' — ' : ''}[DEMO/TEST ORDER]` : notes,
+        discount_amount: discountAmt,
         items: cart.map(item => ({
           product_id: item.id,
           quantity:   item.qty,
@@ -227,32 +340,52 @@ const ManagementSaler = () => {
       };
 
       const order = await orderService.create(orderPayload);
-      await paymentService.create({ order_id: order.id, method: paymentMethod });
 
-      printReceipt({
-        cart, subtotal, discountAmt, grandTotal,
-        paymentMethod, cashReceived: cashNum, change,
-        orderType, tableId, notes,
-        orderNo: `KF-${order.id}`,
+      if (isKhqrPay) {
+        setPendingOrder({ id: order.id, orderNo: `KF-${order.id}` });
+        setShowKhqrScan(true);
+        setIsPlacing(false);
+        return;
+      }
+
+      await paymentService.create({
+        order_id: order.id,
+        method: isTestPay ? 'cash' : paymentMethod,
+        ...(isTestPay ? { transaction_ref: `DEMO-${Date.now()}` } : {}),
       });
 
-      setPlaced(true);
-      setTimeout(() => {
-        setPlaced(false);
-        setCart([]);
-        setNotes('');
-        setTableId('');
-        setDiscountValue('');
-        setCashReceived('');
-        setPaymentMethod('cash');
-        setShowPayment(false);
-      }, 2000);
+      finishOrder({ orderNo: `KF-${order.id}` });
+
     } catch (err) {
       console.error('POS order failed:', err.response ?? err);
       setPlaceError(err.response?.data?.message ?? 'Failed to save order. Please try again.');
-    } finally {
       setIsPlacing(false);
     }
+  };
+
+  const handleKhqrPaid = () => {
+    setShowKhqrScan(false);
+    if (pendingOrder) {
+      finishOrder({ orderNo: pendingOrder.orderNo, methodOverride: 'khqr' });
+    }
+  };
+
+  const handleKhqrClose = async () => {
+    setShowKhqrScan(false);
+
+    if (pendingOrder && !cancellingOrder) {
+      setCancellingOrder(true);
+      try {
+        await orderService.cancel(pendingOrder.id);
+      } catch (err) {
+        console.warn('Failed to cancel abandoned KHQR order:', err.response ?? err);
+      } finally {
+        setCancellingOrder(false);
+      }
+    }
+
+    setPendingOrder(null);
+    setIsPlacing(false);
   };
 
   if (isLoading) return (
@@ -271,13 +404,12 @@ const ManagementSaler = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 lg:p-6 font-sans">
+    <div className="min-h-screen p-4 md:p-6 lg:p-6 font-sans" style={{ background: 'var(--page-bg)' }}>
       <div className="flex flex-col lg:flex-row gap-6">
 
         {/* ══ LEFT: Menu Area ══ */}
         <div className="flex-1 min-w-0">
-          
-          {/* Header Banner - Original Theme Style */}
+
           <div className="bg-[#111827] rounded-xl shadow-lg p-5 mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-white border border-slate-800">
             <div>
               <h1 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
@@ -297,15 +429,14 @@ const ManagementSaler = () => {
             </div>
           )}
 
-          {/* Filter Bar */}
           <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-2 -mx-1 px-1 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
             {categoryTabs.map(cat => {
               const isActive = activeCategory === cat;
               return (
                 <button key={cat} onClick={() => setActiveCategory(cat)}
                   className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex items-center gap-2 flex-shrink-0 shadow-sm ${
-                    isActive 
-                      ? 'bg-amber-400 text-slate-950 shadow-md font-black' 
+                    isActive
+                      ? 'bg-amber-400 text-slate-950 shadow-md font-black'
                       : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                   }`}>
                   <CategoryIcon category={cat} size={15} className={isActive ? 'text-slate-950' : 'text-slate-400'} />
@@ -315,7 +446,6 @@ const ManagementSaler = () => {
             })}
           </div>
 
-          {/* ══ PRODUCT CARDS GRID (4 Columns Setup + Enhanced Card UI) ══ */}
           {filtered.length === 0 ? (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center py-24 text-slate-400">
               <div className="w-16 h-16 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 mb-3 shadow-inner">
@@ -329,18 +459,19 @@ const ManagementSaler = () => {
               {filtered.map(product => {
                 const qty        = cartQty(product.id);
                 const catName    = product.category?.name || '';
-                const discounted = hasDiscount(product.price, product.discount_price);
-                const finalPrice = getFinalPrice(product.price, product.discount_price);
-                const discPct    = getDiscountPercent(product.price, product.discount_price);
+                const discounted = hasDiscount(product.price, product.discount_price, product.discount_expires_at);
+                const finalPrice = getFinalPrice(product.price, product.discount_price, product.discount_expires_at);
+                const discPct    = getDiscountPercent(product.price, product.discount_price, product.discount_expires_at);
+                const expiry     = discounted ? getDiscountExpiryLabel(product.discount_expires_at) : null;
                 const imageUrl   = getImageUrl(product.image);
 
                 return (
-                  <button 
-                    key={product.id} 
+                  <button
+                    key={product.id}
                     onClick={() => addToCart(product)}
                     className={`bg-white rounded-xl border text-left transition-all duration-300 group relative flex flex-col items-center p-4 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 ${
-                      qty > 0 
-                        ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-gradient-to-b from-emerald-50/30 to-white' 
+                      qty > 0
+                        ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-gradient-to-b from-emerald-50/30 to-white'
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
@@ -350,21 +481,28 @@ const ManagementSaler = () => {
                       </span>
                     )}
 
+                    {expiry && (
+                      <span className={`absolute bottom-2.5 left-2.5 text-[8px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 shadow-sm z-10 ${
+                        expiry.urgent ? 'bg-rose-600 text-white' : 'bg-slate-900/80 text-white'
+                      }`}>
+                        <LuClock size={9} /> {expiry.label}
+                      </span>
+                    )}
+
                     {qty > 0 && (
                       <span className="absolute top-2.5 right-2.5 w-6 h-6 rounded-lg bg-slate-900 text-amber-300 text-[11px] font-black flex items-center justify-center shadow z-10 animate-bounce">
                         {qty}
                       </span>
                     )}
 
-                    {/* Circular Image Container with Ring & Glow */}
                     <div className="relative w-20 h-20 my-1 rounded-full p-0.5 bg-gradient-to-tr from-emerald-400 to-teal-300 shadow-md group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
                       <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 flex items-center justify-center relative">
                         {imageUrl ? (
-                          <img 
-                            src={imageUrl} 
-                            alt={product.name} 
+                          <img
+                            src={imageUrl}
+                            alt={product.name}
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} 
+                            onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
                           />
                         ) : (
                           <CategoryIcon category={catName} size={28} className="text-slate-400" />
@@ -372,7 +510,6 @@ const ManagementSaler = () => {
                       </div>
                     </div>
 
-                    {/* Product Details */}
                     <div className="text-center mt-2.5 w-full">
                       <h3 className="text-xs font-black text-slate-900 leading-snug line-clamp-1 group-hover:text-emerald-700 transition-colors px-1">
                         {product.name}
@@ -380,15 +517,15 @@ const ManagementSaler = () => {
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-0.5">
                         {catName || 'General'}
                       </span>
-                      
+
                       <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-center gap-2 w-full">
                         {discounted ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] text-slate-400 line-through font-bold">{fmt(product.price)}</span>
-                            <span className="text-rose-600 font-black text-xs">{fmt(finalPrice)}</span>
+                            <span className="text-[10px] text-slate-400 line-through font-bold">{fmt(product.price, currency)}</span>
+                            <span className="text-rose-600 font-black text-xs">{fmt(finalPrice, currency)}</span>
                           </div>
                         ) : (
-                          <span className="text-slate-900 font-black text-xs">{fmt(product.price)}</span>
+                          <span className="text-slate-900 font-black text-xs">{fmt(product.price, currency)}</span>
                         )}
                       </div>
                     </div>
@@ -399,11 +536,10 @@ const ManagementSaler = () => {
           )}
         </div>
 
-        {/* ══ RIGHT: Current Order Cart Area (Wide & Comfortable Size - 420px) ══ */}
+        {/* ══ RIGHT: Current Order Cart Area ══ */}
         <div className="w-full lg:w-[420px] flex-shrink-0">
           <div className="bg-white rounded-xl border border-slate-200 shadow-xl lg:sticky lg:top-6 flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 48px)' }}>
 
-            {/* Cart Header - Theme Dark Color */}
             <div className="bg-[#111827] text-white p-4 flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center text-amber-300">
@@ -419,20 +555,29 @@ const ManagementSaler = () => {
               </span>
             </div>
 
-            {/* Order Type Section */}
+            {/* ✅ CHANGED — Dine-In / Takeaway buttons now respect Settings toggles */}
             <div className="p-3.5 border-b border-slate-100 bg-slate-50/50">
               <div className="flex gap-2">
-                {['dine-in', 'takeaway'].map(type => (
-                  <button key={type}
-                    onClick={() => { setOrderType(type); if (type === 'takeaway') setTableId(''); }}
+                {settings.table_service !== false && (
+                  <button
+                    onClick={() => setOrderType('dine-in')}
                     className={`flex-1 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
-                      orderType === type ? 'bg-[#111827] text-amber-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                      orderType === 'dine-in' ? 'bg-[#111827] text-amber-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}>
-                    {type === 'dine-in' ? 'Dine-In' : 'Takeaway'}
+                    Dine-In
                   </button>
-                ))}
+                )}
+                {settings.takeaway !== false && (
+                  <button
+                    onClick={() => { setOrderType('takeaway'); setTableId(''); }}
+                    className={`flex-1 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
+                      orderType === 'takeaway' ? 'bg-[#111827] text-amber-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}>
+                    Takeaway
+                  </button>
+                )}
               </div>
-              {orderType === 'dine-in' && (
+              {settings.table_service !== false && orderType === 'dine-in' && (
                 <select value={tableId} onChange={e => setTableId(e.target.value)}
                   className="w-full mt-2.5 border border-slate-200 rounded-lg px-3 py-2.5 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-slate-900">
                   <option value="">Select table number…</option>
@@ -441,7 +586,6 @@ const ManagementSaler = () => {
               )}
             </div>
 
-            {/* Cart Items List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {cart.length === 0 ? (
                 <div className="flex flex-col items-center justify-center text-center py-20 text-slate-300">
@@ -454,8 +598,8 @@ const ManagementSaler = () => {
               ) : (
                 <div className="space-y-2.5">
                   {cart.map(item => {
-                    const fp   = getFinalPrice(item.price, item.discount_price);
-                    const disc = hasDiscount(item.price, item.discount_price);
+                    const fp   = getFinalPrice(item.price, item.discount_price, item.discount_expires_at);
+                    const disc = hasDiscount(item.price, item.discount_price, item.discount_expires_at);
                     const imageUrl = getImageUrl(item.image);
                     return (
                       <div key={item.id} className="bg-slate-50/80 border border-slate-200/90 rounded-xl p-3 flex items-center gap-3 shadow-sm hover:border-slate-300 transition-all">
@@ -466,12 +610,12 @@ const ManagementSaler = () => {
                             <CategoryIcon category={item.category?.name} size={18} className="text-slate-400" />
                           )}
                         </div>
-                        
+
                         <div className="flex-1 min-w-0">
                           <h4 className="text-xs font-bold text-slate-900 truncate">{item.name}</h4>
                           <div className="flex items-center gap-2 mt-0.5">
-                            {disc && <span className="text-[10px] text-slate-400 line-through">{fmt(item.price)}</span>}
-                            <span className={`text-xs font-black ${disc ? 'text-rose-600' : 'text-emerald-700'}`}>{fmt(fp)}</span>
+                            {disc && <span className="text-[10px] text-slate-400 line-through">{fmt(item.price, currency)}</span>}
+                            <span className={`text-xs font-black ${disc ? 'text-rose-600' : 'text-emerald-700'}`}>{fmt(fp, currency)}</span>
                           </div>
                         </div>
 
@@ -495,12 +639,10 @@ const ManagementSaler = () => {
               )}
             </div>
 
-            {/* Cart Footer */}
             <div className="p-4 border-t border-slate-100 bg-white space-y-3 shadow-md">
               <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add kitchen or order notes..." rows={2}
                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-slate-900 resize-none bg-slate-50/50" />
 
-              {/* Order discount row */}
               {cart.length > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0 border border-amber-200">
@@ -526,28 +668,34 @@ const ManagementSaler = () => {
                 </div>
               )}
 
-              {/* Totals Summary */}
+              {/* ✅ CHANGED — adds tax row when settings.show_tax_receipt is on */}
               {cart.length > 0 ? (
                 <div className="space-y-1.5 text-xs bg-slate-50 p-3 rounded-lg border border-slate-200/80">
                   <div className="flex justify-between text-slate-400 font-medium">
                     <span className="uppercase font-black tracking-wider text-[10px]">Subtotal</span>
-                    <span>{fmt(subtotal)}</span>
+                    <span>{fmt(subtotal, currency)}</span>
                   </div>
                   {discountAmt > 0 && (
                     <div className="flex justify-between text-rose-600 font-bold">
                       <span className="text-[10px] uppercase tracking-wider font-black">Discount</span>
-                      <span>-{fmt(discountAmt)}</span>
+                      <span>-{fmt(discountAmt, currency)}</span>
+                    </div>
+                  )}
+                  {showTax && taxAmt > 0 && (
+                    <div className="flex justify-between text-slate-600 font-bold">
+                      <span className="text-[10px] uppercase tracking-wider font-black">Tax ({taxRate}%)</span>
+                      <span>{fmt(taxAmt, currency)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t border-slate-200">
                     <span className="text-xs uppercase tracking-wider font-black text-slate-500 self-center">Total Amount</span>
-                    <span className="text-emerald-700 text-lg">{fmt(grandTotal)}</span>
+                    <span className="text-emerald-700 text-lg">{fmt(grandTotal, currency)}</span>
                   </div>
                 </div>
               ) : (
                 <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200/80">
                   <span className="text-xs font-black uppercase tracking-wider text-slate-400">Total Amount</span>
-                  <span className="text-base font-black text-slate-900">$0.00</span>
+                  <span className="text-base font-black text-slate-900">{fmt(0, currency)}</span>
                 </div>
               )}
 
@@ -580,6 +728,15 @@ const ManagementSaler = () => {
             </div>
 
             <div className="p-6 space-y-5">
+              {isTestPay && (
+                <div className="bg-amber-50 border border-dashed border-amber-300 rounded-xl p-3 flex items-center gap-2.5 text-amber-700">
+                  <LuFlaskConical size={16} className="flex-shrink-0" />
+                  <p className="text-[11px] font-bold leading-snug">
+                    Demo mode — this places a real order but skips actual payment collection. Use for staff training only.
+                  </p>
+                </div>
+              )}
+
               <div className="bg-slate-50 rounded-xl p-4 space-y-2 text-xs border border-slate-200">
                 <div className="flex justify-between text-slate-500">
                   <span>Items count:</span>
@@ -588,25 +745,33 @@ const ManagementSaler = () => {
                 {discountAmt > 0 && (
                   <div className="flex justify-between text-rose-600 font-bold">
                     <span>Discount applied:</span>
-                    <span>-{fmt(discountAmt)}</span>
+                    <span>-{fmt(discountAmt, currency)}</span>
+                  </div>
+                )}
+                {showTax && taxAmt > 0 && (
+                  <div className="flex justify-between text-slate-600 font-bold">
+                    <span>Tax ({taxRate}%):</span>
+                    <span>{fmt(taxAmt, currency)}</span>
                   </div>
                 )}
                 <div className="border-t border-slate-200 pt-2 flex justify-between font-black text-slate-900 text-base">
                   <span>Grand Total</span>
-                  <span className="text-emerald-700">{fmt(grandTotal)}</span>
+                  <span className="text-emerald-700">{fmt(grandTotal, currency)}</span>
                 </div>
               </div>
 
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Select Payment Method</p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className={`grid gap-2 ${ENABLE_TEST_PAYMENT ? 'grid-cols-2' : 'grid-cols-3'}`}>
                   {PAYMENT_METHODS.map(m => {
                     const Icon = m.icon;
                     return (
                       <button key={m.id} onClick={() => { setPaymentMethod(m.id); setCashReceived(''); }}
                         disabled={isPlacing}
                         className={`py-3 rounded-xl flex flex-col items-center gap-1.5 text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
-                          paymentMethod === m.id ? 'bg-[#111827] text-amber-300' : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
+                          paymentMethod === m.id
+                            ? (m.id === 'test' ? 'bg-amber-500 text-white' : 'bg-[#111827] text-amber-300')
+                            : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
                         }`}>
                         <Icon size={18} />{m.label}
                       </button>
@@ -620,7 +785,9 @@ const ManagementSaler = () => {
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Cash Received</p>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-base">$</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-base">
+                        {currency === 'KHR' ? '៛' : currency === 'THB' ? '฿' : '$'}
+                      </span>
                       <input
                         ref={cashInputRef}
                         type="number" min="0" step="0.01"
@@ -638,12 +805,12 @@ const ManagementSaler = () => {
                       {cashNum >= grandTotal ? (
                         <>
                           <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Change Due</p>
-                          <p className="text-2xl font-black text-emerald-700">{fmt(change)}</p>
+                          <p className="text-2xl font-black text-emerald-700">{fmt(change, currency)}</p>
                         </>
                       ) : (
                         <>
                           <p className="text-[10px] font-black uppercase tracking-widest text-rose-600">Remaining Balance</p>
-                          <p className="text-2xl font-black text-rose-600">{fmt(grandTotal - cashNum)}</p>
+                          <p className="text-2xl font-black text-rose-600">{fmt(grandTotal - cashNum, currency)}</p>
                         </>
                       )}
                     </div>
@@ -656,9 +823,17 @@ const ManagementSaler = () => {
                   Please process card settlement on terminal.
                 </div>
               )}
+
               {paymentMethod === 'khqr' && (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-center text-xs text-amber-800 font-bold">
-                  Scan KHQR for: <span className="font-black text-sm">{fmt(grandTotal)}</span>
+                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-center text-xs text-amber-800 font-bold flex items-center gap-2.5">
+                  <LuQrCode size={20} className="flex-shrink-0" />
+                  <span>Tap "Generate QR" below to show a live KHQR code for the customer to scan with their banking app.</span>
+                </div>
+              )}
+
+              {paymentMethod === 'test' && (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center text-xs text-slate-500 font-bold">
+                  No payment collection needed — clicking confirm will simulate a successful cash payment.
                 </div>
               )}
 
@@ -673,19 +848,30 @@ const ManagementSaler = () => {
                 disabled={!cashValid || placed || isPlacing}
                 className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all shadow-md ${
                   placed ? 'bg-emerald-600 text-white' :
-                  (cashValid && !isPlacing) ? 'bg-[#111827] text-amber-300 hover:bg-black' :
+                  (cashValid && !isPlacing) ? (isTestPay ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-[#111827] text-amber-300 hover:bg-black') :
                   'bg-slate-100 text-slate-300 cursor-not-allowed'
                 }`}>
                 {placed
                   ? <><LuCheck size={16} /> Order Successfully Placed!</>
                   : isPlacing
                   ? <><FaSpinner className="animate-spin" size={16} /> Saving Order...</>
-                  : <><LuPrinter size={16} /> Confirm & Print Receipt</>}
+                  : isKhqrPay
+                  ? <><LuQrCode size={16} /> Generate QR & Wait for Payment</>
+                  : <><LuPrinter size={16} /> {isTestPay ? 'Confirm Demo & Print' : 'Confirm & Print Receipt'}</>}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ══ KHQR SCAN MODAL ══ */}
+      <POSKhqrModal
+        isOpen={showKhqrScan}
+        onClose={handleKhqrClose}
+        orderId={pendingOrder?.id}
+        amount={grandTotal}
+        onPaid={handleKhqrPaid}
+      />
     </div>
   );
 };

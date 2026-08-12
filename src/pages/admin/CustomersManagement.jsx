@@ -1,9 +1,13 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
-import { LuPlus, LuPencil, LuTrash, LuUsers, LuUserCheck, LuUserX, LuSave, LuEye, LuX } from "react-icons/lu";
+import {
+  LuPlus, LuPencil, LuTrash, LuUsers, LuUserCheck, LuUserX, LuSave, LuEye, LuX,
+  LuChevronLeft, LuChevronRight,
+} from "react-icons/lu";
 import axiosInstance from '../../api/axios';
+
+const PAGE_SIZE = 8;
 
 const CustomersManagement = () => {
   const { searchTerm = '' } = useOutletContext() || {};
@@ -11,6 +15,7 @@ const CustomersManagement = () => {
   const [customerList, setCustomerList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewData, setViewData] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -33,10 +38,20 @@ const CustomersManagement = () => {
 
   useEffect(() => { fetchCustomers(); }, []);
 
+  // Reset to page 1 whenever the search term changes
+  useEffect(() => { setCurrentPage(1); }, [searchTerm]);
+
   const filteredCustomers = customerList.filter((customer) =>
     customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedCustomers = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredCustomers.slice(start, start + PAGE_SIZE);
+  }, [filteredCustomers, safePage]);
 
   const openEditModal = (customer) => {
     setFormData({ id: customer.id, name: customer.name, email: customer.email, phone: customer.phone || '' });
@@ -106,7 +121,7 @@ const CustomersManagement = () => {
   const blockedCount = customerList.filter(c => c.status === 'blocked').length;
 
   return (
-    <div className="p-6 md:p-8 bg-slate-100 min-h-screen space-y-6">
+    <div className="p-6 md:p-8 min-h-screen space-y-6" style={{ background: 'var(--page-bg)' }}>
       <Toaster position="top-right" />
 
       {/* ── HEADER & ADD BUTTON ── */}
@@ -126,48 +141,49 @@ const CustomersManagement = () => {
         </button>
       </div>
 
-      {/* ── STATS CARDS ── */}
+      {/* ── STATS CARDS (solid color) ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { 
-            title: "TOTAL CUSTOMERS", 
-            label: "All registered clients", 
-            val: customerList.length, 
-            icon: LuUsers, 
-            textColor: "text-emerald-700", 
-            bg: "bg-emerald-50",
-            border: "border-emerald-100" 
+          {
+            title: "Total Customers",
+            label: "All registered clients",
+            val: customerList.length,
+            icon: LuUsers,
+            card: "bg-slate-900",
+            badge: "TOTAL",
+            badgeText: "text-slate-300",
           },
-          { 
-            title: "ACTIVE", 
-            label: "Active accounts", 
-            val: activeCount, 
-            icon: LuUserCheck,  
-            textColor: "text-blue-700", 
-            bg: "bg-blue-50",
-            border: "border-blue-100" 
+          {
+            title: "Active",
+            label: "Active accounts",
+            val: activeCount,
+            icon: LuUserCheck,
+            card: "bg-emerald-700",
+            badge: "STATUS",
+            badgeText: "text-emerald-100",
           },
-          { 
-            title: "BLOCKED", 
-            label: "Restricted accounts", 
-            val: blockedCount, 
-            icon: LuUserX, 
-            textColor: "text-rose-700", 
-            bg: "bg-rose-50",
-            border: "border-rose-100" 
+          {
+            title: "Blocked",
+            label: "Restricted accounts",
+            val: blockedCount,
+            icon: LuUserX,
+            card: "bg-rose-700",
+            badge: "STATUS",
+            badgeText: "text-rose-100",
           },
         ].map((item, i) => (
-          <div key={i} className="bg-white rounded-xl border-2 border-slate-300 p-5 shadow-sm relative overflow-hidden flex flex-col justify-between">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">{item.title}</p>
-                <h2 className="text-3xl font-black text-slate-900 mb-2">{item.val}</h2>
+          <div key={i} className={`${item.card} rounded-xl p-5 shadow-sm relative overflow-hidden flex flex-col justify-between text-white`}>
+            <div className="flex justify-between items-start mb-3">
+              <div className="p-2 bg-white/15 rounded-lg">
+                <item.icon size={18} />
               </div>
-              <div className={`${item.bg} p-3 rounded-xl ${item.textColor} border ${item.border} shadow-2xs`}>
-                <item.icon size={20} />
-              </div>
+              <span className={`text-[10px] font-black uppercase tracking-wider ${item.badgeText} border border-white/25 rounded-full px-2 py-0.5`}>
+                {item.badge}
+              </span>
             </div>
-            <p className={`text-xs font-bold ${item.textColor}`}>{item.label}</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-white/70">{item.title}</p>
+            <h2 className="text-3xl font-black mt-1">{item.val}</h2>
+            <p className="text-xs font-semibold text-white/60 mt-1">{item.label}</p>
           </div>
         ))}
       </div>
@@ -194,9 +210,11 @@ const CustomersManagement = () => {
                 </td>
               </tr>
             ) : (
-              filteredCustomers.map((c, i) => (
+              paginatedCustomers.map((c, i) => (
                 <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="px-5 py-3.5 font-black text-xs text-slate-400">0{i + 1}</td>
+                  <td className="px-5 py-3.5 font-black text-xs text-slate-400">
+                    {String((safePage - 1) * PAGE_SIZE + i + 1).padStart(2, '0')}
+                  </td>
                   <td className="px-5 py-3.5 font-bold text-xs text-slate-900">{c.name}</td>
                   <td className="px-5 py-3.5 text-slate-600 text-xs font-medium">{c.email}</td>
                   <td className="px-5 py-3.5">
@@ -248,6 +266,57 @@ const CustomersManagement = () => {
             )}
           </tbody>
         </table>
+
+        {/* ── PAGINATION ── */}
+        {!loading && filteredCustomers.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3.5 border-t-2 border-slate-200 bg-slate-50">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredCustomers.length)} of {filteredCustomers.length}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                className="p-2 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
+              >
+                <LuChevronLeft size={14} />
+              </button>
+
+              {Array.from({ length: totalPages }, (_, idx) => idx + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                .reduce((acc, p, idx, arr) => {
+                  if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === '...' ? (
+                    <span key={`dots-${idx}`} className="px-1.5 text-slate-400 text-xs font-bold">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setCurrentPage(p)}
+                      className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-black transition cursor-pointer ${
+                        p === safePage
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                className="p-2 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
+              >
+                <LuChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── VIEW MODAL ── */}

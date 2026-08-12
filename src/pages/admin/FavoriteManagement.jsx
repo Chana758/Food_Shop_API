@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
   LuChevronDown, LuChevronUp, LuHeart,
-  LuTrash2, LuRefreshCw, LuX, LuUsers, LuBookmarkCheck
+  LuTrash2, LuRefreshCw, LuX, LuUsers, LuBookmarkCheck, LuDollarSign
 } from 'react-icons/lu';
 import axiosInstance from '../../api/axios';
 
@@ -25,6 +24,22 @@ const Modal = ({ onClose, children }) => (
       onClick={e => e.stopPropagation()}
     >
       {children}
+    </div>
+  </div>
+);
+
+// Solid color stat card — matches Staff / Customer / Report / Backup / Trash style
+const StatCard = ({ icon, cardBg, label, value, sub }) => (
+  <div className={`${cardBg} rounded-xl p-5 flex flex-col justify-between shadow-sm flex-1 min-w-[200px] text-white`}>
+    <div className="flex items-center justify-between mb-3">
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/15">
+        {icon}
+      </div>
+      <span className="text-[10px] font-black uppercase tracking-wider text-white/70">{label}</span>
+    </div>
+    <div>
+      <div className="text-2xl font-black tracking-tight">{value}</div>
+      <p className="text-[11px] font-bold text-white/60 mt-1">{sub}</p>
     </div>
   </div>
 );
@@ -76,6 +91,10 @@ const FavoriteManagement = () => {
 
   const totalUsers = Object.keys(favoritesMap).length;
   const totalFavs  = Object.values(favoritesMap).reduce((sum, items) => sum + items.length, 0);
+  const totalValue = Object.values(favoritesMap).reduce(
+    (sum, items) => sum + items.reduce((s, f) => s + Number(f.product?.price ?? 0), 0),
+    0
+  );
 
   const filteredMap = Object.entries(favoritesMap).reduce((acc, [userName, items]) => {
     const term = searchTerm.toLowerCase();
@@ -107,10 +126,10 @@ const FavoriteManagement = () => {
   );
 
   return (
-    <div className="p-6 md:p-8 bg-slate-100 min-h-screen space-y-6">
+    <div className="p-6 md:p-8 min-h-screen space-y-6" style={{ background: 'var(--page-bg)' }}>
 
-      {/* ── HEADER BANNER ── */}
-      <div className="bg-[#1E2A2E] rounded-xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden border-2 border-slate-300">
+      {/* ── HEADER BANNER (title + refresh only; stats moved to cards below) ── */}
+      <div className="bg-[#1E2A2E] rounded-xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden border-2 border-slate-300">
         <div className="absolute -right-6 -bottom-6 opacity-5 pointer-events-none">
           <LuHeart size={180} />
         </div>
@@ -125,40 +144,41 @@ const FavoriteManagement = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-4 flex-wrap z-10">
-          <div className="bg-white/10 backdrop-blur-xs border border-white/10 rounded-lg px-4 py-2.5 flex items-center gap-5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-[#D99A3D]">
-                <LuUsers size={16} />
-              </div>
-              <div>
-                <span className="text-[9px] font-black text-slate-300 uppercase tracking-wider block">Customers</span>
-                <span className="text-base font-black text-white">{totalUsers}</span>
-              </div>
-            </div>
-            <div className="w-px h-8 bg-white/10" />
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-rose-400">
-                <LuBookmarkCheck size={16} />
-              </div>
-              <div>
-                <span className="text-[9px] font-black text-slate-300 uppercase tracking-wider block">Total Saves</span>
-                <span className="text-base font-black text-white">{totalFavs}</span>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={fetchFavorites}
-            className="bg-white/10 hover:bg-white/20 border border-white/10 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 text-xs font-black uppercase tracking-widest transition cursor-pointer shadow-2xs"
-            title="Refresh Data"
-          >
-            <LuRefreshCw size={13} /> Refresh
-          </button>
-        </div>
+        <button
+          onClick={fetchFavorites}
+          className="z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 text-xs font-black uppercase tracking-widest transition cursor-pointer shadow-2xs whitespace-nowrap"
+          title="Refresh Data"
+        >
+          <LuRefreshCw size={13} /> Refresh
+        </button>
       </div>
 
-      {/* ── EXPAND / COLLAPSE CONTROLS BAR (Moved to the Left) ── */}
+      {/* ── STATS CARDS (solid color, matches Staff/Customer/Report/Backup/Trash) ── */}
+      <div className="flex gap-4 flex-wrap">
+        <StatCard
+          icon={<LuUsers size={18} />}
+          cardBg="bg-slate-900"
+          label="Customers"
+          value={totalUsers}
+          sub="With saved items"
+        />
+        <StatCard
+          icon={<LuBookmarkCheck size={18} />}
+          cardBg="bg-rose-700"
+          label="Total Saves"
+          value={totalFavs}
+          sub="Items wishlisted"
+        />
+        <StatCard
+          icon={<LuDollarSign size={18} />}
+          cardBg="bg-emerald-700"
+          label="Wishlist Value"
+          value={`$${totalValue.toFixed(2)}`}
+          sub="Combined across all customers"
+        />
+      </div>
+
+      {/* ── EXPAND / COLLAPSE CONTROLS BAR ── */}
       <div className="flex items-center justify-start gap-2">
         <button
           onClick={expandAll}

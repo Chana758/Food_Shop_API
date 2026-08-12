@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LuRotateCcw, LuTrash2, LuX, LuTriangleAlert } from 'react-icons/lu';
+import { LuRotateCcw, LuTrash2, LuX, LuTriangleAlert, LuArchive, LuPackage, LuLayers, LuUsers, LuLayoutGrid } from 'react-icons/lu';
 
 // Dummy data representing soft-deleted rows across resources
 const INITIAL_TRASH = [
@@ -17,6 +17,14 @@ const TYPE_STYLES = {
   Category: 'bg-[#E3EDF3] text-[#2E5975] border-[#C2D8E6]',
   Table: 'bg-[#FBEDD9] text-[#B9791F] border-[#F2D7B3]',
   Staff: 'bg-[#EFE8F5] text-[#6B46C1] border-[#D7C7EE]',
+};
+
+// Solid colors + icon for the stat cards, matched to each type's badge hue
+const TYPE_STATS = {
+  Product: { card: 'bg-emerald-700', icon: LuPackage },
+  Category: { card: 'bg-blue-700', icon: LuLayers },
+  Staff: { card: 'bg-purple-700', icon: LuUsers },
+  Table: { card: 'bg-amber-700', icon: LuLayoutGrid },
 };
 
 const Trash = () => {
@@ -39,8 +47,13 @@ const Trash = () => {
     setEmptyConfirm(false);
   };
 
+  const typeCounts = TYPES.slice(1).map((t) => ({
+    type: t,
+    count: items.filter((i) => i.type === t).length,
+  }));
+
   return (
-    <div className="p-8 bg-[#F8F6F0] min-h-screen space-y-6">
+    <div className="p-8 min-h-screen space-y-6" style={{ background: 'var(--page-bg)' }}>
       
       {/* 1. HEADER SECTION */}
       <div className="flex items-center justify-between">
@@ -60,7 +73,41 @@ const Trash = () => {
         )}
       </div>
 
-      {/* 2. TYPE FILTER TABS */}
+      {/* 2. STATS CARDS (solid color, matches Staff/Customer/Report/Backup style) */}
+      <div className="flex gap-4 flex-wrap">
+        <div className="bg-[#1E2A2E] rounded-xl p-5 flex flex-col justify-between shadow-sm flex-1 min-w-[180px] text-white">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/15">
+              <LuArchive size={18} />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-white/70">Total</span>
+          </div>
+          <div>
+            <div className="text-2xl font-black tracking-tight">{items.length}</div>
+            <p className="text-[11px] font-bold text-white/60 mt-1">Items in trash</p>
+          </div>
+        </div>
+
+        {typeCounts.map(({ type, count }) => {
+          const { card, icon: TypeIcon } = TYPE_STATS[type];
+          return (
+            <div key={type} className={`${card} rounded-xl p-5 flex flex-col justify-between shadow-sm flex-1 min-w-[180px] text-white`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/15">
+                  <TypeIcon size={18} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-white/70">{type}s</span>
+              </div>
+              <div>
+                <div className="text-2xl font-black tracking-tight">{count}</div>
+                <p className="text-[11px] font-bold text-white/60 mt-1">Deleted {type.toLowerCase()}s</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 3. TYPE FILTER TABS */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {TYPES.map((t) => (
           <button
@@ -77,7 +124,7 @@ const Trash = () => {
         ))}
       </div>
 
-      {/* 3. TRASH TABLE */}
+      {/* 4. TRASH TABLE */}
       <div className="bg-white rounded-xl border border-[#E8E3D8] shadow-sm overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead className="bg-[#1E2A2E] text-white text-[11px] font-black uppercase tracking-wider">
