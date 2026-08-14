@@ -1,53 +1,61 @@
-/**
- * usePayment.js
- * ─────────────────────────────────────────────────────────────────────────────
- * Hook សម្រាប់ Admin Payment Management
- * - fetch payments ជាមួយ auto-refresh រៀងរាល់ 15 វិនាទី
- * - confirm / refund / delete payment
- * - connect ទៅ routes/api.php: /api/admin/payments/*
- * ─────────────────────────────────────────────────────────────────────────────
- */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import axios from '../api/axios'; // ✅ axiosInstance ដែលមាន Bearer token
+import axios from '../api/axios';
+import useEcho from './useEcho';
 
 const BASE_URL = '/admin/payments';
-const POLL_MS  = 15_000; // auto-refresh រៀងរាល់ 15 វិនាទី
+const POLL_MS  = 15_000;
 
 const usePayment = () => {
   const [payments, setPayments]           = useState([]);
-  const [pendingCount, setPendingCount]   = useState(0);   // ← badge សម្រាប់ Dashboard
+  const [pendingCount, setPendingCount]   = useState(0);
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState(null);
-  const [lastUpdated, setLastUpdated]     = useState(null); // ← បង្ហាញពេលចុងក្រោយ refresh
-  const intervalRef                       = useRef(null);
+  const [lastUpdated, setLastUpdated]     = useState(null);
 
-  // ── Fetch all payments (with optional status filter) ──────────────────────
+  const intervalRef                       = useRef(null);
+  const isFirstLoad                       = useRef(true);
+  const isFetchingRef = useRef(false);
+
   const fetchPayments = useCallback(async (params = {}) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
     try {
-      // មិន setLoading(true) ពេល background refresh ដើម្បីមិន flicker UI
-      if (!payments.length) setLoading(true);
+      if (isFirstLoad.current) {
+        setLoading(true);
+      }
       setError(null);
 
-      const res = await axios.get(BASE_URL, { params });
+      const [res, statsRes] = await Promise.all([
+        axios.get(BASE_URL, { params: { per_page: 1000, ...params } }),
+        axios.get(`${BASE_URL}/stats`).catch(() => null),
+      ]);
 
-      // Backend return: { status: 'success', data: { data: [...], total, ... } }
       const raw = res.data?.data;
       const list = Array.isArray(raw) ? raw
                  : Array.isArray(raw?.data) ? raw.data
                  : [];
 
       setPayments(list);
-      setPendingCount(list.filter(p => p.status === 'pending').length);
+
+      const realPendingCount =
+        statsRes?.data?.data?.pending_confirmation_count
+        ?? statsRes?.data?.data?.by_status
+            ?.find(s => s.status === 'pending')?.count
+        ?? list.filter(p => p.status === 'pending' && p.method !== 'cash').length;
+
+      setPendingCount(Number(realPendingCount));
       setLastUpdated(new Date());
     } catch (err) {
       console.error('usePayment fetch error:', err.response ?? err);
       setError('Failed to load payments. Check your connection.');
     } finally {
       setLoading(false);
+      isFirstLoad.current = false;
+      isFetchingRef.current = false;
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // ── Auto-refresh រៀងរាល់ 15 វិនាទី ───────────────────────────────────────
   useEffect(() => {
     fetchPayments();
 
@@ -60,10 +68,13 @@ const usePayment = () => {
     };
   }, [fetchPayments]);
 
-  // ── Confirm payment (pending → paid) ─────────────────────────────────────
-  // PUT /api/admin/payments/:id/confirm
+  useEcho(null, {
+    onAnyChange: () => {
+      fetchPayments();
+    },
+  });
+
   const confirmPayment = async (id) => {
-    // Optimistic UI update ភ្លាមៗ
     setPayments(prev =>
       prev.map(p => p.id === id
         ? { ...p, status: 'paid', paid_at: new Date().toISOString() }
@@ -74,21 +85,17 @@ const usePayment = () => {
 
     try {
       const res = await axios.put(`${BASE_URL}/${id}/confirm`);
-      // Update ជាមួយ data ពិតពី backend
       const updated = res.data?.data;
       if (updated) {
         setPayments(prev => prev.map(p => p.id === id ? { ...p, ...updated } : p));
       }
     } catch (err) {
       console.error('confirmPayment error:', err.response ?? err);
-      // Revert optimistic update
       fetchPayments();
       throw err;
     }
   };
 
-  // ── Refund payment (paid → refunded) ─────────────────────────────────────
-  // PUT /api/admin/payments/:id/refund
   const refundPayment = async (id) => {
     setPayments(prev =>
       prev.map(p => p.id === id ? { ...p, status: 'refunded' } : p)
@@ -107,12 +114,10 @@ const usePayment = () => {
     }
   };
 
-  // ── Delete payment ────────────────────────────────────────────────────────
-  // DELETE /api/admin/payments/:id
   const removePayment = async (id) => {
     const removed = payments.find(p => p.id === id);
     setPayments(prev => prev.filter(p => p.id !== id));
-    if (removed?.status === 'pending') {
+    if (removed?.status === 'pending' && removed?.method !== 'cash') {
       setPendingCount(prev => Math.max(0, prev - 1));
     }
 
@@ -120,7 +125,6 @@ const usePayment = () => {
       await axios.delete(`${BASE_URL}/${id}`);
     } catch (err) {
       console.error('removePayment error:', err.response ?? err);
-      // Restore on failure
       if (removed) setPayments(prev => [removed, ...prev]);
       throw err;
     }
@@ -128,7 +132,7 @@ const usePayment = () => {
 
   return {
     payments,
-    pendingCount,   // ← Dashboard ប្រើ badge notification
+    pendingCount,
     loading,
     error,
     lastUpdated,

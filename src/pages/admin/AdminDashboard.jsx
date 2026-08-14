@@ -20,43 +20,16 @@ import * as XLSX from 'xlsx';
 /*
   DESIGN TOKENS — Khmer-Fresh admin
   ----------------------------------
-  Paper (page bg)     #FBF9F5   Ink (text)          #1E2A2E
-  Surface (cards)     #FFFFFF   Ink-soft (sub-text) #8B9296
-  Line (borders)      #E8E3D8   Muted (labels)      #9AA0A0
-  Gold (sales/spice)  #D99A3D   Herb (fresh/ok)     #3F7D58
-  Sky (info)          #3B6E91   Plum (messages)     #7A4F6D
-  Chili (urgent)      #B5453B
-
-  SIDEBAR TIE-IN — the sidebar is dark navy (#1E2A2E) with a gold krama
-  accent. Two things in the main content now echo that instead of sitting
-  as an unrelated white/cream area next to it:
-    1. The hero "Today's sales" card uses the same dark-navy + gold
-       gradient as the sidebar, so the money metric reads as the page's
-       one "premium" surface — same family as the brand mark.
-    2. The three secondary stat cards are now fully color-filled (not
-       just a tinted icon chip on white) using the same hue family as
-       the status chips/alerts elsewhere on the page, so the card grid
-       doesn't look like a second, disconnected palette.
-
-  SPACING SCALE — one card padding for the whole page (p-6). Only the
-  hero card (Today's Sales) and the chart get p-8 because they carry
-  more visual weight — every other card uses the same p-6 rhythm so
-  the eye doesn't have to recalibrate between sections.
-
-  HEADING SCALE — every section h2 is text-[16px]/font-semibold. Size
-  no longer competes with layout position for "this matters more" —
-  hierarchy comes from card size and placement instead.
-
-  Display face is 'Fraunces' for page/section titles only — add this to
-  index.html for the intended look, it falls back to Georgia otherwise:
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+  (unchanged — see original comments)
 */
 const FONT_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
 const H2 = "text-[16px] font-semibold text-[#1E2A2E]";
 const CARD = "bg-white rounded-2xl shadow-[0_1px_3px_rgba(30,42,46,0.05)] border border-[#E8E3D8]";
 
 const POLL_MS = 15_000;
-const PENDING_ORDER_ALERT_THRESHOLD = 5; // only alert once pending orders pile up past this count
+
+
+const PENDING_ORDER_ALERT_THRESHOLD = 5;
 
 const STATUS_STYLES = {
   pending: 'bg-[#FBEDD9] text-[#8A5A12] border-[#F1D9AE]',
@@ -113,9 +86,13 @@ const ALERT_TONES = {
     badge:  'bg-[#7A4F6D]',
     button: 'bg-[#7A4F6D] text-white hover:bg-[#68425F]',
   },
-  // Urgent alerts get a left accent bar in the list (see render below) so
-  // the one item that actually needs immediate action stands apart from
-  // routine confirmations, instead of all four tones reading as equal.
+  // ✅ NEW: dedicated tone for "fresh order(s) waiting to be started" —
+  // calmer than 'urgent' (kitchen isn't behind yet, just has work to do).
+  orders: {
+    chip:   'bg-[#E4F0E7] text-[#2F6844]',
+    badge:  'bg-[#3F7D58]',
+    button: 'bg-[#3F7D58] text-white hover:bg-[#356B4A]',
+  },
   urgent: {
     chip:   'bg-[#F5E1DE] text-[#8C3327]',
     badge:  'bg-[#B5453B]',
@@ -123,27 +100,17 @@ const ALERT_TONES = {
   },
 };
 
-// Priority order for sorting alerts — urgent kitchen backlog always leads,
-// routine confirmations (messages, reservations) trail behind money/logistics.
-const ALERT_PRIORITY = ['urgent', 'delivery', 'payment', 'reservation', 'message'];
+// ✅ FIX: 'orders' inserted so a normal "new orders waiting" alert still
+// ranks above routine reservation/message confirmations, just below
+// payment/delivery which need faster action.
+const ALERT_PRIORITY = ['urgent', 'delivery', 'payment', 'orders', 'reservation', 'message'];
 
-// Full-fill palette for the secondary stat cards — bold, saturated brand
-// hues (not light tints) with white text and a translucent icon chip, so
-// each card reads as a solid color block rather than a white card with a
-// hint of color. Same hue family as the status chips elsewhere, just
-// pushed to full saturation.
 const STAT_FILL = {
   sky:   { bg: 'bg-[#3B6E91]', text: 'text-white', sub: 'text-[#CFE1EC]', chip: 'bg-white/20 text-white', badge: 'bg-white/20 text-white' },
   herb:  { bg: 'bg-[#3F7D58]', text: 'text-white', sub: 'text-[#CFE7D7]', chip: 'bg-white/20 text-white', badge: 'bg-white/20 text-white' },
   chili: { bg: 'bg-[#B5453B]', text: 'text-white', sub: 'text-[#F3D4D0]', chip: 'bg-white/20 text-white', badge: 'bg-white/20 text-white' },
 };
 
-// Bold solid fills for the big queue-summary chips (Live order queue /
-// Live delivery queue). Kept separate from STATUS_STYLES / DELIVERY_STATUS_
-// STYLES above, which stay as light pills for small inline tags (order row
-// badges, recent-orders list) — those need to stay quiet next to text,
-// while these chips are meant to read as bold color blocks like the stat
-// cards above them.
 const QUEUE_FILL = {
   pending: 'bg-[#D99A3D]',
   cooking: 'bg-[#3B6E91]',
@@ -179,9 +146,6 @@ const GREETING_BY_HOUR = (hour) => {
   return 'Good evening';
 };
 
-// Small decorative accent inspired by the krama — Cambodia's woven checkered
-// scarf. Same motif as the sidebar logo strip, repeated here (and, wider,
-// as the header divider below) so the two panels read as one product.
 const KramaAccent = ({ className = '', count = 7 }) => (
   <svg width={count * 8} height="6" viewBox={`0 0 ${count * 8} 6`} className={className} aria-hidden="true">
     {Array.from({ length: count }).map((_, i) => (
@@ -241,7 +205,6 @@ const AdminDashboard = () => {
   useEcho(null, {
     onAnyChange: () => {
       fetchDashboard();
-      fetchPayments();
     },
   });
 
@@ -282,9 +245,9 @@ const AdminDashboard = () => {
     XLSX.writeFile(workbook, `recent-orders-${now.toISOString().slice(0, 10)}.xlsx`);
   };
 
-  // Build a single, prioritized "needs attention" list instead of stacking
-  // one full-width banner per alert type.
+  // Build a single, prioritized "needs attention" list.
   const alerts = [];
+
   if (pendingCount > 0) {
     alerts.push({
       key: 'payments',
@@ -297,6 +260,7 @@ const AdminDashboard = () => {
       onClick: () => navigate('/admin/payments'),
     });
   }
+
   if (unassignedDeliveryCount > 0) {
     alerts.push({
       key: 'delivery',
@@ -309,6 +273,33 @@ const AdminDashboard = () => {
       onClick: () => navigate('/admin/delivery'),
     });
   }
+
+  // ✅ FIX (the bug reported): previously this only fired at >= 5 pending
+  // orders, meaning a single fresh order (dine-in/takeaway/delivery, all
+  // start at status 'pending') produced NO signal at all in "Needs your
+  // attention" — admin had to click into Orders manually to notice it.
+  // Now: any pending order shows a calm 'orders' alert; once the backlog
+  // reaches PENDING_ORDER_ALERT_THRESHOLD it escalates to 'urgent' tone
+  // and backlog wording, instead of being two separate, possibly-duplicate
+  // alerts.
+  if (live_queue.pending > 0) {
+    const isBacklog = live_queue.pending >= PENDING_ORDER_ALERT_THRESHOLD;
+    alerts.push({
+      key: 'pending-orders',
+      tone: isBacklog ? 'urgent' : 'orders',
+      icon: <LuClipboardList size={17} />,
+      count: live_queue.pending,
+      title: isBacklog
+        ? `${live_queue.pending} orders stuck in pending`
+        : `${live_queue.pending} new order${live_queue.pending > 1 ? 's' : ''} waiting`,
+      subtitle: isBacklog
+        ? "The kitchen may need backup — orders haven't started cooking."
+        : 'Confirm and start preparing these orders.',
+      cta: 'View',
+      onClick: () => navigate('/admin/orders'),
+    });
+  }
+
   if (reservationStats?.pending > 0) {
     alerts.push({
       key: 'reservations',
@@ -321,6 +312,7 @@ const AdminDashboard = () => {
       onClick: () => navigate('/admin/reservations'),
     });
   }
+
   if (contactStats?.unread > 0) {
     alerts.push({
       key: 'contacts',
@@ -333,18 +325,7 @@ const AdminDashboard = () => {
       onClick: () => navigate('/admin/contacts'),
     });
   }
-  if (live_queue.pending >= PENDING_ORDER_ALERT_THRESHOLD) {
-    alerts.push({
-      key: 'stuck-orders',
-      tone: 'urgent',
-      icon: <LuClipboardList size={17} />,
-      count: live_queue.pending,
-      title: `${live_queue.pending} orders stuck in pending`,
-      subtitle: "The kitchen may need backup — orders haven't started cooking.",
-      cta: 'View',
-      onClick: () => navigate('/admin/orders'),
-    });
-  }
+
   alerts.sort((a, b) => ALERT_PRIORITY.indexOf(a.tone) - ALERT_PRIORITY.indexOf(b.tone));
 
   return (
@@ -384,18 +365,12 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Header → sidebar bridge: a full-width krama strip in the same
-            dark/gold rhythm as the sidebar logo accent, so the cream content
-            area doesn't read as a separate palette from the navy sidebar. */}
         <div className="rounded-full overflow-hidden h-[3px] flex">
           {Array.from({ length: 48 }).map((_, i) => (
             <div key={i} className="flex-1" style={{ background: i % 2 === 0 ? '#D99A3D' : '#1E2A2E', opacity: i % 2 === 0 ? 0.9 : 0.15 }} />
           ))}
         </div>
 
-        {/* Needs attention — sorted so the one thing that's actually urgent
-            (kitchen backlog) leads, and carries a left accent bar so it
-            doesn't read as "just another item in the list". */}
         {alerts.length > 0 && (
           <div className={`${CARD} overflow-hidden`}>
             <div className="px-6 py-4 flex items-center justify-between border-b border-[#EFEBE2]">
@@ -442,13 +417,6 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Stat Cards — Today's Sales is the metric everything else in the
-            business rolls up to, so it gets its own wider hero card in the
-            same dark-navy + gold treatment as the sidebar, instead of
-            competing as one of four equal white boxes. The three cards
-            beside it are now fully color-filled (not just a tinted icon
-            chip on white) using the same hue family as the status chips
-            elsewhere on the page, so the whole row reads as one palette. */}
         <div className="grid grid-cols-12 gap-5">
           <div className="col-span-4">
             <HeroStatCard
@@ -489,7 +457,6 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Reservation Stats Row */}
         {reservationStats && (
           <div
             onClick={() => navigate('/admin/reservations')}
@@ -520,13 +487,10 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Main Grid */}
         <div className="grid grid-cols-12 gap-6 items-start">
 
-          {/* LEFT */}
           <div className="col-span-8 space-y-6">
 
-            {/* Sales Trend */}
             <div className={`${CARD} p-6`}>
               <h2 style={FONT_SERIF} className={`${H2} mb-6`}>Sales trend · last 7 days</h2>
               <div className="h-[280px] w-full">
@@ -555,7 +519,6 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Live Order Queue */}
             <div className={`${CARD} p-6`}>
               <div className="flex items-center justify-between mb-5">
                 <h2 style={FONT_SERIF} className={H2}>Live order queue</h2>
@@ -570,9 +533,6 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Live Delivery Queue — "Unassigned" is the only status that
-                needs a human to act, so it gets a ring instead of blending
-                in with five passive status counts. */}
             <div className={`${CARD} p-6`}>
               <div className="flex items-center justify-between mb-5">
                 <h2 style={FONT_SERIF} className={`${H2} flex items-center gap-2`}>
@@ -623,10 +583,8 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* RIGHT */}
           <div className="col-span-4 space-y-6">
 
-            {/* Recent Orders */}
             <div className={`${CARD} p-6`}>
               <div className="flex items-center justify-between mb-5">
                 <h2 style={FONT_SERIF} className={H2}>Recent orders</h2>
@@ -676,7 +634,6 @@ const AdminDashboard = () => {
               )}
             </div>
 
-            {/* Low Stock */}
             <div className={`${CARD} p-6`}>
               <div className="flex items-center justify-between mb-5">
                 <h2 style={FONT_SERIF} className={H2}>Low stock items</h2>
@@ -707,10 +664,6 @@ const AdminDashboard = () => {
   );
 };
 
-// The hero card for Today's Sales — same dark-navy + gold treatment as the
-// sidebar (down to the mini krama strip in the corner), so this is the one
-// card that visually "belongs" to the brand panel instead of the cream
-// content area. Bigger type, gold-tinted icon chip, white value text.
 const HeroStatCard = ({ icon, title, value, sub, trendPct, loading }) => {
   const showTrend = typeof trendPct === 'number' && !loading;
   const isUp   = showTrend && trendPct > 0;
@@ -741,10 +694,6 @@ const HeroStatCard = ({ icon, title, value, sub, trendPct, loading }) => {
   );
 };
 
-// Secondary stat cards — bold solid-color blocks (icon chip top-left,
-// small uppercase badge pill top-right, big white number below) rather
-// than a white card with a light tint. `fill` picks the hue from
-// STAT_FILL; `badge` is the short corner label (e.g. "Orders", "Alert").
 const StatCard = ({ icon, fill = 'sky', badge, title, value, sub, onClick }) => {
   const f = STAT_FILL[fill];
   return (

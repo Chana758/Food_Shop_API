@@ -1,21 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
   LuRefreshCw, LuEye, LuX, LuTrash2,
-  LuCircleCheck, LuUndo, LuClock, LuBell, LuDollarSign, LuCreditCard
+  LuCircleCheck, LuUndo, LuClock, LuBell, LuDollarSign
 } from 'react-icons/lu';
 import usePayment from '../../hooks/usePayment';
 
-/*
-  Palette matched to the Khmer-Fresh admin (see Dashboard / Contacts /
-  Delivery / Categories / Reservations / Reviews): Ink #1E2A2E ·
-  Gold #D99A3D · Herb #3F7D58 · Sky #3B6E91 · Plum #7A4F6D · Chili #B5453B
-*/
 const FONT_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
 const CARD = "bg-white rounded-xl border border-[#E8E3D8] shadow-[0_1px_3px_rgba(30,42,46,0.05)]";
 const PAGE_BG = "var(--page-bg)";
 
-//  Constants
 const STATUS_STYLES = {
   pending:  'bg-[#FBEDD9] text-[#8A5A12] border-[#F1D9AE]',
   paid:     'bg-[#E4F0E7] text-[#2F6844] border-[#C7E0CD]',
@@ -26,20 +20,11 @@ const STATUS_STYLES = {
 const METHOD_LABELS = { cash: 'Cash', khqr: 'KHQR', card: 'Card' };
 const FILTERS = ['all', 'pending', 'paid', 'refunded', 'failed'];
 
-//  FIX: was hardcoded to 'http://127.0.0.1:8000/storage/', which only
-// ever works on a developer's own machine. Any receipt image would
-// silently 404 for every other admin, and break entirely as soon as the
-// app was deployed to a real server (Reverb / API domain won't be
-// 127.0.0.1 there). Now derived from the same API base URL the rest of
-// the app already uses (see src/api/axios.js / VITE_API_BASE_URL),
-// falling back to the old local dev address only if that env var is
-// missing, so local development still works out of the box.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
 const STORAGE_BASE = `${API_BASE_URL.replace(/\/$/, '')}/storage/`;
 
 const ITEMS_PER_PAGE = 10;
 
-// Modal Wrapper 
 const Modal = ({ onClose, children }) => (
   <div
     className="fixed inset-0 bg-[#1E2A2E]/60 backdrop-blur-2xs flex items-center justify-center p-4 z-50"
@@ -54,7 +39,6 @@ const Modal = ({ onClose, children }) => (
   </div>
 );
 
-//  Main Component 
 const PaymentManagement = () => {
   const { searchTerm = '' } = useOutletContext() || {};
 
@@ -70,7 +54,6 @@ const PaymentManagement = () => {
   const [toastMsg,  setToastMsg]        = useState(null);
   const [currentPage, setCurrentPage]   = useState(1);
 
-  // Filter & Search 
   const filtered = payments.filter(p => {
     const matchesFilter = activeFilter === 'all' || p.status === activeFilter;
     const matchesSearch = 
@@ -86,7 +69,7 @@ const PaymentManagement = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
-  React.useEffect(() => { setCurrentPage(1); }, [activeFilter, searchTerm]);
+  useEffect(() => { setCurrentPage(1); }, [activeFilter, searchTerm]);
 
   const counts = payments.reduce(
     (acc, p) => ({ ...acc, [p.status]: (acc[p.status] || 0) + 1 }), {}
@@ -96,49 +79,50 @@ const PaymentManagement = () => {
     .filter(p => p.status === 'paid')
     .reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
 
-  // Toast helper
   const showToast = (msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  //Confirm
+  // Confirm payment ជាមួយ Catch Error បង្ហាញ Message ពិតប្រាកដពី Backend
   const handleConfirm = async (id) => {
     try {
       await confirmPayment(id);
       showToast('✅ Payment confirmed! Order marked as Paid.');
-    } catch {
-      showToast('❌ Failed to confirm. Please retry.');
+    } catch (err) {
+      const errorMsg = err?.response?.data?.message || 'Failed to confirm. Please retry.';
+      showToast(`❌ ${errorMsg}`);
     }
   };
 
-  // ── Refund ────────────────────────────────────────────────────────────────
+  // Refund payment ជាមួយ Catch Error បង្ហាញ Message ពិតប្រាកដពី Backend
   const handleRefund = async (id) => {
     if (window.confirm("Are you sure you want to refund this payment?")) {
       try {
         await refundPayment(id);
         showToast('↩️ Payment refunded successfully.');
-      } catch {
-        showToast('❌ Failed to refund. Please retry.');
+      } catch (err) {
+        const errorMsg = err?.response?.data?.message || 'Failed to refund. Please retry.';
+        showToast(`❌ ${errorMsg}`);
       }
     }
   };
 
-  // ── Delete ────────────────────────────────────────────────────────────────
+  // Delete payment
   const handleDelete = async () => {
     setSubmitting(true);
     try {
       await removePayment(deleting.id);
       setDeleting(null);
-      showToast('🗑️ Payment deleted.');
-    } catch {
-      showToast('❌ Failed to delete.');
+      showToast('🗑️ Payment deleted successfully.');
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to delete payment.';
+      showToast(`❌ ${msg}`);
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ── Loading state ─────────────────────────────────────────────────────────
   if (loading) return (
     <div className="p-8 flex flex-col items-center justify-center min-h-[300px] gap-3">
       <div className="w-8 h-8 border-4 border-[#E8E3D8] border-t-[#1E2A2E] rounded-full animate-spin" />
@@ -155,18 +139,15 @@ const PaymentManagement = () => {
     </div>
   );
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="p-6 md:p-8 min-h-screen space-y-6 relative" style={{ background: PAGE_BG }}>
 
-      {/* ── Toast Notification ──────────────────────────────────────────── */}
       {toastMsg && (
         <div className="fixed top-6 right-6 z-[999] bg-[#1E2A2E] text-white px-5 py-3 rounded-xl shadow-2xl text-xs font-bold uppercase tracking-wider animate-fade-in border border-[#2A3B3F]">
           {toastMsg}
         </div>
       )}
 
-      {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div className={`${CARD} p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4`}>
         <div>
           <h1 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">Payment Management</h1>
@@ -187,7 +168,6 @@ const PaymentManagement = () => {
         </div>
       </div>
 
-      {/* ── STATS CARDS — bold solid fills ─────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-[#B5453B] rounded-xl p-5 shadow-[0_4px_14px_rgba(30,42,46,0.12)] relative overflow-hidden flex flex-col justify-between">
           <div className="flex justify-between items-start">
@@ -216,7 +196,6 @@ const PaymentManagement = () => {
         </div>
       </div>
 
-      {/* ── Filter Tabs ─────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {FILTERS.map(f => (
           <button
@@ -241,7 +220,6 @@ const PaymentManagement = () => {
         ))}
       </div>
 
-      {/* ── Payments Table ───────────────────────────────────────────────── */}
       <div className={`${CARD} overflow-hidden`}>
         <table className="w-full text-left border-collapse">
           <thead className="bg-[#FBF9F5] text-[#8B9296] text-[11px] font-black uppercase tracking-wider border-b border-[#EFEBE2]">
@@ -284,7 +262,6 @@ const PaymentManagement = () => {
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex justify-center gap-1.5">
-                    {/* View details */}
                     <button
                       onClick={() => setViewing(payment)}
                       className="p-2 bg-white border border-[#E8E3D8] hover:bg-[#FBF9F5] text-[#5B6B6F] rounded-lg cursor-pointer transition shadow-2xs"
@@ -293,7 +270,6 @@ const PaymentManagement = () => {
                       <LuEye size={13} />
                     </button>
 
-                    {/* Confirm — pending only */}
                     {payment.status === 'pending' && (
                       <button
                         onClick={() => handleConfirm(payment.id)}
@@ -304,7 +280,6 @@ const PaymentManagement = () => {
                       </button>
                     )}
 
-                    {/* Refund — paid only */}
                     {payment.status === 'paid' && (
                       <button
                         onClick={() => handleRefund(payment.id)}
@@ -315,7 +290,6 @@ const PaymentManagement = () => {
                       </button>
                     )}
 
-                    {/* Delete */}
                     <button
                       onClick={() => setDeleting(payment)}
                       className="p-2 bg-white border border-[#EBC7C1] hover:bg-[#F5E1DE] text-[#B5453B] rounded-lg cursor-pointer transition shadow-2xs"
@@ -338,7 +312,6 @@ const PaymentManagement = () => {
           </tbody>
         </table>
 
-        {/* ── PAGINATION ── */}
         {totalPages > 1 && (
           <div className="p-3 flex justify-center items-center gap-1.5 border-t border-[#EFEBE2] bg-[#FBF9F5]">
             <button
@@ -372,7 +345,6 @@ const PaymentManagement = () => {
         )}
       </div>
 
-      {/* ── VIEW Modal ───────────────────────────────────────────────────── */}
       {viewing && (
         <Modal onClose={() => setViewing(null)}>
           <div className="flex items-center justify-between pb-3 border-b border-[#EFEBE2]">
@@ -403,7 +375,6 @@ const PaymentManagement = () => {
               </div>
             ))}
 
-            {/* ── Receipt Image ── */}
             {viewing.receipt_image && (
               <div className="pt-3">
                 <span className="block text-[10px] font-black uppercase text-[#9AA0A0] mb-2">
@@ -415,7 +386,9 @@ const PaymentManagement = () => {
                   className="w-full rounded-lg border border-[#E8E3D8] shadow-sm object-contain max-h-[250px] bg-[#FBF9F5]"
                   onError={e => {
                     e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
+                    if (e.target.nextElementSibling) {
+                      e.target.nextElementSibling.style.display = 'flex';
+                    }
                   }}
                 />
                 <div
@@ -426,7 +399,6 @@ const PaymentManagement = () => {
               </div>
             )}
 
-            {/* ── Order Items ── */}
             {viewing.order?.items?.length > 0 && (
               <div className="pt-2">
                 <span className="block text-[10px] font-black uppercase text-[#9AA0A0] mb-2">
@@ -447,7 +419,6 @@ const PaymentManagement = () => {
             )}
           </div>
 
-          {/* Action buttons inside modal */}
           <div className="flex gap-2.5 pt-4 mt-2 border-t border-[#EFEBE2]">
             {viewing.status === 'pending' && (
               <button
@@ -467,7 +438,6 @@ const PaymentManagement = () => {
         </Modal>
       )}
 
-      {/* ── DELETE Confirm Modal ─────────────────────────────────────────── */}
       {deleting && (
         <Modal onClose={() => setDeleting(null)}>
           <div className="flex items-center justify-between pb-3 border-b border-[#EFEBE2]">

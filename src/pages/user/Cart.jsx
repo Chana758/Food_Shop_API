@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaShoppingCart, FaTrash, FaMinus, FaPlus, FaArrowLeft, FaTag } from 'react-icons/fa';
 import { MdDeliveryDining, MdOutlineReceiptLong, MdCheckCircle } from 'react-icons/md';
-
+import usePricing from '../../hooks/usePricing';
 const Cart = () => {
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
+  const { delivery_fee: DELIVERY_FEE, free_delivery_threshold: FREE_THRESHOLD } = usePricing();
 
   const getImageUrl = (imagePath) => {
     if (!imagePath) return '/placeholder-food.jpg';
@@ -15,7 +16,7 @@ const Cart = () => {
   };
 
   useEffect(() => {
-    // ✅ Fix: ប្តូរពី localStorage មក sessionStorage សម្រាប់ check login
+    // Fix: ប្តូរពី localStorage មក sessionStorage សម្រាប់ check login
     const currentUser = sessionStorage.getItem('currentUser');
     if (!currentUser) {
       navigate('/login');
@@ -134,8 +135,8 @@ const Cart = () => {
   const getDeliveryFee = () => {
     const subtotal = parseFloat(calculateSubtotal());
     if (subtotal <= 0 || selectedItems.length === 0) return 0;
-    if (subtotal >= 20) return 0;
-    return 2.0;
+    if (subtotal >= FREE_THRESHOLD) return 0;
+    return DELIVERY_FEE;
   };
 
   const calculateTotal = () => {
@@ -159,12 +160,12 @@ const Cart = () => {
 
   const getFreeDeliveryProgress = () => {
     const subtotal = parseFloat(calculateSubtotal());
-    return Math.min((subtotal / 20) * 100, 100);
+    return Math.min((subtotal / FREE_THRESHOLD) * 100, 100);
   };
 
   const getRemainingForFreeDelivery = () => {
     const subtotal = parseFloat(calculateSubtotal());
-    const remaining = 20 - subtotal;
+    const remaining = FREE_THRESHOLD - subtotal;
     return remaining > 0 ? remaining.toFixed(2) : 0;
   };
 
@@ -450,7 +451,7 @@ const Cart = () => {
                   </div>
                   <div className="flex justify-between mt-1">
                     <span className="text-[8px] text-gray-300 font-bold">$0</span>
-                    <span className="text-[8px] text-gray-300 font-bold">$20 FREE</span>
+                    <span className="text-[8px] text-gray-300 font-bold">${FREE_THRESHOLD} FREE</span>
                   </div>
                 </div>
               </div>

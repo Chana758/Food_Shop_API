@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
   LuEye, LuX, LuArrowRight,
-  LuUtensilsCrossed, LuShoppingBag,
+  LuUtensilsCrossed, LuShoppingBag, LuBike,
   LuTrash2, LuRefreshCw, LuClipboardList, LuClock
 } from 'react-icons/lu';
 import useOrder from '../../hooks/useOrder';
+import orderService from '../../service/orderService';
 
 /*
   Palette matched to the Khmer-Fresh admin (see Dashboard / Contacts /
@@ -40,6 +41,41 @@ const STATUS_STYLES = {
 const FILTERS = ['all', ...ALL_STATUSES];
 const ITEMS_PER_PAGE = 10;
 
+// ✅ FIX: order_type → icon + label lookup, used for both the table rows
+// and the details modal.
+//
+// ROOT CAUSE OF THE BUG THIS FIXES: the old code only branched on
+// order_type === 'dine-in' — everything else (including 'delivery')
+// fell into the same "else" bucket that rendered a shopping-bag icon
+// and the hardcoded label "Takeaway". Checkout.jsx's delivery flow
+// always sends order_type: 'delivery' (see buildOrderPayload()), so
+// every delivery order placed through the storefront was silently
+// mislabeled as a takeaway order in the admin Order Management screen
+// — with no visual distinction and no way to tell it apart from a real
+// takeaway order (or notice it needed a delivery address / rider) just
+// by looking at this table. This is a *display* bug only; the order's
+// real order_type in the database was always correct — see
+// DeliveryManagement.jsx and the dashboard's delivery queue, which
+// query order_type === 'delivery' directly and were never affected.
+const ORDER_TYPE_META = {
+  'dine-in': {
+    icon: <LuUtensilsCrossed size={13} />,
+    chip: 'bg-[#E4F0E7] text-[#2F6844] border-[#C7E0CD]',
+    label: (order) => order.table?.name ?? 'Dine-in',
+  },
+  'delivery': {
+    icon: <LuBike size={13} />,
+    chip: 'bg-[#F5E5DE] text-[#9C4A2E] border-[#EAD0C2]',
+    label: () => 'Delivery',
+  },
+  'takeaway': {
+    icon: <LuShoppingBag size={13} />,
+    chip: 'bg-[#FBEDD9] text-[#8A5A12] border-[#F1D9AE]',
+    label: () => 'Takeaway',
+  },
+};
+const getOrderTypeMeta = (orderType) => ORDER_TYPE_META[orderType] ?? ORDER_TYPE_META['takeaway'];
+
 const Modal = ({ onClose, children }) => (
   <div
     className="fixed inset-0 bg-[#1E2A2E]/60 backdrop-blur-2xs flex items-center justify-center p-4 z-50"
@@ -64,6 +100,43 @@ const ManageOrders = () => {
   const [submitting, setSubmitting]     = useState(false);
   const [currentPage, setCurrentPage]   = useState(1);
 
+  // ✅ FIX: global per-status counts for the filter tabs, fetched from
+  // OrderController::stats() (GET /admin/orders/stats → by_status),
+  // which aggregates over ALL orders in the database.
+  //
+  // ROOT CAUSE OF THE BUG THIS FIXES: the tab counts used to be derived
+  // with `orders.reduce(...)` over the `orders` array from useOrder(),
+  // but that array only ever holds ONE PAGE of results — useOrder's
+  // fetchOrders() calls orderService.getAll(params) with no per_page
+  // override, so the backend's default paginate($request->per_page ??
+  // 15) caps it at 15 rows. The dashboard's "Needs your attention"
+  // banner, by contrast, gets its pending count from
+  // DashboardController::stats() (a true `Order::whereIn(...)->count()`
+  // over the whole table) — so the two screens could show different
+  // numbers for the exact same thing (e.g. dashboard: "5 orders stuck
+  // in pending", this page's tab: "PENDING 1") purely because this
+  // page was quietly counting a 15-row subset and calling it the total.
+  const [statusCounts, setStatusCounts] = useState({});
+
+  const fetchStatusCounts = useCallback(async () => {
+    try {
+      const stats = await orderService.getStats();
+      const byStatus = stats?.by_status ?? [];
+      const map = byStatus.reduce((acc, row) => ({ ...acc, [row.status]: row.count }), {});
+      setStatusCounts(map);
+    } catch (err) {
+      console.error('Failed to fetch order status counts:', err.response ?? err);
+    }
+  }, []);
+
+  useEffect(() => { fetchStatusCounts(); }, [fetchStatusCounts]);
+
+  // Keep tab counts in sync whenever the order list itself refreshes
+  // (poll / Echo / manual refresh) — useOrder() already re-triggers on
+  // all of those, so piggyback on `orders` changing rather than adding
+  // a second independent poll/Echo subscription here.
+  useEffect(() => { fetchStatusCounts(); }, [orders, fetchStatusCounts]);
+
   const filtered = orders.filter(o => {
     const matchesStatus = activeFilter === 'all' || o.status === activeFilter;
     const searchVal = searchTerm.toLowerCase();
@@ -80,10 +153,6 @@ const ManageOrders = () => {
   );
 
   useEffect(() => { setCurrentPage(1); }, [activeFilter, searchTerm]);
-
-  const counts = orders.reduce(
-    (acc, o) => ({ ...acc, [o.status]: (acc[o.status] || 0) + 1 }), {}
-  );
 
   const handleAdvance = async (id) => {
     await advanceStatus(id);
@@ -130,7 +199,7 @@ const ManageOrders = () => {
           <p className="text-xs text-[#8B9296] font-semibold mt-0.5">Track and manage incoming food orders seamlessly from kitchen to payment</p>
         </div>
         <button
-          onClick={() => fetchOrders()}
+          onClick={() => { fetchOrders(); fetchStatusCounts(); }}
           className="bg-white border border-[#E8E3D8] text-[#5B6B6F] px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#FBF9F5] transition cursor-pointer shadow-sm flex items-center gap-2"
         >
           <LuRefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
@@ -152,9 +221,9 @@ const ManageOrders = () => {
               }`}
             >
               {f}
-              {f !== 'all' && counts[f] > 0 && (
+              {f !== 'all' && statusCounts[f] > 0 && (
                 <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-[#F1EFE9] text-[#5B6B6F]'}`}>
-                  {counts[f]}
+                  {statusCounts[f]}
                 </span>
               )}
             </button>
@@ -177,7 +246,9 @@ const ManageOrders = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EFEBE2]">
-            {pagedOrders.map(order => (
+            {pagedOrders.map(order => {
+              const typeMeta = getOrderTypeMeta(order.order_type);
+              return (
               <tr
                 key={order.id}
                 className="hover:bg-[#FBF9F5] transition-colors"
@@ -186,21 +257,15 @@ const ManageOrders = () => {
                   #{order.id}
                 </td>
                 <td className="px-5 py-3.5 font-bold text-xs text-[#1E2A2E]">
-                  {order.user?.name ?? '—'}
+                  {order.customer_name ?? order.user?.name ?? '—'}
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-2">
-                    {order.order_type === 'dine-in' ? (
-                      <div className="p-1.5 rounded-lg bg-[#E4F0E7] text-[#2F6844] border border-[#C7E0CD] shadow-2xs">
-                        <LuUtensilsCrossed size={13} />
-                      </div>
-                    ) : (
-                      <div className="p-1.5 rounded-lg bg-[#FBEDD9] text-[#8A5A12] border border-[#F1D9AE] shadow-2xs">
-                        <LuShoppingBag size={13} />
-                      </div>
-                    )}
+                    <div className={`p-1.5 rounded-lg border shadow-2xs ${typeMeta.chip}`}>
+                      {typeMeta.icon}
+                    </div>
                     <span className="font-bold text-xs text-[#3A4548]">
-                      {order.order_type === 'dine-in' ? order.table?.name ?? 'Dine-in' : 'Takeaway'}
+                      {typeMeta.label(order)}
                     </span>
                   </div>
                 </td>
@@ -252,7 +317,8 @@ const ManageOrders = () => {
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
 
             {filtered.length === 0 && (
               <tr>
@@ -317,14 +383,20 @@ const ManageOrders = () => {
             <div className="grid grid-cols-2 gap-3 bg-[#FBF9F5] p-3 rounded-lg border border-[#E8E3D8]">
               <div>
                 <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">Customer</span>
-                <span className="font-bold text-[#1E2A2E]">{viewing.user?.name ?? '—'}</span>
+                <span className="font-bold text-[#1E2A2E]">{viewing.customer_name ?? viewing.user?.name ?? '—'}</span>
               </div>
               <div>
                 <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">Order Type</span>
                 <span className="font-bold text-[#1E2A2E]">
-                  {viewing.order_type === 'dine-in' ? viewing.table?.name ?? 'Dine-in' : 'Takeaway'}
+                  {getOrderTypeMeta(viewing.order_type).label(viewing)}
                 </span>
               </div>
+              {viewing.order_type === 'delivery' && viewing.delivery_address && (
+                <div className="col-span-2">
+                  <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">Delivery Address</span>
+                  <span className="font-bold text-[#1E2A2E]">{viewing.delivery_address}</span>
+                </div>
+              )}
               <div>
                 <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">Status</span>
                 <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${STATUS_STYLES[viewing.status]}`}>

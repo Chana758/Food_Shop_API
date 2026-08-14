@@ -1,20 +1,4 @@
-/**
- * useAdminBell.js
- *
- * Aggregates all actionable items that need the admin's attention
- * and exposes them as a unified list for the bell-icon dropdown in
- * AdminHeader. Polls every 30 s and can be manually refreshed.
- *
- * Data sources (all existing endpoints — no new backend code needed):
- *   - GET /api/admin/payments?status=pending      → pending payments
- *   - GET /api/admin/reservations/stats           → pending reservations
- *   - GET /api/admin/contacts/stats               → unread contact messages
- *   - GET /api/admin/dashboard-stats              → unassigned deliveries
- *
- * Each item shape:
- *   { id, type, icon, title, sub, link, color, bg, count }
- */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import axiosInstance from '../api/axios';
 
 const POLL_MS = 30_000;
@@ -24,35 +8,55 @@ const useAdminBell = () => {
   const [totalCount, setTotal]  = useState(0);
   const [loading, setLoading]   = useState(true);
 
+  // ✅ FIX (429 storm): guards against overlapping calls to fetch().
+  // Without this, React 18 StrictMode's dev-only double-invoke of mount
+  // effects — visible in the reported error stack as
+  // "reconnectPassiveEffects" / "doubleInvokeEffectsOnFiber" — fired this
+  // effect twice almost simultaneously on every mount, each kicking off
+  // its OWN set of 4 parallel GET requests (payments/stats,
+  // reservations/stats, contacts/stats, dashboard-stats) — 8 requests
+  // instead of 4 on a single page load. The same double-fire risk exists
+  // any time `fetch` is invoked again (poll tick) before the previous
+  // call has resolved (e.g. a slow/stalled network). Skipping a call
+  // while one is already in flight removes that duplication entirely.
+  const isFetchingRef = useRef(false);
+
   const fetch = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
     try {
-      // All 4 sources in parallel — any failure is caught individually
       const [paymentsRes, reservationsRes, contactsRes, dashRes] = await Promise.all([
-        axiosInstance.get('/admin/payments', { params: { status: 'pending', per_page: 1 } }).catch(() => null),
+        axiosInstance.get('/admin/payments/stats').catch(() => null),
         axiosInstance.get('/admin/reservations/stats').catch(() => null),
         axiosInstance.get('/admin/contacts/stats').catch(() => null),
         axiosInstance.get('/admin/dashboard-stats').catch(() => null),
       ]);
 
-      // Extract counts safely from each response
-      // Payments: paginated list → total from meta
-      const pendingPayments = paymentsRes?.data?.data?.total ?? 0;
+      // Prefer the dedicated non-cash pending count (see
+      // PaymentController::stats()) over the raw by_status breakdown,
+      // which used to count 'cash' payments the same as 'khqr' — that
+      // was a separate bug (COD orders falsely showing as "payment
+      // awaiting confirmation").
+      const byStatus = paymentsRes?.data?.data?.by_status || [];
+      const pendingItem = Array.isArray(byStatus) ? byStatus.find(s => s.status === 'pending') : null;
+      const legacyPendingPayments = pendingItem ? Number(pendingItem.count) : 0;
 
-      // Reservations stats: { data: { total, pending, confirmed, today } }
+      const pendingPayments =
+        paymentsRes?.data?.data?.pending_confirmation_count
+        ?? legacyPendingPayments;
+
       const pendingReservations =
         reservationsRes?.data?.data?.pending ??
         reservationsRes?.data?.pending ?? 0;
 
-      // Contact stats: { data: { total, unread, read, replied } }
       const unreadContacts =
         contactsRes?.data?.data?.unread ??
         contactsRes?.data?.unread ?? 0;
 
-      // Dashboard stats: unassigned deliveries
       const unassignedDeliveries =
         dashRes?.data?.stats?.unassigned_delivery_count ?? 0;
 
-      // Build the items list — only include non-zero counts
       const next = [];
 
       if (pendingPayments > 0) {
@@ -117,6 +121,7 @@ const useAdminBell = () => {
       console.error('useAdminBell fetch error:', err);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, []);
 
@@ -127,8 +132,8 @@ const useAdminBell = () => {
   }, [fetch]);
 
   return {
-    items,       // array of notification items
-    totalCount,  // total badge count on the bell
+    items,
+    totalCount,
     loading,
     refresh: fetch,
   };

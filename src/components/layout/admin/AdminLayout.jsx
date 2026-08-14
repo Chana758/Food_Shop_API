@@ -71,7 +71,7 @@ const AdminLayout = () => {
   }, [resetIdleTimer]);
 
   return (
-    // ✅ CHANGED — was `bg-slate-100 dark:bg-[#0F1A1D]`. This is the
+    //  CHANGED — was `bg-slate-100 dark:bg-[#0F1A1D]`. This is the
     // outermost page canvas visible behind every route, so it now reads
     // the same --page-bg variable every content page uses. Whichever
     // Appearance > "Apply Accent Color To" option is active decides

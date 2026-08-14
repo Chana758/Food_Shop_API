@@ -127,7 +127,7 @@ const NAV_SECTIONS = [
     items: [
       { name: 'Backup',   icon: <LuDatabase />, path: '/admin/backup',   roles: ['admin'] },
       { name: 'Trash',    icon: <LuTrash2 />,   path: '/admin/trash',    roles: ['admin'] },
-      { name: 'Settings', icon: <LuSettings />, path: '/admin/settings', roles: ['admin'] },
+      { name: 'Settings', icon: <LuSettings />, path: '/admin/settings', roles: ['admin',] },
     ],
   },
 ];
