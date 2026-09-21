@@ -45,7 +45,7 @@ const AdminHeader = ({ title, searchTerm, setSearchTerm, toggleSidebar, placehol
   };
 
   return (
-    // ✅ FIXED — background reads --header-bg (solid accent when
+    //  FIXED — background reads --header-bg (solid accent when
     // theme_target === 'sidebar', fixed white/navy otherwise). The bug
     // reported: background was changing but every text/icon below was
     // still hardcoded to text-gray-600 / text-[#1e292b], so on a colored

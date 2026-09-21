@@ -1,7 +1,3 @@
-// src/config/sidebarTheme.js
-//
-// Central color config for the Admin Sidebar.
-// Change any value here to re-theme the whole sidebar — no JSX edits needed.
 
 export const SIDEBAR_THEME = {
   // Base background (top → bottom subtle gradient)

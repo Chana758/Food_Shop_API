@@ -16,7 +16,7 @@ export const authService = {
       const response = await api.post('/login', credentials);
 
       if (response.data.access_token) {
-        // sessionStorage — ដាច់ដោយឡែកក្នុង tab នីមួយៗ
+       
         sessionStorage.setItem('access_token', response.data.access_token);
         sessionStorage.setItem('user', JSON.stringify(response.data.user));
         sessionStorage.setItem('currentUser', JSON.stringify(response.data.user)); // legacy key

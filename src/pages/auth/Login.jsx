@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const Login = () => {
   const navigate  = useNavigate();
-  const { login } = useAuth(); // ✅ ប្រើ AuthContext.login()
+  const { login } = useAuth(); 
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading]           = useState(false);
@@ -27,16 +27,16 @@ const Login = () => {
       const data = await authService.login(formData);
 
       if (data.status === 'success') {
-        // ✅ AuthContext.login() saves: access_token + user + currentUser (legacy)
+        // AuthContext.login() saves: access_token + user + currentUser (legacy)
         login(data.user, data.access_token);
 
         const role = data.user.role?.toLowerCase();
 
         if (role === 'admin' || role === 'staff') {
-          // hard reload → AdminLayout mount fresh ជាមួយ auth state ពេញលេញ
+          // hard reload → AdminLayout mount fresh with full auth state
           window.location.href = '/admin/dashboard';
         } else {
-          // ✅ customer → hard reload ផង ដើម្បីឱ្យ Navbar re-mount ឃើញ currentUser
+          // customer → hard reload too so that Navbar re-mounts to see currentUser
           window.location.href = '/';
         }
       }

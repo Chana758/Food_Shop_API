@@ -1,5 +1,5 @@
 
-export const BAKONG_ACCOUNT_ID = 'khqr@aclb';
+export const BAKONG_ACCOUNT_ID = 'abaakhppxxx@abaa';
 export const MERCHANT_NAME = 'KHMER FRESH';
 export const MERCHANT_CITY = 'Phnom Penh';
 

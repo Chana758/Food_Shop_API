@@ -52,9 +52,6 @@ const CategoryIcon = ({ category, size = 18, className = '' }) => {
 };
 
 //RECEIPT PRINT HELPER (Standard POS format) 
-// CHANGED — now accepts `settings` so the store name/tagline/logo/tax/
-// footer note/currency all come from Settings > General & Receipt & POS
-// Rules instead of the previously hardcoded STORE_INFO constant.
 const printReceipt = ({
   cart, subtotal, discountAmt, grandTotal, paymentMethod, cashReceived, change,
   orderType, tableId, notes, orderNo, cashierName, isTest, settings = {},
@@ -167,12 +164,10 @@ ${isTest ? `<div class="center small" style="margin-top:4px;color:#b45309;">This
 // MAIN COMPONENT 
 const ManagementSaler = () => {
   const { searchTerm = '' } = useOutletContext() || {};
-  const { settings } = useSettings(); //  NEW — live settings
+  const { settings } = useSettings();
 
-  const currency = settings.currency || 'USD'; // NEW
+  const currency = settings.currency || 'USD';
 
-  // NEW — payment method list now built from settings-aware currency
-  // display; ENABLE_TEST_PAYMENT still controls the demo option.
   const PAYMENT_METHODS = [
     { id: 'cash',  label: 'Cash',   icon: LuBanknote   },
     { id: 'card',  label: 'Card',   icon: LuCreditCard  },
@@ -234,8 +229,6 @@ const ManagementSaler = () => {
     }
   }, [showPayment, paymentMethod]);
 
-  // NEW — if Table Service is disabled in Settings and the current
-  // selection is dine-in, force it to takeaway.
   useEffect(() => {
     if (settings.table_service === false && orderType === 'dine-in') {
       setOrderType('takeaway');
@@ -278,7 +271,6 @@ const ManagementSaler = () => {
     return Math.min(subtotal, v);
   })();
 
-  // NEW — tax computed from Settings > Receipt & POS Rules
   const preTaxTotal = Math.max(0, subtotal - discountAmt);
   const showTax      = settings.show_tax_receipt === true;
   const taxRate        = parseFloat(settings.tax_rate) || 0;
@@ -286,7 +278,7 @@ const ManagementSaler = () => {
     ? Math.round((preTaxTotal * (taxRate / 100)) * 100) / 100
     : 0;
 
-  const grandTotal  = preTaxTotal + taxAmt; //  CHANGED — includes tax now
+  const grandTotal  = preTaxTotal + taxAmt;
   const totalItems  = cart.reduce((s, i) => s + i.qty, 0);
   const cashNum     = parseFloat(cashReceived) || 0;
   const change      = Math.max(0, cashNum - grandTotal);
@@ -332,6 +324,12 @@ const ManagementSaler = () => {
         table_id:   orderType === 'dine-in' ? tableId : null,
         notes: isTestPay ? `${notes ? notes + ' — ' : ''}[DEMO/TEST ORDER]` : notes,
         discount_amount: discountAmt,
+        // ✅ FIX (Bug 1): send the SAME tax figure used to build grandTotal
+        // (and therefore the KHQR QR amount / printed receipt total) so
+        // OrderController::store() computes total_amount identically —
+        // otherwise Bakong's reported paid amount would never match
+        // payments.amount whenever tax is enabled in Settings.
+        tax_amount: taxAmt,
         items: cart.map(item => ({
           product_id: item.id,
           quantity:   item.qty,
@@ -351,6 +349,13 @@ const ManagementSaler = () => {
       await paymentService.create({
         order_id: order.id,
         method: isTestPay ? 'cash' : paymentMethod,
+        // ✅ FIX (Bug 2): the cashier has already physically collected
+        // cash/card money at the register right now — tell the backend
+        // to mark this payment (and the order) 'paid' immediately
+        // instead of leaving it 'pending' forever. KHQR is untouched —
+        // it still goes through POSKhqrModal → checkStatus() → Bakong
+        // verification, never a client-asserted flag.
+        paid_now: true,
         ...(isTestPay ? { transaction_ref: `DEMO-${Date.now()}` } : {}),
       });
 
@@ -555,7 +560,6 @@ const ManagementSaler = () => {
               </span>
             </div>
 
-            {/* ✅ CHANGED — Dine-In / Takeaway buttons now respect Settings toggles */}
             <div className="p-3.5 border-b border-slate-100 bg-slate-50/50">
               <div className="flex gap-2">
                 {settings.table_service !== false && (
@@ -668,7 +672,6 @@ const ManagementSaler = () => {
                 </div>
               )}
 
-              {/* ✅ CHANGED — adds tax row when settings.show_tax_receipt is on */}
               {cart.length > 0 ? (
                 <div className="space-y-1.5 text-xs bg-slate-50 p-3 rounded-lg border border-slate-200/80">
                   <div className="flex justify-between text-slate-400 font-medium">

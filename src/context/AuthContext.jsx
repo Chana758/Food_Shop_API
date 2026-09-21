@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
         } catch {
             // sessionStorage corrupt → ignore
         } finally {
-            setLoading(false); // ✅ ចប់ check → AdminRoute អាច render បាន
+            setLoading(false);
         }
     }, []);
 

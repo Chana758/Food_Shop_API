@@ -8,27 +8,7 @@ import {
 } from 'react-icons/lu';
 import { useAuth } from '../../../context/AuthContext';
 
-/*
-  DESIGN TOKENS — matches AdminDashboard's Khmer-Fresh palette
-  ----------------------------------------------------------------
-  Ink (sidebar bg)      #1E2A2E   Ink-raised (hover/active)  #28383D
-  Paper (contrast text) #FBF9F5   Ink-soft (muted label)     #7C8A8D
-  Line (dividers)       #32444A   Gold (active accent)       #D99A3D
-  Chili (logout hover)  #B5453B
 
-  CHANGED — Live theme support. The sidebar background now reads
-  `var(--sidebar-bg)`, set globally by SettingsContext.jsx from
-  Settings > Appearance & Branding. If the customer chose "Sidebar &
-  Header" as the theme target, this becomes their accent color; if they
-  chose "Page Content" instead, this stays pinned to the fixed navy
-  brand color (#1E2A2E / #161F22 in dark mode) — SettingsContext decides
-  which value the variable holds, this component just consumes it.
-
-  Icon accents (SECTION_TONE), the gold active-state highlight, and text
-  colors are intentionally left as fixed brand tones — only the base
-  background responds to the customer's color choice, so the sidebar
-  never becomes unreadable regardless of which accent is picked.
-*/
 const FONT_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
 
 const BrandSeal = ({ size = 44 }) => (
@@ -144,8 +124,7 @@ const AdminSidebar = ({ collapsed }) => {
 
   return (
     <div
-      // ✅ CHANGED — was `bg-[#1E2A2E] dark:bg-[#161F22]`, now driven by
-      // the live --sidebar-bg CSS variable (see SettingsContext.jsx).
+     
       style={{ background: 'var(--sidebar-bg)' }}
       className={`h-screen text-[#A9B2B0] flex flex-col fixed left-0 top-0 z-50
         border-r border-[#32444A] transition-colors duration-300

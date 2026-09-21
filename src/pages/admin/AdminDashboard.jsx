@@ -32,7 +32,6 @@ const POLL_MS = 15_000;
 const PENDING_ORDER_ALERT_THRESHOLD = 5;
 
 const STATUS_STYLES = {
-  pending: 'bg-[#FBEDD9] text-[#8A5A12] border-[#F1D9AE]',
   cooking: 'bg-[#E3EDF3] text-[#2E5975] border-[#C9DCE8]',
   served:  'bg-[#EFE6EC] text-[#6B3D5C] border-[#DCC9D6]',
   paid:    'bg-[#E4F0E7] text-[#2F6844] border-[#C7E0CD]',
