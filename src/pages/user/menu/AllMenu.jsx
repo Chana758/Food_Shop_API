@@ -7,7 +7,7 @@ import useFavorite from '../../../hooks/useFavorite';
 import { FaHeart, FaRegHeart, FaShoppingCart, FaFilter, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { IoSearch } from 'react-icons/io5';
 import Toast from '../../../components/common/Toast';
-
+import { getImageUrl } from '../../../utils/imageUrl';
 const PRICE_RANGES = [
   { id: 'all',    labelKey: 'menu.allPrices' },
   { id: 'low',    labelKey: 'menu.under'     },
@@ -105,7 +105,7 @@ const AllMenu = () => {
 
   // Add to Cart → localStorage
   const addToCart = (item) => {
-    // ✅ Fix: ប្តូរពី localStorage មក sessionStorage
+    
     if (!sessionStorage.getItem('currentUser')) { navigate('/login'); return; }
 
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -274,7 +274,7 @@ const AllMenu = () => {
                       <div className="relative h-48 overflow-hidden bg-gray-50">
                         <Link to={`/menu/product/${item.id}`}>
                           <img
-                            src={item.image?.startsWith('http') ? item.image : `http://127.0.0.1:8000/storage/${item.image}`}
+                            src={getImageUrl(item.image)}
                             alt={item.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             onError={e => { e.target.src = 'https://placehold.co/400x300?text=Khmer+Fresh'; }}

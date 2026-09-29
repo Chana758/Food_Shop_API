@@ -8,6 +8,7 @@ import Toast from '../../../components/common/Toast';
 import useFavorite from '../../../hooks/useFavorite';
 import { useProductReviews, useReview } from '../../../hooks/useReview';
 import { useAuth } from '../../../context/AuthContext';
+import { getImageUrl } from '../../../utils/imageUrl';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -24,7 +25,7 @@ const ProductDetail = () => {
 
   const { isFavorite, toggleFavorite } = useFavorite();
 
-  // ✅ NEW — reviews for this product (public) + the logged-in user's own reviews
+  // Reviews for this product (public) + the logged-in user's own reviews
   const { reviews, stats, loading: reviewsLoading, refetch: refetchReviews } = useProductReviews(id);
   const { myReviews, createReview } = useReview();
 
@@ -73,7 +74,6 @@ const ProductDetail = () => {
 
   const addToCart = () => {
     if (!product) return;
-    // ✅ Fix: ប្តូរពី localStorage មក sessionStorage
     const sessUser = JSON.parse(sessionStorage.getItem('currentUser'));
     if (sessUser?.status === 'blocked') {
       alert("Action restricted: Your account has been blocked.");
@@ -89,7 +89,7 @@ const ProductDetail = () => {
     setShowToast(true);
   };
 
-  // ✅ NEW — submit a review for this product
+  // Submit a review for this product
   const handleSubmitReview = async (e) => {
     e.preventDefault();
     if (reviewRating < 1) {
@@ -141,13 +141,11 @@ const ProductDetail = () => {
     </div>
   );
 
-  const productImageUrl = product.image?.startsWith('http')
-    ? product.image
-    : `http://127.0.0.1:8000/storage/${product.image}`;
+  // ✅ Fixed: use shared helper (no more 127.0.0.1)
+  const productImageUrl = getImageUrl(product.image);
 
   const totalPrice = (discountPrice * quantity).toFixed(2);
 
-  // ✅ Fix: ប្តូរពី localStorage មក sessionStorage
   const isBlocked = JSON.parse(sessionStorage.getItem('currentUser'))?.status === 'blocked';
 
   const fav = isFavorite(product.id);
@@ -202,7 +200,7 @@ const ProductDetail = () => {
               {product.name}
             </h1>
 
-            {/* ✅ NEW — rating summary under the title */}
+            {/* Rating summary under the title */}
             <div className="flex items-center gap-2 mb-3">
               <StarDisplay rating={stats.average} size={13} />
               <span className="text-[11px] font-bold text-gray-600">
@@ -293,7 +291,7 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* ✅ NEW — Reviews Section */}
+        {/* Reviews Section */}
         <div className="max-w-5xl mx-auto mt-10 bg-white border border-gray-100 shadow-sm p-8 md:p-10">
           <h2 className="text-lg font-black text-[#2D4A22] uppercase tracking-tight mb-6">
             Customer Reviews
@@ -440,7 +438,7 @@ const ProductDetail = () => {
   );
 };
 
-// ── small helper — read-only star display ──────────────────────────────
+// Small helper — read-only star display
 const StarDisplay = ({ rating, size = 14 }) => (
   <div className="flex items-center gap-0.5">
     {[1, 2, 3, 4, 5].map(n => (

@@ -4,6 +4,9 @@ import { IoSearch } from 'react-icons/io5';
 import { FaArrowLeft } from 'react-icons/fa';
 import { BiLeaf } from 'react-icons/bi';
 import axiosInstance from '../../../api/axios';
+import { getImageUrl } from '../../../utils/imageUrl';
+
+const PLACEHOLDER = 'https://placehold.co/400x300?text=Khmer+Fresh';
 
 const SearchResults = () => {
   const navigate                        = useNavigate();
@@ -14,12 +17,6 @@ const SearchResults = () => {
   const [products, setProducts]         = useState([]);
   const [categories, setCategories]     = useState([]);
   const [isLoading, setIsLoading]       = useState(false);
-
-  // ── Image URL helper ──────────────────────────────────
-  const getImageUrl = (p) =>
-    !p ? '/placeholder-food.jpg'
-      : p.startsWith('http') ? p
-      : `http://127.0.0.1:8000/storage/${p}`;
 
   // ── Fetch from API ────────────────────────────────────
   const fetchResults = async (term) => {
@@ -118,10 +115,10 @@ const SearchResults = () => {
                     <Link key={item.id} to={`/menu/product/${item.id}`} className="group flex flex-col">
                       <div className="relative aspect-[4/3.5] overflow-hidden bg-gray-50 mb-6 border border-gray-100">
                         <img
-                          src={getImageUrl(item.image)}
+                          src={getImageUrl(item.image, PLACEHOLDER)}
                           alt={item.name}
                           className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-500"
-                          onError={e => { e.target.onerror = null; e.target.src = '/placeholder-food.jpg'; }}
+                          onError={e => { e.target.onerror = null; e.target.src = PLACEHOLDER; }}
                         />
                       </div>
                       <div className="text-center">

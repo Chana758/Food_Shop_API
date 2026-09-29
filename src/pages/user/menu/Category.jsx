@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FaChevronRight } from 'react-icons/fa';
 import { useCategories } from '../../../hooks/useCategories';
-
+import { getImageUrl } from '../../../utils/imageUrl';
 const Category = () => {
   const { t } = useTranslation();
 
@@ -13,38 +13,38 @@ const Category = () => {
     AOS.init({ duration: 800, once: true });
   }, []);
 
-  // ── Fetch all categories from API ─────────────────────────────────────────
+  // ── Fetch all categories from API 
   const { data: categoriesData, isLoading, error } = useCategories({ per_page: 100 });
 
-  // ── Parse response ────────────────────────────────────────────────────────
+  // ── Parse response 
   // Laravel may return: { data: { data: [...] } } (paginated) or { data: [...] }
   const categories =
     categoriesData?.data?.data ||
     categoriesData?.data       ||
     [];
 
-  // ── Loading ───────────────────────────────────────────────────────────────
+  // ── Loading 
   if (isLoading) return (
     <div className="text-center py-24 font-bold text-gray-400 animate-pulse">
       {t('common.loading') || 'Loading...'}
     </div>
   );
 
-  // ── Error ─────────────────────────────────────────────────────────────────
+  // ── Error 
   if (error) return (
     <div className="text-center py-24 font-black text-gray-500">
       {t('common.error') || 'Error'}: {error.message}
     </div>
   );
 
-  // ── Empty ─────────────────────────────────────────────────────────────────
+  // ── Empty 
   if (categories.length === 0) return (
     <div className="text-center py-24 text-gray-400">
       {t('menu.noItems') || 'No categories found.'}
     </div>
   );
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Render 
   return (
     <div className="bg-white py-24">
       <div className="container mx-auto px-6">
@@ -74,13 +74,7 @@ const Category = () => {
               {/* Category Image */}
               <div className="overflow-hidden w-full aspect-[4/3] mb-6 relative bg-gray-100">
                 <img
-                  src={
-                    category.image
-                      ? category.image.startsWith('http')
-                        ? category.image
-                        : `http://127.0.0.1:8000/storage/${category.image}`
-                      : 'https://placehold.co/400x300?text=Food'
-                  }
+                  src={getImageUrl(category.image, 'https://placehold.co/400x300?text=Food')}
                   alt={category.name}
                   className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                   onError={e => { e.target.src = 'https://placehold.co/400x300?text=Food'; }}

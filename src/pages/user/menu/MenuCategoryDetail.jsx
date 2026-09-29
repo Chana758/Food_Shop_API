@@ -1,4 +1,4 @@
-// src/pages/menu/MenuCategoryDetail.jsx
+
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -7,15 +7,7 @@ import { useCategories } from '../../../hooks/useCategories';
 import { IoSearch } from 'react-icons/io5';
 import { FaChevronRight, FaArrowLeft } from 'react-icons/fa';
 import { BiLeaf } from 'react-icons/bi';
-
-const getImageUrl = (image) => {
-    if (!image) return 'https://placehold.co/400x300?text=Khmer+Fresh';
-    if (image.startsWith('http')) return image;
-    const cleanPath = image.replace('public/', '');
-    return cleanPath.startsWith('storage/')
-        ? `http://127.0.0.1:8000/${cleanPath}`
-        : `http://127.0.0.1:8000/storage/${cleanPath}`;
-};
+import { getImageUrl } from '../../../utils/imageUrl';
 
 const formatSlugAsTitle = (slug) =>
     slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -117,30 +109,34 @@ const MenuCategoryDetail = () => {
                 {products.length > 0 ? (
                     <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {products.map(item => (
-                            <div key={item.id} className="bg-white border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 flex flex-col h-full">
-                                <div className="relative h-56 overflow-hidden bg-[#F9F9F9]">
-                                    <img src={getImageUrl(item.image)} className="w-full h-full object-cover" alt={item.name} />
-                                    <div className="absolute top-3 right-3 bg-white/95 px-3 py-1 text-[#2D4A22] font-black text-xs rounded-full shadow-sm">
-                                        ${parseFloat(item.price).toFixed(2)}
+                            {products.map(item => (
+                                <div key={item.id} className="bg-white border border-gray-100 shadow-md hover:shadow-lg transition-all duration-300 flex flex-col h-full">
+                                    <div className="relative h-56 overflow-hidden bg-[#F9F9F9]">
+                                        <img
+                                            src={getImageUrl(item.image)}
+                                            className="w-full h-full object-cover"
+                                            alt={item.name}
+                                        />
+                                        <div className="absolute top-3 right-3 bg-white/95 px-3 py-1 text-[#2D4A22] font-black text-xs rounded-full shadow-sm">
+                                            ${parseFloat(item.price).toFixed(2)}
+                                        </div>
+                                    </div>
+                                    <div className="p-5 flex flex-col flex-1">
+                                        <h3 className="text-sm font-bold text-[#2D4A22] uppercase line-clamp-1 mb-2">{item.name}</h3>
+                                        <p className="text-xs text-gray-400 leading-relaxed mb-6 flex-1 line-clamp-2">
+                                            {item.description || 'Authentic organic recipe.'}
+                                        </p>
+                                        <Link
+                                            to={`/menu/product/${item.id}`}
+                                            className="w-full bg-[#FAFAFA] border border-gray-200 text-[#2D4A22] py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#2D4A22] hover:text-white transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <span>{t('menu.viewDetails')}</span>
+                                            <FaChevronRight size={8} />
+                                        </Link>
                                     </div>
                                 </div>
-                                <div className="p-5 flex flex-col flex-1">
-                                    <h3 className="text-sm font-bold text-[#2D4A22] uppercase line-clamp-1 mb-2">{item.name}</h3>
-                                    <p className="text-xs text-gray-400 leading-relaxed mb-6 flex-1 line-clamp-2">
-                                        {item.description || 'Authentic organic recipe.'}
-                                    </p>
-                                    <Link
-                                        to={`/menu/product/${item.id}`}
-                                        className="w-full bg-[#FAFAFA] border border-gray-200 text-[#2D4A22] py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#2D4A22] hover:text-white transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <span>{t('menu.viewDetails')}</span>
-                                        <FaChevronRight size={8} />
-                                    </Link>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
 
                         {/* Pagination Buttons */}
                         {totalPages > 1 && (
