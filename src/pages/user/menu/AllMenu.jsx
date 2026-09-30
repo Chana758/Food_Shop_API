@@ -105,7 +105,7 @@ const AllMenu = () => {
 
   // Add to Cart → localStorage
   const addToCart = (item) => {
-   
+    
     if (!sessionStorage.getItem('currentUser')) { navigate('/login'); return; }
 
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');

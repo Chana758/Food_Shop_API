@@ -1,4 +1,4 @@
-// src/pages/menu/MenuCategoryDetail.jsx
+
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
