@@ -16,9 +16,10 @@ import paymentService from '../../service/paymentService';
 import { hasDiscount, getFinalPrice, getDiscountPercent, getDiscountExpiryLabel, fmt } from '../../utils/priceUtils';
 import { ENABLE_TEST_PAYMENT } from '../../config/khqrConfig';
 import POSKhqrModal from '../../components/payment/POSKhqrModal';
-import { useSettings } from '../../context/SettingsContext'; 
+import { useSettings } from '../../context/SettingsContext';
+import { getPublicImageUrl } from '../../utils/imageUrl';
 
-// STATIC DATA 
+// STATIC DATA
 const AVAILABLE_TABLES = [
   { id: 1, name: 'Table 01' },
   { id: 3, name: 'Table 03' },
@@ -26,15 +27,10 @@ const AVAILABLE_TABLES = [
   { id: 7, name: 'Table 07' },
 ];
 
-// HELPERS 
-const getImageUrl = (image) => {
-  if (!image) return null;
-  if (image.startsWith('http')) return image;
-  const cleanPath = image.replace('public/', '');
-  return cleanPath.startsWith('storage/')
-    ? `http://127.0.0.1:8000/${cleanPath}`
-    : `http://127.0.0.1:8000/storage/${cleanPath}`;
-};
+// HELPERS
+// Images are served from the frontend's public/ folder (no more 127.0.0.1).
+// Returns null when there is no image so the UI can show a category icon instead.
+const getImageUrl = (image) => (image ? getPublicImageUrl(image) : null);
 
 const CategoryIcon = ({ category, size = 18, className = '' }) => {
   const props = { size, className };
@@ -51,7 +47,7 @@ const CategoryIcon = ({ category, size = 18, className = '' }) => {
   }
 };
 
-//RECEIPT PRINT HELPER (Standard POS format) 
+// RECEIPT PRINT HELPER (Standard POS format)
 const printReceipt = ({
   cart, subtotal, discountAmt, grandTotal, paymentMethod, cashReceived, change,
   orderType, tableId, notes, orderNo, cashierName, isTest, settings = {},
@@ -161,7 +157,7 @@ ${isTest ? `<div class="center small" style="margin-top:4px;color:#b45309;">This
   setTimeout(() => { w.print(); w.close(); }, 400);
 };
 
-// MAIN COMPONENT 
+// MAIN COMPONENT
 const ManagementSaler = () => {
   const { searchTerm = '' } = useOutletContext() || {};
   const { settings } = useSettings();
@@ -296,7 +292,7 @@ const ManagementSaler = () => {
       orderNo,
       cashierName: sessionStorage.getItem('cashierName'),
       isTest: isTestPay,
-      settings, 
+      settings,
     });
 
     setPlaced(true);
@@ -324,7 +320,7 @@ const ManagementSaler = () => {
         table_id:   orderType === 'dine-in' ? tableId : null,
         notes: isTestPay ? `${notes ? notes + ' — ' : ''}[DEMO/TEST ORDER]` : notes,
         discount_amount: discountAmt,
-        // ✅ FIX (Bug 1): send the SAME tax figure used to build grandTotal
+        // FIX (Bug 1): send the SAME tax figure used to build grandTotal
         // (and therefore the KHQR QR amount / printed receipt total) so
         // OrderController::store() computes total_amount identically —
         // otherwise Bakong's reported paid amount would never match
@@ -349,11 +345,11 @@ const ManagementSaler = () => {
       await paymentService.create({
         order_id: order.id,
         method: isTestPay ? 'cash' : paymentMethod,
-        // ✅ FIX (Bug 2): the cashier has already physically collected
+        // FIX (Bug 2): the cashier has already physically collected
         // cash/card money at the register right now — tell the backend
         // to mark this payment (and the order) 'paid' immediately
         // instead of leaving it 'pending' forever. KHQR is untouched —
-        // it still goes through POSKhqrModal → checkStatus() → Bakong
+        // it still goes through POSKhqrModal -> checkStatus() -> Bakong
         // verification, never a client-asserted flag.
         paid_now: true,
         ...(isTestPay ? { transaction_ref: `DEMO-${Date.now()}` } : {}),

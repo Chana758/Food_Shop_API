@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
@@ -9,6 +8,7 @@ import {
 import { categoryService } from '../../service/categoryService';
 import { productService }  from '../../service/productService';
 import { hasDiscount, getFinalPrice, getDiscountPercent, getDiscountExpiryLabel, fmt } from '../../utils/priceUtils';
+import { getPublicImageUrl } from '../../utils/imageUrl';
 
 const FONT_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
 const CARD = "bg-white rounded-xl border border-[#E8E3D8] shadow-[0_1px_3px_rgba(30,42,46,0.05)]";
@@ -30,12 +30,12 @@ const STAT_FILL = {
   gold:  'bg-[#D99A3D]',
 };
 
-// ── shared input styling helpers (keeps the form visually consistent) ──────
+// Shared input styling helpers (keeps the form visually consistent)
 const FIELD_LABEL = "block text-[10px] font-black uppercase tracking-wider text-[#8B9296] mb-1.5";
 const FIELD_INPUT = "w-full p-3 rounded-lg border border-[#E8E3D8] font-bold text-[#1E2A2E] text-sm focus:outline-none focus:ring-2 focus:ring-[#1E2A2E]/10 focus:border-[#1E2A2E] bg-[#FBF9F5] transition placeholder:font-semibold placeholder:text-[#B0AA9C]";
 const SECTION_TITLE = "flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[#1E2A2E] pb-2 mb-4 border-b border-[#EFEAE0]";
 
-//  Convert an ISO datetime (from backend) to the `datetime-local` input format
+// Convert an ISO datetime (from backend) to the `datetime-local` input format
 const toDatetimeLocalValue = (iso) => {
   if (!iso) return '';
   const d = new Date(iso);
@@ -261,9 +261,9 @@ const ManageProducts = () => {
                   <div className="p-3 pb-0">
                     <div className="relative rounded-xl overflow-hidden bg-[#FBF9F5] shadow-sm">
                       <img
-                        src={p.image ? `http://127.0.0.1:8000/storage/${p.image}` : 'https://placehold.co/400x300'}
+                        src={getPublicImageUrl(p.image, 'https://placehold.co/400x300')}
                         className={`w-full h-44 object-cover group-hover:scale-105 transition-transform duration-500 ${Number(p.stock_quantity) <= 0 ? 'opacity-40 grayscale' : ''}`}
-                        onError={e => e.target.src = 'https://placehold.co/400x300'}
+                        onError={e => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x300'; }}
                         alt={p.name}
                       />
                       <span className={`absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md text-[10px] font-black shadow-md ${stockBadge.className}`}>
@@ -332,7 +332,7 @@ const ManageProducts = () => {
         </div>
       )}
 
-      {/* ══════════════════════════ MODAL — REDESIGNED ══════════════════════════ */}
+      {/* ══════════════════════════ MODAL ══════════════════════════ */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#1E2A2E]/60 backdrop-blur-sm flex justify-center items-center p-4 z-50">
           <form
@@ -493,7 +493,7 @@ const ManageProducts = () => {
                   {!isAddMode && formData.image_path && (
                     <div className="flex-shrink-0">
                       <img
-                        src={`http://127.0.0.1:8000/storage/${formData.image_path}`}
+                        src={getPublicImageUrl(formData.image_path)}
                         className="w-20 h-20 object-cover rounded-xl border border-[#E8E3D8] shadow-sm"
                         alt="Current"
                       />

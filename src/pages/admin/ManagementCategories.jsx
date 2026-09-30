@@ -6,7 +6,7 @@ import {
   LuPlus, LuPencil, LuTrash, LuShapes, LuImage, LuFolder, LuSave
 } from "react-icons/lu";
 import { categoryService } from "../../service/categoryService";
-
+import { getPublicImageUrl } from "../../utils/imageUrl";
 /*
   Palette matched to the Khmer-Fresh admin (see Dashboard / Contacts /
   Delivery): Ink #1E2A2E · Gold #D99A3D · Herb #3F7D58 · Sky #3B6E91 ·
@@ -198,7 +198,7 @@ const ManagementCategories = () => {
                   <td className="px-5 py-3.5 font-bold text-xs text-[#1E2A2E]">{cat.name}</td>
                   <td className="px-5 py-3.5">
                     <img
-                      src={cat.image ? `http://127.0.0.1:8000/storage/${cat.image}` : "https://placehold.co/100x100"}
+                      src={getPublicImageUrl(cat.image, "https://placehold.co/100x100")}
                       className="w-16 h-10 object-cover rounded-md border border-[#E8E3D8] bg-[#FBF9F5] shadow-2xs"
                       alt={cat.name}
                       onError={e => e.target.src = "https://placehold.co/100x100"}
