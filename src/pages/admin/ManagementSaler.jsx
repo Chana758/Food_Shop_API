@@ -320,11 +320,7 @@ const ManagementSaler = () => {
         table_id:   orderType === 'dine-in' ? tableId : null,
         notes: isTestPay ? `${notes ? notes + ' — ' : ''}[DEMO/TEST ORDER]` : notes,
         discount_amount: discountAmt,
-        // FIX (Bug 1): send the SAME tax figure used to build grandTotal
-        // (and therefore the KHQR QR amount / printed receipt total) so
-        // OrderController::store() computes total_amount identically —
-        // otherwise Bakong's reported paid amount would never match
-        // payments.amount whenever tax is enabled in Settings.
+
         tax_amount: taxAmt,
         items: cart.map(item => ({
           product_id: item.id,
@@ -345,13 +341,6 @@ const ManagementSaler = () => {
       await paymentService.create({
         order_id: order.id,
         method: isTestPay ? 'cash' : paymentMethod,
-        // FIX (Bug 2): the cashier has already physically collected
-        // cash/card money at the register right now — tell the backend
-        // to mark this payment (and the order) 'paid' immediately
-        // instead of leaving it 'pending' forever. KHQR is untouched —
-        // it still goes through POSKhqrModal -> checkStatus() -> Bakong
-        // verification, never a client-asserted flag.
-        paid_now: true,
         ...(isTestPay ? { transaction_ref: `DEMO-${Date.now()}` } : {}),
       });
 
