@@ -1,16 +1,77 @@
-# React + Vite
+# Khmer-Fresh Food Shop 🥗
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack restaurant ordering system with a customer storefront and an admin dashboard (POS, orders, products, reservations and more). This repository contains the **React frontend**.
 
-Currently, two official plugins are available:
+🔗 **Live Demo:** https://food-shop-api.vercel.app
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+> ⏳ The API is hosted on a free plan. If the backend has been idle, the first load can take about 50 seconds while the server wakes up.
 
-## React Compiler
+🧩 **Backend repository:** https://github.com/Chana758/Food_Shop_Backend
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+![Home page](docs/screenshots/home.png)
 
-## Expanding the ESLint configuration
+## Demo accounts
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+| Role  | Email                    | Password          |
+| ----- | ------------------------ | ----------------- |
+| Admin | `demo-admin@example.com` | `<demo-password>` |
+| User  | `demo-user@example.com`  | `<demo-password>` |
+
+## Features
+
+### Customer
+
+- Browse the menu with category filters, price range, search and sorting
+- Category pages and product detail pages
+- Ratings and reviews (with verified purchase badge)
+- Favorites and shopping cart
+- Table reservation
+- Khmer / English language switch
+- Register, log in and manage a profile
+
+### Admin
+
+- Dashboard with sales, orders, customers and low-stock alerts
+- POS terminal: cash, card, KHQR and demo payments, receipt printing
+- Manage products, categories, orders, delivery, tables and reservations
+- Manage staff, customers, reviews, contacts and payments
+- Reports, backup, trash and site settings
+
+## Screenshots
+
+| Home | Categories | Admin dashboard |
+| ---- | ---------- | --------------- |
+| ![Home](docs/screenshots/home.png) | ![Categories](docs/screenshots/category.png) | ![Dashboard](docs/screenshots/dashboard.png) |
+
+## Tech stack
+
+| Layer      | Technology                                    |
+| ---------- | --------------------------------------------- |
+| Frontend   | React, Vite, Tailwind CSS, React Router       |
+| Data       | Axios, custom hooks, react-i18next            |
+| UI         | react-icons, react-hot-toast, AOS             |
+| Backend    | Laravel (PHP), see the backend repository     |
+| Database   | Supabase (PostgreSQL)                         |
+| Deployment | Vercel (frontend), Docker on Render (backend) |
+
+## Getting started
+
+```bash
+git clone https://github.com/Chana758/Food_Shop_API.git
+cd Food_Shop_API
+npm install
+npm run dev
+```
+
+Optional `.env.local` to use a local backend:
+
+```env
+VITE_API_URL=http://127.0.0.1:8000/api
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+If these are not set, the app uses the hosted backend on Render.
+
+## Author
+
+**Chana** · [GitHub](https://github.com/Chana758)
