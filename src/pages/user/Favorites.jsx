@@ -1,28 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaHeart, FaShoppingCart, FaTrash, FaArrowLeft } from 'react-icons/fa';
 import useFavorite from '../../hooks/useFavorite';
 import Toast from '../../components/common/Toast';
-import { useState } from 'react';
+import { getImageUrl } from '../../utils/imageUrl';
+import { getFinalPrice, hasDiscount } from '../../utils/priceUtils';
 
-const getImageUrl = (image) => {
-  if (!image) return '/placeholder-food.jpg';
-  if (image.startsWith('http')) return image;
-  return `http://127.0.0.1:8000/storage/${image}`;
-};
+// Adapters: your helpers take (price, discount_price, discount_expires_at)
+const finalPrice = (p) => getFinalPrice(p?.price, p?.discount_price, p?.discount_expires_at);
+const onDiscount = (p) => hasDiscount(p?.price, p?.discount_price, p?.discount_expires_at);
+
+const FALLBACK_IMG = 'https://placehold.co/400x300?text=Khmer+Fresh';
+
+const isLoggedIn = () =>
+  !!(localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser'));
 
 const Favorites = () => {
   const navigate = useNavigate();
   const { favorites, loading, error, toggleFavorite } = useFavorite();
-  const [showToast, setShowToast]   = useState(false);
-  const [toastMsg, setToastMsg]     = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
 
   const addToCart = (item) => {
-    if (!localStorage.getItem('currentUser')) { navigate('/login'); return; }
+    if (!isLoggedIn()) { navigate('/login'); return; }
+
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const idx  = cart.findIndex(i => i.id === item.id);
-    if (idx > -1) cart[idx].quantity += 1;
-    else cart.push({ ...item, quantity: 1, type: 'product' });
+    const idx = cart.findIndex(i => i.id === item.id && i.type === 'product');
+
+    if (idx > -1) {
+      cart[idx].quantity += 1;
+    } else {
+      cart.push({
+        ...item,
+        price: finalPrice(item),        // effective price (discount applied)
+        originalPrice: Number(item.price), // keep the original for reference
+        quantity: 1,
+        type: 'product',
+      });
+    }
+
     localStorage.setItem('cart', JSON.stringify(cart));
     setToastMsg(`${item.name} added to cart!`);
     setShowToast(true);
@@ -92,10 +108,13 @@ const Favorites = () => {
                 <div className="relative h-48 overflow-hidden bg-gray-50">
                   <Link to={`/menu/product/${item.id}`}>
                     <img
-                      src={getImageUrl(item.image)}
+                      src={getImageUrl(item.image, FALLBACK_IMG)}
                       alt={item.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      onError={e => { e.target.src = '/placeholder-food.jpg'; }}
+                      onError={e => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = FALLBACK_IMG;
+                      }}
                     />
                   </Link>
 
@@ -127,10 +146,15 @@ const Favorites = () => {
 
                   {/* Price + Cart */}
                   <div className="flex items-center justify-between border-t border-gray-50 pt-4">
-                    <div>
+                    <div className="flex items-baseline gap-2">
                       <span className="text-lg font-black text-[#2D4A22]">
-                        ${parseFloat(item.price).toFixed(2)}
+                        ${finalPrice(item).toFixed(2)}
                       </span>
+                      {onDiscount(item) && (
+                        <span className="text-[11px] text-gray-400 line-through">
+                          ${Number(item.price).toFixed(2)}
+                        </span>
+                      )}
                     </div>
                     <button
                       onClick={() => addToCart(item)}

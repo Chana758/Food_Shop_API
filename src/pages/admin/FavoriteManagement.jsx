@@ -5,13 +5,14 @@ import {
   LuTrash2, LuRefreshCw, LuX, LuUsers, LuBookmarkCheck, LuDollarSign
 } from 'react-icons/lu';
 import axiosInstance from '../../api/axios';
+import { getImageUrl } from '../../utils/imageUrl';
+import { getFinalPrice, hasDiscount } from '../../utils/priceUtils';
 
-// Image helper
-const getImageUrl = (image) => {
-  if (!image) return 'https://placehold.co/100x100?text=Food';
-  if (image.startsWith('http')) return image;
-  return `http://127.0.0.1:8000/storage/${image}`;
-};
+// Adapters: helpers take (price, discount_price, discount_expires_at)
+const finalPrice = (p) => getFinalPrice(p?.price, p?.discount_price, p?.discount_expires_at);
+const onDiscount = (p) => hasDiscount(p?.price, p?.discount_price, p?.discount_expires_at);
+
+const FALLBACK_IMG = 'https://placehold.co/400x300?text=Khmer+Fresh';
 
 // Modal
 const Modal = ({ onClose, children }) => (
@@ -28,7 +29,7 @@ const Modal = ({ onClose, children }) => (
   </div>
 );
 
-// Solid color stat card — matches Staff / Customer / Report / Backup / Trash style
+// Solid color stat card
 const StatCard = ({ icon, cardBg, label, value, sub }) => (
   <div className={`${cardBg} rounded-xl p-5 flex flex-col justify-between shadow-sm flex-1 min-w-[200px] text-white`}>
     <div className="flex items-center justify-between mb-3">
@@ -70,10 +71,10 @@ const FavoriteManagement = () => {
 
   useEffect(() => { fetchFavorites(); }, [fetchFavorites]);
 
-  const toggleUser   = (name) =>
+  const toggleUser  = (name) =>
     setOpenUsers(prev => prev.includes(name) ? prev.filter(u => u !== name) : [...prev, name]);
-  const expandAll    = () => setOpenUsers(Object.keys(favoritesMap));
-  const collapseAll  = () => setOpenUsers([]);
+  const expandAll   = () => setOpenUsers(Object.keys(favoritesMap));
+  const collapseAll = () => setOpenUsers([]);
 
   const handleDelete = async () => {
     if (!deleting) return;
@@ -89,12 +90,13 @@ const FavoriteManagement = () => {
     }
   };
 
+  // Totals use the same effective price as the cards
+  const sumValue = (items) =>
+    items.reduce((sum, f) => sum + finalPrice(f.product), 0);
+
   const totalUsers = Object.keys(favoritesMap).length;
   const totalFavs  = Object.values(favoritesMap).reduce((sum, items) => sum + items.length, 0);
-  const totalValue = Object.values(favoritesMap).reduce(
-    (sum, items) => sum + items.reduce((s, f) => s + Number(f.product?.price ?? 0), 0),
-    0
-  );
+  const totalValue = Object.values(favoritesMap).reduce((sum, items) => sum + sumValue(items), 0);
 
   const filteredMap = Object.entries(favoritesMap).reduce((acc, [userName, items]) => {
     const term = searchTerm.toLowerCase();
@@ -104,7 +106,7 @@ const FavoriteManagement = () => {
       f.product?.name?.toLowerCase().includes(term) ||
       f.product?.category?.name?.toLowerCase().includes(term)
     );
-    if (matchUser)              acc[userName] = items;
+    if (matchUser)                    acc[userName] = items;
     else if (matchedItems.length > 0) acc[userName] = matchedItems;
     return acc;
   }, {});
@@ -128,7 +130,7 @@ const FavoriteManagement = () => {
   return (
     <div className="p-6 md:p-8 min-h-screen space-y-6" style={{ background: 'var(--page-bg)' }}>
 
-      {/* ── HEADER BANNER (title + refresh only; stats moved to cards below) ── */}
+      {/* HEADER BANNER */}
       <div className="bg-[#1E2A2E] rounded-xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden border-2 border-slate-300">
         <div className="absolute -right-6 -bottom-6 opacity-5 pointer-events-none">
           <LuHeart size={180} />
@@ -153,7 +155,7 @@ const FavoriteManagement = () => {
         </button>
       </div>
 
-      {/* ── STATS CARDS (solid color, matches Staff/Customer/Report/Backup/Trash) ── */}
+      {/* STATS CARDS */}
       <div className="flex gap-4 flex-wrap">
         <StatCard
           icon={<LuUsers size={18} />}
@@ -178,7 +180,7 @@ const FavoriteManagement = () => {
         />
       </div>
 
-      {/* ── EXPAND / COLLAPSE CONTROLS BAR ── */}
+      {/* EXPAND / COLLAPSE */}
       <div className="flex items-center justify-start gap-2">
         <button
           onClick={expandAll}
@@ -194,7 +196,7 @@ const FavoriteManagement = () => {
         </button>
       </div>
 
-      {/* ── FAVORITES LIST ACCORDIONS ── */}
+      {/* FAVORITES LIST */}
       {Object.keys(filteredMap).length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-slate-300 rounded-xl bg-white shadow-2xs">
           <LuHeart className="mx-auto text-slate-300 mb-2" size={40} />
@@ -207,11 +209,11 @@ const FavoriteManagement = () => {
           {Object.entries(filteredMap).map(([userName, items]) => {
             const isOpen     = openUsers.includes(userName);
             const initials   = userName.slice(0, 2).toUpperCase();
-            const totalPrice = items.reduce((sum, f) => sum + Number(f.product?.price ?? 0), 0);
+            const totalPrice = sumValue(items);
 
             return (
               <div key={userName} className="bg-white border-2 border-slate-300 rounded-xl shadow-sm overflow-hidden transition-all">
-                {/* User Header Accordion Button */}
+                {/* User header */}
                 <button
                   onClick={() => toggleUser(userName)}
                   className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"
@@ -238,7 +240,7 @@ const FavoriteManagement = () => {
                   </div>
                 </button>
 
-                {/* Product Grid (Expanded) */}
+                {/* Product grid */}
                 {isOpen && (
                   <div className="px-5 pb-5 pt-3 border-t-2 border-slate-200 bg-slate-50">
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
@@ -249,10 +251,13 @@ const FavoriteManagement = () => {
                         >
                           <div className="relative h-28 overflow-hidden bg-slate-100 border-b border-slate-200">
                             <img
-                              src={getImageUrl(fav.product?.image)}
+                              src={getImageUrl(fav.product?.image, FALLBACK_IMG)}
                               alt={fav.product?.name}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              onError={e => { e.target.src = 'https://placehold.co/100x100?text=Food'; }}
+                              onError={e => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = FALLBACK_IMG;
+                              }}
                             />
                             <button
                               onClick={() => setDeleting({
@@ -277,9 +282,9 @@ const FavoriteManagement = () => {
                             </p>
                             <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-200">
                               <span className="text-xs font-black text-emerald-700">
-                                ${Number(fav.product?.discount_price || fav.product?.price || 0).toFixed(2)}
+                                ${finalPrice(fav.product).toFixed(2)}
                               </span>
-                              {fav.product?.discount_price && (
+                              {onDiscount(fav.product) && (
                                 <span className="text-[9px] text-slate-400 line-through">
                                   ${Number(fav.product.price).toFixed(2)}
                                 </span>
@@ -297,7 +302,7 @@ const FavoriteManagement = () => {
         </div>
       )}
 
-      {/* ── DELETE CONFIRMATION MODAL ── */}
+      {/* DELETE CONFIRMATION MODAL */}
       {deleting && (
         <Modal onClose={() => setDeleting(null)}>
           <div className="flex items-center justify-between pb-3 border-b border-slate-200">

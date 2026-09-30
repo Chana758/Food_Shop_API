@@ -124,7 +124,7 @@ export const useAdminReview = () => {
     setError(null);
     try {
       const res = await reviewService.getAll(params);
-      // ✅ FIXED — res.data.data was the paginator object itself, not an
+      // res.data.data was the paginator object itself, not an
       // array. The actual rows are one level deeper, at .data.data.data
       const paginator = res?.data?.data ?? null;
       setReviews(Array.isArray(paginator?.data) ? paginator.data : []);

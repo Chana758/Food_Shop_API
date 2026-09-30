@@ -3,22 +3,24 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FaShoppingCart, FaTrash, FaMinus, FaPlus, FaArrowLeft, FaTag } from 'react-icons/fa';
 import { MdDeliveryDining, MdOutlineReceiptLong, MdCheckCircle } from 'react-icons/md';
 import usePricing from '../../hooks/usePricing';
+import { getImageUrl } from '../../utils/imageUrl';
+
+const FALLBACK_IMG = 'https://placehold.co/400x300?text=Khmer+Fresh';
+
+const isLoggedIn = () =>
+  !!(localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser'));
+
 const Cart = () => {
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
-  const { delivery_fee: DELIVERY_FEE, free_delivery_threshold: FREE_THRESHOLD } = usePricing();
 
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return '/placeholder-food.jpg';
-    if (imagePath.startsWith('http')) return imagePath;
-    return `http://127.0.0.1:8000/storage/${imagePath}`;
-  };
+  const pricing = usePricing() || {};
+  const DELIVERY_FEE = Number(pricing.delivery_fee ?? 2);
+  const FREE_THRESHOLD = Number(pricing.free_delivery_threshold ?? 20);
 
   useEffect(() => {
-    // Fix: ប្តូរពី localStorage មក sessionStorage សម្រាប់ check login
-    const currentUser = sessionStorage.getItem('currentUser');
-    if (!currentUser) {
+    if (!isLoggedIn()) {
       navigate('/login');
       return;
     }
@@ -30,8 +32,7 @@ const Cart = () => {
     if (storedCart) {
       const parsed = JSON.parse(storedCart);
       setCartItems(parsed);
-      const allKeys = parsed.map(item => `${item.id}-${item.type}`);
-      setSelectedItems(allKeys);
+      setSelectedItems(parsed.map(item => `${item.id}-${item.type}`));
     }
   };
 
@@ -40,28 +41,23 @@ const Cart = () => {
   const toggleItemSelection = (itemId, itemType) => {
     const itemKey = `${itemId}-${itemType}`;
     setSelectedItems(prev =>
-      prev.includes(itemKey)
-        ? prev.filter(key => key !== itemKey)
-        : [...prev, itemKey]
+      prev.includes(itemKey) ? prev.filter(key => key !== itemKey) : [...prev, itemKey]
     );
   };
 
-  const isItemSelected = (itemId, itemType) => {
-    return selectedItems.includes(`${itemId}-${itemType}`);
-  };
+  const isItemSelected = (itemId, itemType) =>
+    selectedItems.includes(`${itemId}-${itemType}`);
 
   const toggleSelectAll = () => {
     if (selectedItems.length === cartItems.length) {
       setSelectedItems([]);
     } else {
-      const allItemKeys = cartItems.map(item => `${item.id}-${item.type}`);
-      setSelectedItems(allItemKeys);
+      setSelectedItems(cartItems.map(item => `${item.id}-${item.type}`));
     }
   };
 
-  const isAllSelected = () => {
-    return cartItems.length > 0 && selectedItems.length === cartItems.length;
-  };
+  const isAllSelected = () =>
+    cartItems.length > 0 && selectedItems.length === cartItems.length;
 
   // ====== QUANTITY LOGIC =======
 
@@ -82,12 +78,9 @@ const Cart = () => {
     if (!isNaN(numValue) && numValue > 0) {
       updateQuantity(itemId, itemType, numValue);
     } else if (value === '') {
-      const updatedCart = cartItems.map(item =>
-        item.id === itemId && item.type === itemType
-          ? { ...item, quantity: '' }
-          : item
-      );
-      setCartItems(updatedCart);
+      setCartItems(cartItems.map(item =>
+        item.id === itemId && item.type === itemType ? { ...item, quantity: '' } : item
+      ));
     }
   };
 
@@ -141,8 +134,7 @@ const Cart = () => {
 
   const calculateTotal = () => {
     const subtotal = parseFloat(calculateSubtotal());
-    const delivery = getDeliveryFee();
-    return (subtotal + delivery).toFixed(2);
+    return (subtotal + getDeliveryFee()).toFixed(2);
   };
 
   // ==== CHECKOUT =====
@@ -164,9 +156,8 @@ const Cart = () => {
   };
 
   const getRemainingForFreeDelivery = () => {
-    const subtotal = parseFloat(calculateSubtotal());
-    const remaining = FREE_THRESHOLD - subtotal;
-    return remaining > 0 ? remaining.toFixed(2) : 0;
+    const remaining = FREE_THRESHOLD - parseFloat(calculateSubtotal());
+    return remaining > 0 ? remaining.toFixed(2) : '0.00';
   };
 
   // === EMPTY STATE ====
@@ -200,6 +191,7 @@ const Cart = () => {
   const total = calculateTotal();
   const progress = getFreeDeliveryProgress();
   const remaining = getRemainingForFreeDelivery();
+  const freeDeliveryUnlocked = parseFloat(subtotal) >= FREE_THRESHOLD;
 
   // === MAIN CART UI ====
 
@@ -207,7 +199,7 @@ const Cart = () => {
     <div className="w-full min-h-screen bg-[#FDFDFD] pt-32 pb-20 px-6 md:px-14">
       <div className="max-w-7xl mx-auto">
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 border-b border-gray-100 pb-10 gap-6">
           <div>
             <button
@@ -233,7 +225,7 @@ const Cart = () => {
 
         <div className="grid lg:grid-cols-12 gap-16">
 
-          {/* ══════════════ LEFT: CART ITEMS ══════════════ */}
+          {/* LEFT: CART ITEMS */}
           <div className="lg:col-span-8 space-y-3">
 
             {/* Select-all row */}
@@ -262,14 +254,14 @@ const Cart = () => {
 
                   {/* IMAGE + CHECKBOX */}
                   <div className="relative flex-shrink-0">
-                    <div className="w-20 h-20 rounded-0 overflow-hidden bg-gray-50 border border-gray-100">
+                    <div className="w-20 h-20 overflow-hidden bg-gray-50 border border-gray-100">
                       <img
-                        src={getImageUrl(item.image)}
+                        src={getImageUrl(item.image, FALLBACK_IMG)}
                         alt={item.name}
                         className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-500"
                         onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '/placeholder-food.jpg';
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = FALLBACK_IMG;
                         }}
                       />
                     </div>
@@ -286,16 +278,21 @@ const Cart = () => {
                     <div className="flex justify-between items-start gap-2">
                       <div className="min-w-0">
                         <span className="text-[8px] uppercase font-black tracking-[0.2em] text-[#F58220]">
-                          {typeof item.category === 'object'
-                            ? item.category?.name
-                            : item.category}
+                          {typeof item.category === 'object' ? item.category?.name : item.category}
                         </span>
                         <h3 className="text-sm font-black text-[#2D4A22] uppercase tracking-tight mt-0.5 truncate">
                           {item.name}
                         </h3>
-                        <p className="text-base font-black text-[#2D4A22] mt-0.5">
-                          ${(parseFloat(item.price) || 0).toFixed(2)}
-                        </p>
+                        <div className="flex items-baseline gap-2 mt-0.5">
+                          <p className="text-base font-black text-[#2D4A22]">
+                            ${(parseFloat(item.price) || 0).toFixed(2)}
+                          </p>
+                          {Number(item.originalPrice) > Number(item.price) && (
+                            <span className="text-[10px] text-gray-400 line-through">
+                              ${Number(item.originalPrice).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <button
                         onClick={() => removeFromCart(item.id, item.type)}
@@ -309,9 +306,7 @@ const Cart = () => {
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center border border-gray-200 rounded-sm overflow-hidden">
                         <button
-                          onClick={() =>
-                            updateQuantity(item.id, item.type, (item.quantity || 1) - 1)
-                          }
+                          onClick={() => updateQuantity(item.id, item.type, (item.quantity || 1) - 1)}
                           className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors border-r border-gray-200 disabled:opacity-30"
                           disabled={item.quantity <= 1}
                           title="Decrease"
@@ -321,18 +316,12 @@ const Cart = () => {
                         <input
                           type="text"
                           value={item.quantity}
-                          onChange={(e) =>
-                            handleQuantityInput(item.id, item.type, e.target.value)
-                          }
-                          onBlur={() =>
-                            handleQuantityBlur(item.id, item.type, item.quantity)
-                          }
+                          onChange={(e) => handleQuantityInput(item.id, item.type, e.target.value)}
+                          onBlur={() => handleQuantityBlur(item.id, item.type, item.quantity)}
                           className="w-8 text-center text-[10px] font-black text-[#2D4A22] outline-none py-1.5"
                         />
                         <button
-                          onClick={() =>
-                            updateQuantity(item.id, item.type, (item.quantity || 0) + 1)
-                          }
+                          onClick={() => updateQuantity(item.id, item.type, (item.quantity || 0) + 1)}
                           className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors border-l border-gray-200"
                           title="Increase"
                         >
@@ -345,11 +334,7 @@ const Cart = () => {
                           Subtotal
                         </p>
                         <p className="text-sm font-black text-[#2D4A22]">
-                          $
-                          {(
-                            (parseFloat(item.price) || 0) *
-                            (parseInt(item.quantity) || 0)
-                          ).toFixed(2)}
+                          ${((parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0)).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -360,7 +345,7 @@ const Cart = () => {
             ))}
           </div>
 
-          {/* ═══ RIGHT: ORDER SUMMARY ═════ */}
+          {/* RIGHT: ORDER SUMMARY */}
           <div className="lg:col-span-4">
             <div className="bg-gray-50 p-8 rounded-sm sticky top-32">
 
@@ -421,19 +406,19 @@ const Cart = () => {
                 ← Continue Shopping
               </Link>
 
-              {/* ── Free Delivery Progress Bar ── */}
+              {/* Free Delivery Progress Bar */}
               <div className="mt-12 p-5 bg-white border border-gray-100 rounded-sm relative overflow-hidden">
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-[10px] font-black text-[#2D4A22] uppercase tracking-widest flex items-center gap-1">
                       <FaTag size={9} /> Special Offer
                     </p>
-                    {parseFloat(subtotal) >= 20 && (
+                    {freeDeliveryUnlocked && (
                       <MdCheckCircle className="text-green-500" size={14} />
                     )}
                   </div>
 
-                  {parseFloat(subtotal) >= 20 ? (
+                  {freeDeliveryUnlocked ? (
                     <p className="text-[9px] text-green-500 font-black uppercase tracking-tighter">
                       🎉 You've unlocked free delivery!
                     </p>
