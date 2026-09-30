@@ -5,11 +5,9 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
 
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true); // ✅ ការពារ AdminRoute redirect មុនពេល check ចប់
-
+    const [loading, setLoading] = useState(true); 
     useEffect(() => {
-        // ✅ sync state ពី sessionStorage ពេល app mount (refresh page)
-        //    sessionStorage ដាច់ដោយឡែកក្នុង tab នីមួយៗ — ដូចគ្នានឹង axios.js / authService.js
+        
         try {
             const savedUser  = sessionStorage.getItem('user');
             const savedToken = sessionStorage.getItem('access_token');
@@ -25,10 +23,10 @@ export const AuthProvider = ({ children }) => {
 
     //  login() — called from Login.jsx after API success
     const login = (userData, accessToken) => {
-        // persist to sessionStorage (ដាច់ដោយឡែកក្នុង tab នីមួយៗ)
+        
         sessionStorage.setItem('access_token', accessToken);
         sessionStorage.setItem('user',        JSON.stringify(userData));
-        sessionStorage.setItem('currentUser', JSON.stringify(userData)); // legacy Navbar key
+        sessionStorage.setItem('currentUser', JSON.stringify(userData));
         // sync React state
         setUser(userData);
     };
@@ -38,11 +36,11 @@ export const AuthProvider = ({ children }) => {
         sessionStorage.removeItem('access_token');
         sessionStorage.removeItem('user');
         sessionStorage.removeItem('currentUser');
-        // legacy key cleanup (ករណីមាន residual data ពី version ចាស់)
+       
         sessionStorage.removeItem('user_role');
         sessionStorage.removeItem('user_name');
         sessionStorage.removeItem('token');
-        localStorage.removeItem('user_role'); // សម្អាត localStorage residual ផងដែរ
+        localStorage.removeItem('user_role'); 
         localStorage.removeItem('token');
         localStorage.removeItem('currentUser');
         setUser(null);
