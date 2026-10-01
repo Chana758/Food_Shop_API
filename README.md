@@ -28,12 +28,20 @@ A full-stack restaurant ordering system for a Cambodian food shop: a customer st
 - Table reservation
 - Khmer / English language switch
 
-### Admin
+### Staff
 
 - Dashboard with sales, orders, low-stock alerts and live order queues
 - POS terminal with cash, card and KHQR payment and receipt printing
-- Manage products, categories, orders, delivery, reservations and tables
-- Manage staff, customers, reviews and payments
+- Handle orders and table reservations
+- Read customer contacts and reviews
+- View payments
+
+### Admin
+
+Everything Staff can do, plus:
+
+- Manage products, categories, delivery and tables
+- Manage staff and customers
 - Reports, scheduled backups, trash and site settings
 
 ## Screenshots
