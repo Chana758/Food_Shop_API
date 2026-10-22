@@ -16,7 +16,7 @@ const PRICE_RANGES = [
 ];
 
 const ITEMS_PER_PAGE = 12;
-const FETCH_ALL_PER_PAGE = 1000;
+const FETCH_ALL_PER_PAGE = 100;
 
 const AllMenu = () => {
   const { t }        = useTranslation();
