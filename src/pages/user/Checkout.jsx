@@ -529,7 +529,7 @@ const Checkout = () => {
                         <p className="text-xs font-bold text-red-400 uppercase text-center px-2 mb-4">
                           {khqrErrorMsg ?? 'Something went wrong. Please try again.'}
                         </p>
-                        {/* ✅ NEW: retry button — safe now, since nothing was
+                        {/* retry button — safe now, since nothing was
                             ever created for the expired/failed attempt */}
                         <button
                           onClick={handleRetryKhqr}
