@@ -8,17 +8,6 @@ const useAdminBell = () => {
   const [totalCount, setTotal]  = useState(0);
   const [loading, setLoading]   = useState(true);
 
-  // ✅ FIX (429 storm): guards against overlapping calls to fetch().
-  // Without this, React 18 StrictMode's dev-only double-invoke of mount
-  // effects — visible in the reported error stack as
-  // "reconnectPassiveEffects" / "doubleInvokeEffectsOnFiber" — fired this
-  // effect twice almost simultaneously on every mount, each kicking off
-  // its OWN set of 4 parallel GET requests (payments/stats,
-  // reservations/stats, contacts/stats, dashboard-stats) — 8 requests
-  // instead of 4 on a single page load. The same double-fire risk exists
-  // any time `fetch` is invoked again (poll tick) before the previous
-  // call has resolved (e.g. a slow/stalled network). Skipping a call
-  // while one is already in flight removes that duplication entirely.
   const isFetchingRef = useRef(false);
 
   const fetch = useCallback(async () => {
@@ -32,12 +21,6 @@ const useAdminBell = () => {
         axiosInstance.get('/admin/contacts/stats').catch(() => null),
         axiosInstance.get('/admin/dashboard-stats').catch(() => null),
       ]);
-
-      // Prefer the dedicated non-cash pending count (see
-      // PaymentController::stats()) over the raw by_status breakdown,
-      // which used to count 'cash' payments the same as 'khqr' — that
-      // was a separate bug (COD orders falsely showing as "payment
-      // awaiting confirmation").
       const byStatus = paymentsRes?.data?.data?.by_status || [];
       const pendingItem = Array.isArray(byStatus) ? byStatus.find(s => s.status === 'pending') : null;
       const legacyPendingPayments = pendingItem ? Number(pendingItem.count) : 0;

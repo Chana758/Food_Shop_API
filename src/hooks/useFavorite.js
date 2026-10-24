@@ -8,7 +8,7 @@ const useFavorite = () => {
 
   // Fetch favorites
   const fetchFavorites = useCallback(async () => {
-    // ✅ Fix: ប្តូរពី localStorage មក sessionStorage
+  
     const currentUser = sessionStorage.getItem('currentUser');
     if (!currentUser) {
       // Not logged in — use localStorage for guest favorites
@@ -45,7 +45,7 @@ const useFavorite = () => {
 
   // Toggle favorite
   const toggleFavorite = async (item, navigateFn) => {
-    // ✅ Fix: ប្តូរពី localStorage មក sessionStorage
+    // Switch from localStorage to sessionStorage
     const currentUser = sessionStorage.getItem('currentUser');
     if (!currentUser) { navigateFn?.('/login'); return; }
 

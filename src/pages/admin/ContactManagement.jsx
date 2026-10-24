@@ -7,14 +7,6 @@ import {
 } from 'react-icons/lu';
 import { useAdminContact } from '../../hooks/useContact';
 
-/*
-  Palette matched to the Khmer-Fresh admin (see Dashboard):
-  Ink #1E2A2E · Gold #D99A3D · Herb #3F7D58 · Sky #3B6E91 · Plum #7A4F6D · Chili #B5453B
-  This page's "brand color" is Plum, the same tone the dashboard uses for
-  message/contact alerts — the selected-message highlight and the reply
-  button both use it so contacts feel like one continuous section, not a
-  generic slate/blue admin screen bolted onto the rest of the app.
-*/
 const FONT_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
 const CARD = "bg-white rounded-2xl border border-[#E8E3D8] shadow-[0_1px_3px_rgba(30,42,46,0.05)]";
 
@@ -24,10 +16,6 @@ const STATUS_STYLES = {
   replied: 'bg-[#E4F0E7] text-[#2F6844] border-[#C7E0CD]',
 };
 
-// Bold solid fills for the four report cards — same treatment as the
-// dashboard's stat cards (icon chip top-left, badge pill top-right, big
-// white number). Unread reads as urgent (chili) since it needs action;
-// Total stays neutral ink; Read/Replied use the calm sky/herb tones.
 const STAT_FILL = {
   ink:   { bg: 'bg-[#1E2A2E]', chip: 'bg-white/10 text-[#E8C97A]', badge: 'bg-white/10 text-white/80', sub: 'text-[#B9C2C4]' },
   chili: { bg: 'bg-[#B5453B]', chip: 'bg-white/20 text-white',     badge: 'bg-white/20 text-white',     sub: 'text-[#F3D4D0]' },

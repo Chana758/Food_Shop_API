@@ -7,13 +7,6 @@ import { Link } from 'react-router-dom';
 import { FaArrowRight, FaLeaf } from 'react-icons/fa';
 import { IoSearch } from 'react-icons/io5';
 
-/* ------------------------------------------------------------------
-   Same token system as Navbar.jsx:
-   ink #17242A · palm #2F5233 · turmeric #E3A73A · kroeung #C1502E
-   Signature element: a slow-rotating "certified fresh" market stamp,
-   plus a torn awning edge closing the section — echoes a market
-   stall canopy rather than a generic hero underline.
-------------------------------------------------------------------- */
 
 const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap');
 @keyframes stampSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -23,7 +16,6 @@ const Benner = () => {
   const { t } = useTranslation();
 
   return (
-    // កែសម្រួលកម្ពស់ទីនេះ ពី lg:h-[92vh] មកជា lg:h-[calc(100vh-88px)] ដើម្បីឱ្យវាបំពេញលំហស្អាតជាមួយ Navbar ទំហំ 88px របស់អ្នក
     <div className="relative w-full h-[540px] sm:h-[600px] lg:h-[calc(100vh-88px)] min-h-[650px] overflow-hidden flex items-center" style={{ fontFamily: "'Work Sans', sans-serif" }}>
       <style>{FONT_IMPORT}</style>
 
@@ -34,7 +26,7 @@ const Benner = () => {
         className="absolute inset-0 w-full h-full object-cover object-center"
       />
 
-      {/* Ink gradient overlay — ធ្វើឱ្យដិតបន្តិចខាងឆ្វេង ដើម្បីធានាថាអអត្ថបទងាយស្រួលអាន */}
+      {/* Ink gradient overlay — slightly darken the left side to ensure the text is easy to read. */}
       <div className="absolute inset-0 bg-gradient-to-r from-[#17242A]/95 via-[#17242A]/75 to-[#17242A]/30"></div>
       <div className="absolute inset-0 bg-gradient-to-t from-[#17242A]/60 via-transparent to-transparent"></div>
 

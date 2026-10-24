@@ -15,7 +15,7 @@ import { useAdminReview } from '../../hooks/useReview';
 const FONT_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
 const CARD = "bg-white rounded-2xl border border-[#E8E3D8] shadow-[0_1px_3px_rgba(30,42,46,0.05)]";
 
-// ── constants ────────────────────────────────────────────────────────
+// ── constants ───
 const STATUS_STYLES = {
   pending:  'bg-[#FBEDD9] text-[#8A5A12] border-[#F1D9AE] font-bold',
   approved: 'bg-[#E4F0E7] text-[#2F6844] border-[#C7E0CD] font-bold',
@@ -34,7 +34,7 @@ const STAT_FILL = {
 
 const FILTERS = ['all', 'pending', 'approved', 'rejected'];
 
-// ── star display ─────────────────────────────────────────────────────
+// ── star display 
 const Stars = ({ rating, size = 14 }) => (
   <div className="flex items-center gap-0.5">
     {[1, 2, 3, 4, 5].map(n => (
@@ -47,7 +47,7 @@ const Stars = ({ rating, size = 14 }) => (
   </div>
 );
 
-// ── component ────────────────────────────────────────────────────────
+// ── component ───
 const ReviewManagement = () => {
   const { searchTerm: search } = useOutletContext() ?? { searchTerm: '' };
 

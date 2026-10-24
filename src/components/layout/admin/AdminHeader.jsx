@@ -45,14 +45,7 @@ const AdminHeader = ({ title, searchTerm, setSearchTerm, toggleSidebar, placehol
   };
 
   return (
-    //  FIXED — background reads --header-bg (solid accent when
-    // theme_target === 'sidebar', fixed white/navy otherwise). The bug
-    // reported: background was changing but every text/icon below was
-    // still hardcoded to text-gray-600 / text-[#1e292b], so on a colored
-    // header those stayed unreadable. Every text/icon in this file now
-    // reads --header-fg / --header-fg-muted instead, which
-    // SettingsContext.jsx flips to white when the header becomes a
-    // solid accent color, and back to normal dark/light text otherwise.
+  
     <header
       style={{ background: 'var(--header-bg)' }}
       className="sticky top-0 z-50 shadow-sm border-b border-black/5 px-6 py-4 flex justify-between items-center transition-colors duration-300"

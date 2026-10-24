@@ -10,15 +10,6 @@ import { HiOutlineShoppingCart } from "react-icons/hi";
 import LanguageSwitcher from '../../common/LanguageSwitcher';
 import { useAuth } from '../../../context/AuthContext';
 
-/* ------------------------------------------------------------------
-   Design tokens (Khmer-Fresh market identity)
-   ink        #17242A  charcoal-navy, structure/utility bar
-   palm       #2F5233  leaf green, primary action
-   turmeric   #E3A73A  saffron gold, accents / counts
-   kroeung    #C1502E  spiced clay red, alerts / active state
-   ricepaper  #F6F1E3  warm cream, light surfaces
-   Fonts: Space Grotesk (display/wordmark), Work Sans (everything else)
-------------------------------------------------------------------- */
 
 const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Work+Sans:wght@400;500;600;700&display=swap');`;
 
@@ -108,7 +99,7 @@ const Navbar = () => {
     <nav className="w-full sticky top-0 z-50 shadow-sm" style={{ fontFamily: "'Work Sans', sans-serif" }}>
       <style>{FONT_IMPORT}</style>
 
-      {/* Top Bar Desktop - កែសម្រួលឱ្យស្តើងជាងមុន py-1.5 ដើម្បីកុំឱ្យក្រាស់ពេក */}
+      {/* Top Bar (Desktop) – Adjusted to be thinner (using `py-1.5`) so it isn't too thick. */}
       <div className="hidden xl:block w-full bg-[#17242A] py-1.5 px-14">
         <div className="flex justify-between items-center text-white/70 text-[12px] font-medium">
           <div className="flex items-center gap-4">
@@ -117,7 +108,7 @@ const Navbar = () => {
               Welcome to Khmer-Fresh Organic Market
             </p>
             <div className="h-3 w-[1px] bg-white/15"></div>
-            <p className="text-[#E3A73A] font-semibold flex items-center gap-1.5"><IoCallOutline size={13} /> +855 972 325 094</p>
+            <p className="text-[#E3A73A] font-semibold flex items-center gap-1.5"><IoCallOutline size={13} /> +855 972 321294</p>
           </div>
 
           <div className="flex items-center gap-3 bg-white/[0.06] hover:bg-white/10 border border-white/10 rounded-full pl-3 pr-1 py-0.5 transition-colors">
@@ -154,7 +145,7 @@ const Navbar = () => {
               <span className="text-[#2F5233]">Fresh</span>
             </span>
 
-            {/* បន្ទាត់ខ័ណ្ឌក្រោម Logo ត្រូវបានលុប ឬសម្រួលឱ្យសាមញ្ញស្អាតស្អំជាងមុន */}
+            {/* The line below the logo has been removed or simplified for a cleaner look.*/}
             <div className="w-full flex items-center justify-center my-0.5">
               <div className="h-[1.5px] w-full bg-gradient-to-r from-transparent via-[#E3A73A]/60 to-transparent rounded-full"></div>
             </div>
@@ -263,7 +254,6 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* Signature rule - បន្ទាត់ក្រោនស្អាតទាក់ទាញជាងមុន */}
         <div className="absolute bottom-0 left-0 w-full h-[2.5px] bg-gradient-to-r from-[#2F5233] via-[#E3A73A] to-[#C1502E]"></div>
       </div>
 

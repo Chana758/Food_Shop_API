@@ -1,34 +1,34 @@
-// src/components/payment/POSKhqrModal.jsx
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { generateDynamicKHQR } from '../../utils/khqr';
 import paymentService from '../../service/paymentService';
 import BankBadges from './BankBadges';
 
-const EXPIRY_SECONDS = 180;     // 3 នាទី — ស្របនឹង expirationTimestamp ក្នុង khqr.js
-const POLL_INTERVAL_MS = 4000;  // 4 វិនាទី/ដង → max ~15 requests/min < throttle 20/min
+const EXPIRY_SECONDS = 180;
+const POLL_INTERVAL_MS = 4000;
 
 /**
- * Modal បង្ហាញ KHQR code សម្រាប់ order មួយ
+ * Modal for displaying a KHQR code for an order.
  *
- * @param {object}   props
- * @param {boolean}  props.isOpen       - បើក/បិទ modal
- * @param {Function} props.onClose      - callback ពេលបិទ modal
- * @param {number}   props.orderId      - ID របស់ order ត្រូវបង់
- * @param {number}   props.amount       - ទឹកប្រាក់ត្រូវបង់ (USD)
- * @param {Function} props.onPaid       - callback ពេលបានបញ្ជាក់ថាបង់រួច (data payment)
+ * @param {object} props
+ * @param {boolean} props.isOpen - Whether the modal is open.
+ * @param {Function} props.onClose - Callback triggered when the modal closes.
+ * @param {number} props.orderId - ID of the order to be paid.
+ * @param {number} props.amount - Payment amount in USD.
+ * @param {Function} props.onPaid - Callback triggered when payment is confirmed.
  */
 const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
-  const [qrData, setQrData]       = useState(null);   // { qr, md5 }
-  const [payment, setPayment]     = useState(null);   // Payment record ពី backend
-  const [status, setStatus]       = useState('idle');  // idle | generating | waiting | paid | expired | error
+  const [qrData, setQrData] = useState(null); 
+  const [payment, setPayment] = useState(null); 
+  const [status, setStatus] = useState('idle'); 
   const [secondsLeft, setSecondsLeft] = useState(EXPIRY_SECONDS);
-  const [errorMsg, setErrorMsg]   = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const pollRef    = useRef(null);
+  const pollRef = useRef(null);
   const countdownRef = useRef(null);
 
-  // ── ជំហានទី១: បង្កើត KHQR + បង្កើត pending payment record ក្នុង backend ──────
+  // Step 1: Generate the KHQR code and create a pending payment record in the backend.
   const initPayment = useCallback(async () => {
     setStatus('generating');
     setErrorMsg('');
@@ -38,14 +38,15 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
 
     if (!generated) {
       setStatus('error');
-      setErrorMsg('មិនអាចបង្កើត QR code បានទេ។ សូមព្យាយាមម្តងទៀត។');
+      setErrorMsg('Unable to generate the QR code. Please try again.');
       return;
     }
 
     setQrData(generated);
 
     try {
-      // ✅ transaction_ref = md5 ពី QR — Bakong ប្រើ md5 នេះដើម្បី match transaction
+      // The transaction reference is the QR's MD5 hash.
+      // Bakong uses this hash to match the payment transaction.
       const createdPayment = await paymentService.create({
         order_id: orderId,
         method: 'khqr',
@@ -59,12 +60,13 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
       console.error('Failed to create payment record:', err.response ?? err);
       setStatus('error');
       setErrorMsg(
-        err.response?.data?.message || 'មិនអាចបង្កើត payment record បានទេ។'
+        err.response?.data?.message ||
+          'Unable to create the payment record.'
       );
     }
   }, [orderId, amount]);
 
-  // ── ជំហានទី២: Poll checkStatus រហូតទាល់តែបានបង់ ឬផុតកំណត់ ──────────────────
+  // Step 2: Poll the payment status until the payment is confirmed or the QR expires.
   const poll = useCallback(async () => {
     if (!payment?.id) return;
 
@@ -77,34 +79,35 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
         clearInterval(countdownRef.current);
         onPaid?.(res.data);
       }
-      // res.paid === false → នៅតែបន្ត poll ដដែល (មិនចាំបាច់ធ្វើអ្វី)
+      // If res.paid is false, continue polling.
     } catch (err) {
-      // FIX: កុំបញ្ឈប់ poll ព្រោះ error មួយដង (network blip) —
-      // log ចោលហើយបន្តព្យាយាមទៀតរហូតដល់ expire
-      console.error('checkStatus poll error:', err.response ?? err);
+      // Do not stop polling because of a temporary network error.
+      // Log the error and continue retrying until the QR expires.
+      console.error('Payment status polling error:', err.response ?? err);
     }
   }, [payment, onPaid]);
 
-  // ── Effect: ចាប់ផ្ដើម init ពេល modal បើក ───────────────────────────────────
+  // Effect: Initialize the payment when the modal opens.
   useEffect(() => {
     if (isOpen) {
       initPayment();
     } else {
-      // Reset state ពេល modal បិទ
+      // Reset the state when the modal closes.
       setQrData(null);
       setPayment(null);
       setStatus('idle');
       setSecondsLeft(EXPIRY_SECONDS);
+      setErrorMsg('');
     }
 
     return () => {
       clearInterval(pollRef.current);
       clearInterval(countdownRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [isOpen]);
 
-  // ── Effect: ចាប់ផ្ដើម polling + countdown ពេល status = 'waiting' ──────────
+  // Effect: Start polling and the countdown while waiting for payment.
   useEffect(() => {
     if (status !== 'waiting') return;
 
@@ -118,6 +121,7 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
           setStatus('expired');
           return 0;
         }
+
         return prev - 1;
       });
     }, 1000);
@@ -145,21 +149,24 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
         </button>
 
         <h2 className="text-center text-lg font-bold text-gray-800 mb-1">
-          ស្កេន KHQR ដើម្បីបង់ប្រាក់
+          Scan KHQR to Pay
         </h2>
+
         <p className="text-center text-2xl font-black text-primary mb-4">
           ${Number(amount).toFixed(2)}
         </p>
 
-        {/* ── Generating ─────────────────────────────────────────────── */}
+        {/* Generating QR Code */}
         {status === 'generating' && (
           <div className="flex flex-col items-center justify-center h-64 gap-3">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-            <p className="text-sm text-gray-500">កំពុងបង្កើត QR...</p>
+            <p className="text-sm text-gray-500">
+              Generating QR code...
+            </p>
           </div>
         )}
 
-        {/* ── Waiting for scan ───────────────────────────────────────── */}
+        {/* Waiting for Payment */}
         {status === 'waiting' && qrData && (
           <>
             <div className="flex justify-center p-3 bg-white border border-gray-100 rounded-xl">
@@ -167,7 +174,7 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
             </div>
 
             <p className="text-center text-sm text-gray-500 mt-3">
-              QR នេះនឹងផុតកំណត់ក្នុងរយៈពេល{' '}
+              This QR code expires in{' '}
               <span className="font-bold text-red-500">
                 {mm}:{ss}
               </span>
@@ -175,45 +182,53 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
 
             <div className="flex items-center justify-center gap-2 mt-2">
               <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-xs text-gray-400">កំពុងរង់ចាំការទូទាត់...</span>
+              <span className="text-xs text-gray-400">
+                Waiting for payment...
+              </span>
             </div>
 
             <BankBadges />
           </>
         )}
 
-        {/* ── Paid ────────────────────────────────────────────────────── */}
+        {/* Payment Successful */}
         {status === 'paid' && (
           <div className="flex flex-col items-center justify-center h-64 gap-3">
             <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center text-3xl">
               ✓
             </div>
-            <p className="text-green-600 font-bold text-lg">បង់ប្រាក់ជោគជ័យ!</p>
+            <p className="text-green-600 font-bold text-lg">
+              Payment Successful!
+            </p>
           </div>
         )}
 
-        {/* ── Expired ─────────────────────────────────────────────────── */}
+        {/* QR Code Expired */}
         {status === 'expired' && (
           <div className="flex flex-col items-center justify-center h-64 gap-3">
-            <p className="text-red-500 font-bold">QR Code ផុតកំណត់ហើយ</p>
+            <p className="text-red-500 font-bold">
+              QR Code Expired
+            </p>
             <button
               onClick={initPayment}
               className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold"
             >
-              បង្កើត QR ថ្មី
+              Generate New QR Code
             </button>
           </div>
         )}
 
-        {/* ── Error ───────────────────────────────────────────────────── */}
+        {/* Payment Error */}
         {status === 'error' && (
           <div className="flex flex-col items-center justify-center h-64 gap-3">
-            <p className="text-red-500 font-bold text-center">{errorMsg}</p>
+            <p className="text-red-500 font-bold text-center">
+              {errorMsg}
+            </p>
             <button
               onClick={initPayment}
               className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold"
             >
-              ព្យាយាមម្តងទៀត
+              Try Again
             </button>
           </div>
         )}

@@ -85,7 +85,7 @@ const ALERT_TONES = {
     badge:  'bg-[#7A4F6D]',
     button: 'bg-[#7A4F6D] text-white hover:bg-[#68425F]',
   },
-  // ✅ NEW: dedicated tone for "fresh order(s) waiting to be started" —
+
   // calmer than 'urgent' (kitchen isn't behind yet, just has work to do).
   orders: {
     chip:   'bg-[#E4F0E7] text-[#2F6844]',
@@ -99,8 +99,6 @@ const ALERT_TONES = {
   },
 };
 
-// ✅ FIX: 'orders' inserted so a normal "new orders waiting" alert still
-// ranks above routine reservation/message confirmations, just below
 // payment/delivery which need faster action.
 const ALERT_PRIORITY = ['urgent', 'delivery', 'payment', 'orders', 'reservation', 'message'];
 
@@ -273,13 +271,7 @@ const AdminDashboard = () => {
     });
   }
 
-  // ✅ FIX (the bug reported): previously this only fired at >= 5 pending
-  // orders, meaning a single fresh order (dine-in/takeaway/delivery, all
-  // start at status 'pending') produced NO signal at all in "Needs your
-  // attention" — admin had to click into Orders manually to notice it.
-  // Now: any pending order shows a calm 'orders' alert; once the backlog
-  // reaches PENDING_ORDER_ALERT_THRESHOLD it escalates to 'urgent' tone
-  // and backlog wording, instead of being two separate, possibly-duplicate
+  
   // alerts.
   if (live_queue.pending > 0) {
     const isBacklog = live_queue.pending >= PENDING_ORDER_ALERT_THRESHOLD;

@@ -15,7 +15,7 @@ const useTable = () => {
       const data = await tableService.getAll();
       setTables(data);
     } catch {
-      setError('មិនអាច load tables បាន');
+      setError('Unable to load tables');
     } finally {
       setLoading(false);
     }

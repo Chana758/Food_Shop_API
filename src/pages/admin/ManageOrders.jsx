@@ -100,21 +100,6 @@ const ManageOrders = () => {
   const [submitting, setSubmitting]     = useState(false);
   const [currentPage, setCurrentPage]   = useState(1);
 
-  // ✅ FIX: global per-status counts for the filter tabs, fetched from
-  // OrderController::stats() (GET /admin/orders/stats → by_status),
-  // which aggregates over ALL orders in the database.
-  //
-  // ROOT CAUSE OF THE BUG THIS FIXES: the tab counts used to be derived
-  // with `orders.reduce(...)` over the `orders` array from useOrder(),
-  // but that array only ever holds ONE PAGE of results — useOrder's
-  // fetchOrders() calls orderService.getAll(params) with no per_page
-  // override, so the backend's default paginate($request->per_page ??
-  // 15) caps it at 15 rows. The dashboard's "Needs your attention"
-  // banner, by contrast, gets its pending count from
-  // DashboardController::stats() (a true `Order::whereIn(...)->count()`
-  // over the whole table) — so the two screens could show different
-  // numbers for the exact same thing (e.g. dashboard: "5 orders stuck
-  // in pending", this page's tab: "PENDING 1") purely because this
   // page was quietly counting a 15-row subset and calling it the total.
   const [statusCounts, setStatusCounts] = useState({});
 

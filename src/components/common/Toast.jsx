@@ -14,7 +14,7 @@ const Toast = ({ message, onClose, duration = 3000 }) => {
 
   return (
     <div className="fixed top-32 right-6 z-[200] animate-toast-slide-in">
-      {/* --- Custom CSS for Smooth Animation --- */}
+      {/* Custom CSS for Smooth Animation  */}
       <style>{`
         @keyframes toast-slide-in {
           from { transform: translateX(20px); opacity: 0; }
@@ -25,7 +25,7 @@ const Toast = ({ message, onClose, duration = 3000 }) => {
         }
       `}</style>
       
-      {/* --- Toast Container --- */}
+      {/*  Toast Container  */}
       <div className="bg-white border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.08)] rounded-sm p-4 flex items-center gap-4 min-w-[320px] max-w-[400px]">
         
         {/* Success Icon - Using Dark Green Accent */}

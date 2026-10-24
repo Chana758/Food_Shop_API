@@ -12,7 +12,7 @@ const STATUS_STYLES = {
 
 const EMPTY_FORM = { name: '', capacity: '', status: 'available' };
 
-// ─── Reusable Modal ───────────────────────────────────────────────────────────
+// Reusable Modal ─
 const Modal = ({ title, onClose, children }) => (
   <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
     <div className="bg-white rounded-sm p-8 w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
@@ -25,7 +25,7 @@ const Modal = ({ title, onClose, children }) => (
   </div>
 );
 
-// ─── Table Form (Add / Edit) ──────────────────────────────────────────────────
+//  Table Form (Add / Edit) 
 const TableForm = ({ initial = EMPTY_FORM, onSubmit, onClose, submitting }) => {
   const [form, setForm] = useState(initial);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -84,7 +84,7 @@ const TableForm = ({ initial = EMPTY_FORM, onSubmit, onClose, submitting }) => {
   );
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// Main Component 
 const ManageTables = () => {
   const { searchTerm = '' } = useOutletContext() || {};
 

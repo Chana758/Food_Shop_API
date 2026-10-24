@@ -138,14 +138,14 @@ export const useAdminReview = () => {
   useEffect(() => { fetchReviews(); }, [fetchReviews]);
 
   const approveReview = async (id) => {
-    await reviewService.approve(id); // ✅ FIXED — now hits the real /status endpoint
+    await reviewService.approve(id); 
     setReviews(prev =>
       prev.map(r => r.id === id ? { ...r, status: 'approved' } : r)
     );
   };
 
   const rejectReview = async (id) => {
-    await reviewService.reject(id); // ✅ FIXED — now hits the real /status endpoint
+    await reviewService.reject(id); 
     setReviews(prev =>
       prev.map(r => r.id === id ? { ...r, status: 'rejected' } : r)
     );

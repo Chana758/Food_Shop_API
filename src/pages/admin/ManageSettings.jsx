@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axiosInstance from '../../api/axios';
 import { useSettings } from '../../context/SettingsContext';
 
-// ── SVG ICONS ────────────────────────────────────────────────────────────────
+// SVG ICONS 
 const Icon = ({ d, size = 18, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -30,7 +30,7 @@ const I = {
   layoutPage:    "M3 4h18v16H3zM3 9h18",
 };
 
-// ── THEME ─────────────────────────────────────────────────────────────────
+// THEME ─
 const buildTheme = (isDark, accent) => ({
   accent,
   pageBg:       isDark ? '#0F1A1D' : '#f8fafc',
@@ -58,7 +58,7 @@ const buildTheme = (isDark, accent) => ({
   toastDark:    '#0f172a',
 });
 
-// ── TOGGLE COMPONENT ─────────────────────────────────────────────────────────
+// TOGGLE COMPONENT
 const Toggle = ({ checked, onChange, theme }) => (
   <div onClick={() => onChange(!checked)} style={{
     width: 44, height: 24, borderRadius: 12,
@@ -74,7 +74,7 @@ const Toggle = ({ checked, onChange, theme }) => (
   </div>
 );
 
-// ── SECTION WRAPPER ──────────────────────────────────────────────────────────
+// SECTION WRAPPER─
 const Section = ({ icon, iconBg, title, subtitle, children, theme }) => (
   <div style={{ background: theme.cardBg, borderRadius: 16, border: `1px solid ${theme.cardBorder}`, boxShadow: theme.cardShadow, overflow: 'hidden', marginBottom: 24, transition: 'background .2s ease, border-color .2s ease' }}>
     <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', alignItems: 'stretch' }}>
@@ -94,7 +94,7 @@ const Section = ({ icon, iconBg, title, subtitle, children, theme }) => (
   </div>
 );
 
-// ── FORM UTILITIES ───────────────────────────────────────────────────────────
+// FORM UTILITIES──
 const Row = ({ label, hint, children, theme }) => (
   <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 20, alignItems: 'start', padding: '14px 0', borderBottom: `1px solid ${theme.rowBorder}` }}>
     <div>
@@ -202,7 +202,7 @@ const ThemeTargetPicker = ({ value, onChange, theme }) => {
   );
 };
 
-// ── MAIN COMPONENT ───────────────────────────────────────────────────────────
+// MAIN COMPONENT──
 const ManageSettings = () => {
   const { settings: globalSettings, loading: globalLoading, refresh } = useSettings();
 
@@ -232,7 +232,7 @@ const ManageSettings = () => {
     dark_mode: false,
     compact_mode: false,
     accent_color: '#10b981',
-    theme_target: 'sidebar', // ✅ NEW — 'sidebar' | 'page'
+    theme_target: 'sidebar', 
     two_fa: false,
     auto_logout: true,
     logout_time: '30'
@@ -249,13 +249,6 @@ const ManageSettings = () => {
     }
   }, [globalSettings]);
 
-  // Live theme, recalculated whenever the DRAFT dark_mode/accent change
-  // (not just the saved globalSettings), so toggling either one repaints
-  // this settings page instantly, before you even hit Save. Note: this
-  // local `theme` object only styles THIS page's cards/inputs — the
-  // Sidebar/Header/other-pages theming is handled globally by
-  // SettingsContext's CSS variables, which only update on Save (see
-  // saveSection below calling `refresh()`).
   const isDark = !!settings.dark_mode;
   const theme = buildTheme(isDark, settings.accent_color || '#10b981');
 
@@ -268,9 +261,7 @@ const ManageSettings = () => {
     setSavingSection(sectionName);
     try {
       await axiosInstance.put('/admin/settings', payload);
-      await refresh(); // ✅ pulls fresh settings into SettingsContext →
-                        // triggers the global CSS variable update, so
-                        // Sidebar/Header/every page repaint immediately.
+      await refresh(); 
       showToast(`${sectionName} settings saved successfully!`);
     } catch (error) {
       console.error(`Save ${sectionName} failed:`, error.response ?? error);
@@ -430,7 +421,7 @@ const ManageSettings = () => {
         </div>
       </div>
 
-      {/* ── 1. GENERAL SETTINGS ── */}
+      {/* 1. GENERAL SETTINGS */}
       <Section theme={theme} icon="store" iconBg={isDark ? '#0B1315' : '#0f172a'} title="General Settings" subtitle="Core restaurant identity and localization parameters">
         <Row theme={theme} label="Restaurant Name" hint="Appears on dashboard titles, login screens, and printed invoices">
           <Input theme={theme} value={settings.restaurant_name} onChange={val => setSettings({...settings, restaurant_name: val})} placeholder="Khmer-Fresh" />
@@ -486,7 +477,7 @@ const ManageSettings = () => {
         </div>
       </Section>
 
-      {/* ── 2. NOTIFICATIONS SETTINGS ── */}
+      {/* 2. NOTIFICATIONS SETTINGS */}
       <Section theme={theme} icon="bell" iconBg="#d97706" title="Notification Triggers" subtitle="Manage alerts, auditory notifications, and automated reporting channels">
         <ToggleRow theme={theme} label="New Order Alerts" hint="Play audio notification and trigger popup panel on incoming orders" checked={settings.notify_new_order} onChange={val => setSettings({...settings, notify_new_order: val})} />
         <ToggleRow theme={theme} label="Low Stock Inventory Warning" hint="Trigger warnings when raw ingredients dip under required limits" checked={settings.notify_low_stock} onChange={val => setSettings({...settings, notify_low_stock: val})} />
@@ -508,7 +499,7 @@ const ManageSettings = () => {
         </div>
       </Section>
 
-      {/* ── 3. RECEIPT & POS SETTINGS ── */}
+      {/* 3. RECEIPT & POS SETTINGS */}
       <Section theme={theme} icon="printer" iconBg="#2563eb" title="Receipt & POS Rules" subtitle="Configure printing elements, tax parameters, and table modes">
         <ToggleRow theme={theme} label="Print Company Logo" hint="Render organization badge at top of customer receipts" checked={settings.show_logo_receipt} onChange={val => setSettings({...settings, show_logo_receipt: val})} />
         <ToggleRow theme={theme} label="Display Tax Breakdowns" hint="Itemize computed tax lines on printed tickets and the POS cart totals" checked={settings.show_tax_receipt} onChange={val => setSettings({...settings, show_tax_receipt: val})} />
@@ -538,7 +529,7 @@ const ManageSettings = () => {
         </div>
       </Section>
 
-      {/* ── 4. APPEARANCE SETTINGS ── */}
+      {/* 4. APPEARANCE SETTINGS */}
       <Section theme={theme} icon="palette" iconBg="#7c3aed" title="Appearance & Branding" subtitle="Control visual layout, theme preferences, and system asset files">
         <ToggleRow theme={theme} label="Dark Mode Theme" hint="Toggle sidebar and content backdrops into high-contrast dark style" checked={settings.dark_mode} onChange={val => setSettings({...settings, dark_mode: val})} />
         <ToggleRow theme={theme} label="Compact Padding Mode" hint="Shrink interface element spacing for higher density metrics" checked={settings.compact_mode} onChange={val => setSettings({...settings, compact_mode: val})} />
@@ -591,7 +582,7 @@ const ManageSettings = () => {
         </div>
       </Section>
 
-      {/* ── 5. SECURITY SETTINGS ── */}
+      {/* 5. SECURITY SETTINGS */}
       <Section theme={theme} icon="lock" iconBg="#dc2626" title="Security & Authentication" subtitle="Password updates, multi-factor tokens, and session timeouts">
         <Row theme={theme} label="Current Password">
           <div style={{ position: 'relative', maxWidth: 360 }}>
@@ -636,7 +627,7 @@ const ManageSettings = () => {
         </div>
       </Section>
 
-      {/* ── 6. DANGER ZONE ── */}
+      {/* 6. DANGER ZONE */}
       <div style={{ background: theme.cardBg, borderRadius: 16, border: `1px solid ${isDark ? '#4A2A26' : '#fecaca'}`, boxShadow: theme.cardShadow, overflow: 'hidden' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', alignItems: 'stretch' }}>
           <div style={{ padding: '32px 28px', background: theme.dangerBg, borderRight: `1px solid ${theme.dangerBorder}`, display: 'flex', flexDirection: 'column', gap: 16 }}>

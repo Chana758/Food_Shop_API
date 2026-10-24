@@ -4,12 +4,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 
-// ── Layout ──────────────────────────────────────────────────────────────────
+// ── Layout 
 import Navbar      from './components/layout/user/Navbar';
 import Footer      from './components/layout/user/Footer';
 import AdminLayout from './components/layout/admin/AdminLayout';
 
-// ── User Pages ───────────────────────────────────────────────────────────────
+// ── User Pages 
 import Home          from './pages/user/Home';
 import About         from './pages/user/About';
 import Contact       from './pages/user/Contact';
@@ -22,17 +22,17 @@ import Reservation   from './pages/user/Reservation';
 import SearchResults from './pages/user/menu/SearchResults';
 import Service       from './pages/user/Service';
 
-// ── Auth Pages ───────────────────────────────────────────────────────────────
+// ── Auth Pages 
 import Login    from './pages/auth/Login';
 import Register from './pages/auth/Register';
 
-// ── Admin Guard ──────────────────────────────────────────────────────────────
+// ── Admin Guard 
 import AdminRoute from './components/guards/AdminRoute';
 
-// ── Settings Context ─────────────────────────────────────────────────────────
+// ── Settings Context 
 import { SettingsProvider } from './context/SettingsContext'; // ✅ NEW
 
-// ── Admin Pages ──────────────────────────────────────────────────────────────
+// ── Admin Pages ─────
 import AdminDashboard       from './pages/admin/AdminDashboard';
 import ManageOrders         from './pages/admin/ManageOrders';
 import ManageProducts       from './pages/admin/ManageProducts';
@@ -52,13 +52,13 @@ import ReservationManagement from './pages/admin/ReservationManagement.jsx';
 import ContactManagement     from './pages/admin/ContactManagement.jsx';
 import ReviewManagement      from './pages/admin/ReviewManagement.jsx';
 
-// ── Menu Pages ───────────────────────────────────────────────────────────────
+// ── Menu Pages 
 import AllMenu           from './pages/user/menu/AllMenu';
 import MenuCategoryDetail from './pages/user/menu/MenuCategoryDetail';
 import ProductDetail     from './pages/user/menu/ProductDetail';
 import Category          from './pages/user/menu/Category';
 
-// ── Utils ────────────────────────────────────────────────────────────────────
+// ── Utils ─────
 import { initDummyUsers } from './utils/initDummyData';
 
 // Scroll to top on every route change
@@ -79,7 +79,7 @@ const App = () => {
       <ScrollToTop />
       <Routes>
 
-        {/* ── Public / User Routes ──────────────────────────────────────── */}
+        {/* ── Public / User Routes */}
         <Route path="/"            element={<><Navbar /><Home /><Footer /></>} />
         <Route path="/home"        element={<><Navbar /><Home /><Footer /></>} />
         <Route path="/about"       element={<><Navbar /><About /><Footer /></>} />
@@ -104,7 +104,7 @@ const App = () => {
         <Route path="/order-history" element={<><Navbar /><OrderHistory /><Footer /></>} />
 
         {/* ── Admin Routes (Protected) ──────────────────────────────────── */}
-        {/* ✅ CHANGED — wrapped in <SettingsProvider> so every admin page
+        {/*— wrapped in <SettingsProvider> so every admin page
             (Dashboard, POS, Header, Sidebar, etc.) can call useSettings()
             and immediately react to whatever was saved in Settings. */}
         <Route

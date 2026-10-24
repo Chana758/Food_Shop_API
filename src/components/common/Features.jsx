@@ -4,21 +4,6 @@ import { FaClock, FaShieldAlt, FaLeaf, FaHeart, FaCommentAlt, FaArrowRight } fro
 import { MdDeliveryDining } from 'react-icons/md';
 import { Link } from "react-router-dom";
 
-/* ------------------------------------------------------------------
-   Redesign notes (v3) — signature: the "swing tag"
-   Khmer-Fresh sells itself on being an organic market, so the cards
-   are shaped like the swing tags tied to real produce/coffee bags:
-   a punched grommet + thread in the corner, one clipped corner
-   instead of a uniform rounded rect, and a very light paper-cream
-   section background instead of flat white. This is the one place
-   the design takes a real risk — everything else stays quiet.
-   - `lg:grid-rows-2` keeps the hero exactly as tall as its sibling
-     stack (fixes the v1 height mismatch).
-   - Eyebrows (SOURCING, SPEED, PROMISE...) replace literal 01–06
-     numbering since this content isn't a sequence — they read as
-     tag categories instead, which a swing tag would actually have.
-------------------------------------------------------------------- */
-
 const Grommet = ({ tone = 'green' }) => {
   const styles = {
     green: { ring: 'border-[#1a3a32]', thread: 'text-[#1a3a32]/70', dot: 'bg-white' },

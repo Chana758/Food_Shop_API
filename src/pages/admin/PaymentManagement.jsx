@@ -84,7 +84,7 @@ const PaymentManagement = () => {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  // Confirm payment ជាមួយ Catch Error បង្ហាញ Message ពិតប្រាកដពី Backend
+  // Confirm payment with error handling to display the actual message from the backend
   const handleConfirm = async (id) => {
     try {
       await confirmPayment(id);
@@ -95,7 +95,7 @@ const PaymentManagement = () => {
     }
   };
 
-  // Refund payment ជាមួយ Catch Error បង្ហាញ Message ពិតប្រាកដពី Backend
+ // Payment refund with error handling to display the actual message from the backend
   const handleRefund = async (id) => {
     if (window.confirm("Are you sure you want to refund this payment?")) {
       try {

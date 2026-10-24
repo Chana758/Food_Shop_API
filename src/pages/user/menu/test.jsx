@@ -30,9 +30,7 @@ const MenuCategoryDetail = () => {
     allProducts.filter(item => item.category?.slug === slug),
   [allProducts, slug]);
 
-  // FIX: guard against missing item.name, and normalize Unicode so Khmer
-  // text typed via different IME compositions (NFD vs NFC) still matches
-  // what's stored in the database.
+  
   const filteredItems = useMemo(() =>
     categoryProducts.filter(item => {
       const name = (item.name || '').normalize('NFC').toLowerCase();

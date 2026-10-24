@@ -11,9 +11,6 @@ export const useNotification = () => {
     setLoading(true);
     setError(null);
     try {
-      // FIX: unread_count already comes back in the same /notifications
-      // response (under `meta`), so a separate /unread-count call —
-      // which doesn't exist as a route — is unnecessary and was 404'ing.
       const res = await notificationService.getAll();
       setNotifications(res.data?.data?.data ?? []); // Laravel paginator: data.data
       setUnreadCount(res.data?.meta?.unread_count ?? 0);
@@ -35,9 +32,7 @@ export const useNotification = () => {
   }, []);
 
   const markAllAsRead = useCallback(async () => {
-    // FIX: was api.put('/notifications/mark-all-read') → 405.
-    // Correct call now goes through notificationService.markAllAsRead()
-    // which POSTs to /notifications/read-all.
+  
     await notificationService.markAllAsRead();
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     setUnreadCount(0);

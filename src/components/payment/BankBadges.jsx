@@ -1,4 +1,4 @@
-// src/components/payment/BankBadges.jsx
+
 import React from 'react';
 import { SUPPORTED_BANKS } from '../../config/khqrConfig';
 

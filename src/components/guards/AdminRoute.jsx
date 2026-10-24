@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 const AdminRoute = ({ children }) => {
     const { user, loading } = useAuth();
 
-    //  រង់ចាំ AuthContext sync ពី localStorage មុន (ការពារ flash redirect ពេល refresh)
+    // Wait for AuthContext to sync from localStorage first (prevents flash redirect on refresh)
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -20,7 +20,7 @@ const AdminRoute = ({ children }) => {
         );
     }
 
-    // មន login ឬ role មិនមែន admin/staff → ទៅ login
+    // Not logged in or role is not admin/staff → Go to login
     if (!user || (user.role !== 'admin' && user.role !== 'staff')) {
         return <Navigate to="/login" replace />;
     }

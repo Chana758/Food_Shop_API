@@ -51,12 +51,12 @@ export const useAdminContact = () => {
         contactService.getStats().catch(() => null),
       ]);
 
-      // ✅ controller returns { status, data: <laravel paginator> }
+      // controller returns { status, data: <laravel paginator> }
       // and the paginator itself has its rows under .data
       const paginator = listRes?.data?.data ?? null;
       setContacts(Array.isArray(paginator?.data) ? paginator.data : (Array.isArray(paginator) ? paginator : []));
 
-      // ✅ controller returns { status, data: {...} }
+      // controller returns { status, data: {...} }
       const statsPayload = statsRes?.data?.data ?? statsRes?.data ?? null;
       setStats(statsPayload);
     } catch (err) {
@@ -70,7 +70,7 @@ export const useAdminContact = () => {
 
   const openContact = async (id) => {
     const res = await contactService.getOne(id);
-    // ✅ controller returns { status, data: <contact> }
+    // controller returns { status, data: <contact> }
     const contact = res?.data?.data ?? res?.data ?? null;
     setSelected(contact);
     // update list — unread → read
@@ -82,7 +82,7 @@ export const useAdminContact = () => {
 
   const replyContact = async (id, data) => {
     const res = await contactService.reply(id, data);
-    // ✅ controller returns { status, message, data: <contact> } — not `.contact`
+    // controller returns { status, message, data: <contact> } — not `.contact`
     const updated = res?.data?.data ?? res?.data ?? null;
     setContacts(prev =>
       prev.map(c => c.id === id ? { ...c, status: 'replied' } : c)

@@ -18,7 +18,7 @@ const SearchResults = () => {
   const [categories, setCategories]     = useState([]);
   const [isLoading, setIsLoading]       = useState(false);
 
-  // ── Fetch from API ────────────────────────────────────
+  //  Fetch from API 
   const fetchResults = async (term) => {
     if (!term || term.trim().length < 2) {
       setProducts([]);
@@ -47,13 +47,13 @@ const SearchResults = () => {
     }
   };
 
-  // ── Re-fetch when URL query changes ──────────────────
+  //  Re-fetch when URL query changes 
   useEffect(() => {
     setSearchQuery(query);
     fetchResults(query);
   }, [query]);
 
-  // ── Handle form submit → update URL ──────────────────
+  //  Handle form submit → update URL 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -63,7 +63,7 @@ const SearchResults = () => {
 
   const hasResults = products.length > 0 || categories.length > 0;
 
-  // ─────────────────────────────────────────────────────
+  // ─
   return (
     <div className="w-full min-h-screen bg-[#FDFDFD] pt-32 pb-20 px-6 md:px-14">
       <div className="max-w-7xl mx-auto">

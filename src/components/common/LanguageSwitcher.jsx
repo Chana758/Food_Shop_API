@@ -6,23 +6,23 @@ import khFlag from '../../assets/kh.svg';
 const LanguageSwitcher = () => {
   const { i18n } = useTranslation();
 
-  // Function សម្រាប់ប្តូរភាសាចុះឡើង (Toggle) រវាង ខ្មែរ និង អង់គ្លេស
+  // Function to toggle between Khmer and English
   const toggleLanguage = () => {
-    // បើភាសាបច្ចុប្បន្នជា 'en' ឱ្យដូរទៅ 'kh' តែបើមិនមែនទេ ឱ្យដូរទៅ 'en' វិញ
+    // If the current language is 'en', change it to 'kh'; otherwise, change it back to 'en'.
     const newLang = i18n.language === 'en' ? 'kh' : 'en';
-    i18n.changeLanguage(newLang); // បញ្ជាឱ្យបណ្ណាល័យ i18next ប្តូរភាសាពេញ Website តែម្តង
+    i18n.changeLanguage(newLang);
   };
 
   return (
     <button
-      onClick={toggleLanguage} // ចុចលើរូបទង់ជាតិដើម្បីប្តូរភាសា
+      onClick={toggleLanguage}
       className="relative flex items-center justify-center w-8 h-8 rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 hover:scale-110 border-2 border-gray-200 hover:border-orange-500 group overflow-hidden active:scale-95"
-      title={i18n.language === 'en' ? 'Switch to Khmer' : 'Switch to English'} // បង្ហាញអត្ថបទប្រាប់ពេលយក Mouse ទៅដាក់ពីលើ
+      title={i18n.language === 'en' ? 'Switch to Khmer' : 'Switch to English'} 
     >
-      {/* បន្ថែមពណ៌ Gradient តិចៗនៅខាងក្រោយទង់ជាតិពេល Hover */}
+      {/* Add a subtle gradient in the background of the flag on hover.*/}
       <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
       
-      {/* បង្ហាញរូបទង់ជាតិ៖ បើភាសាជា English វាបង្ហាញទង់ជាតិខ្មែរ (សម្រាប់ចុចប្តូរ) និងផ្ទុយមកវិញ */}
+      {/* Display flag: If the language is English, it shows the Cambodian flag (which can be clicked to switch languages), and vice versa.*/}
       <img 
         src={i18n.language === 'en' ? khFlag : enFlag}
         alt={i18n.language === 'en' ? 'English Flag' : 'Khmer Flag'}
