@@ -1,6 +1,4 @@
 import axios from 'axios';
-
-// src/api/axios.js
 const axiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_URL || "https://food-shop-backend-xivl.onrender.com/api",
     headers: {

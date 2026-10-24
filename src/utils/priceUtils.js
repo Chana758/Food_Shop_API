@@ -1,4 +1,4 @@
-// ─── Shared price & discount helpers ─────────────────────────────────────────
+//  Shared price & discount helpers ──
 
 /**
  * Check whether a product has a valid, NOT-expired discount price.

@@ -9,7 +9,6 @@ const paymentService = {
     return res.data.data;
   },
 
-  //  NEW: ត្រូវផ្គូផ្គងជាមួយ route POST /payments/{id}/check-status (ដែលកែពី GET → POST)
   checkStatus: async (id) => {
     const res = await axios.post(`/payments/${id}/check-status`);
     return res.data; // { status, paid, data?, message? }

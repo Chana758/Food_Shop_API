@@ -3,11 +3,9 @@ import { KHQR, CURRENCY, COUNTRY, TAG } from 'ts-khqr';
 import { BAKONG_ACCOUNT_ID, MERCHANT_NAME, MERCHANT_CITY } from '../config/khqrConfig';
 
 /**
- * បង្កើត KHQR string ថ្មីៗ (dynamic) ដោយផ្អែកលើ amount របស់ order
- * ពេលនេះវាជា client-side generation ពិតប្រាកដ — មិនត្រូវការ call backend
  *
- * @param {number} amount      សរុបទឹកប្រាក់ត្រូវបង់ (USD)
- * @param {string} billNumber  លេខយោង unique សម្រាប់ order នេះ
+ * @param {number} amount    
+ * @param {string} billNumber 
  * @returns {{ qr: string, md5: string } | null}
  */
 export function generateDynamicKHQR({ amount, billNumber }) {
@@ -21,7 +19,7 @@ export function generateDynamicKHQR({ amount, billNumber }) {
       amount: Number(Number(amount).toFixed(2)),
       countryCode: COUNTRY.KH,
       merchantCategoryCode: '5999',
-      expirationTimestamp: Date.now() + 180 * 1000, // 3 នាទី — ស្របនឹង timer ខាង UI
+      expirationTimestamp: Date.now() + 180 * 1000, 
       additionalData: {
         billNumber: billNumber || `KF-${Date.now()}`,
         storeLabel: MERCHANT_NAME,

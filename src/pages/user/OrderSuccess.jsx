@@ -43,7 +43,7 @@ const WaitingScreen = ({ order }) => (
     </div>
 );
 
-// ── Paid Screen ───────────────────────────────────────────────────────────
+// Paid Screen 
 const PaidScreen = ({ order, orderData, navigate }) => {
     const formatDate = (d) =>
         new Date(d).toLocaleDateString('en-US', {

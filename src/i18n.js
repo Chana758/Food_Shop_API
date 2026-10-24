@@ -17,22 +17,19 @@ const resources = {
 };
 
 i18n
-  .use(initReactI18next) // បញ្ជូន i18n ទៅឱ្យ react-i18next
+  .use(initReactI18next)
   .init({
     resources,
-    //  ៣. កំណត់ភាសាដំបូង៖ បើធ្លាប់រើសភាសាវានឹងទាញពី localStorage បើអត់ទេគឺយក 'en'
+   
     lng: localStorage.getItem('language') || 'en', 
-    fallbackLng: 'en', // ករណីរកពាក្យបកប្រែមិនឃើញ វានឹងបង្ហាញជាភាសាអង់គ្លេសជំនួស
+    fallbackLng: 'en', 
     interpolation: {
-      escapeValue: false // React ការពារ XSS រួចជាស្រេច ដូច្នេះមិនចាំបាច់ escape ទេ
+      escapeValue: false
     },
     react: {
-      useSuspense: false // បិទ suspense ដើម្បីឱ្យការ Setup កាន់តែងាយស្រួល
+      useSuspense: false 
     }
   });
-
-//  ៤. រក្សាទុកជម្រើសភាសាទៅក្នុង Local Storage
-// រាល់ពេលប្តូរភាសា វានឹង Save ទុក ដើម្បីពេល User បើកមកវិញ វានៅចាំភាសានោះដដែល
 i18n.on('languageChanged', (lng) => {
   localStorage.setItem('language', lng);
 });

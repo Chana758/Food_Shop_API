@@ -1,7 +1,7 @@
 import axios from '../api/axios';
 
 const orderService = {
-  // ─── CUSTOMER ────────────────────────────────────────────────────────────
+  //  CUSTOMER 
 
   // GET /api/orders  →  customer's own orders (ownership-filtered by backend)
   getMyOrders: async (params = {}) => {
@@ -27,7 +27,7 @@ const orderService = {
     return res.data.data;
   },
 
-  // ─── ADMIN ───────────────────────────────────────────────────────────────
+  //  ADMIN 
 
   // GET /api/admin/orders  →  all orders with filters
   getAll: async (params = {}) => {
@@ -42,14 +42,12 @@ const orderService = {
   },
 
   // PUT /api/admin/orders/:id  (status / notes / table_id)
-  // FIXED: was /orders/:id  → now /admin/orders/:id
   update: async (id, payload) => {
     const res = await axios.put(`/admin/orders/${id}`, payload);
     return res.data.data;
   },
 
   // DELETE /api/admin/orders/:id
-  // FIXED: was /orders/:id  → now /admin/orders/:id
   remove: async (id) => {
     const res = await axios.delete(`/admin/orders/${id}`);
     return res.data;

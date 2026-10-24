@@ -63,7 +63,7 @@ const Service = () => {
               data-aos-delay={item.delay}
               className="group bg-white p-10 border border-gray-100 shadow-sm hover:shadow-2xl hover:border-[#2D4A22] transition-all duration-500 text-center relative overflow-hidden"
             >
-              {/* បន្ទះពណ៌លម្អនៅខាងក្រោម */}
+              {/* Decorative color panel at the bottom */}
               <div className="absolute bottom-0 left-0 w-full h-1 bg-[#F58220] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
               
               <div className="w-20 h-20 bg-[#F8F9F8] group-hover:bg-[#2D4A22] rounded-full flex items-center justify-center mx-auto mb-8 transition-colors duration-500">
@@ -80,7 +80,7 @@ const Service = () => {
                 {item.desc}
               </p>
 
-              {/* លេខរៀងលម្អ (Watermark) */}
+              {/* Watermark */}
               <span className="absolute -top-2 -right-2 text-6xl font-black text-gray-50 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity italic">
                 0{index + 1}
               </span>

@@ -16,7 +16,7 @@ const OrderHistory = () => {
   const [expandedOrders, setExpanded] = useState([]);
   const [filterStatus, setFilter]     = useState('all');
 
-  // ── Fetch orders from API ──────────────────────────────
+  // Fetch orders from API 
   useEffect(() => {
     const user = localStorage.getItem('user') || localStorage.getItem('currentUser');
     if (!user) { navigate('/login'); return; }
@@ -42,7 +42,7 @@ const OrderHistory = () => {
     fetchOrders();
   }, [navigate]);
 
-  // ── Helpers ───────────────────────────────────────────
+  // Helpers 
   const getImageUrl = (p) =>
     !p ? '/placeholder-food.jpg'
       : p.startsWith('http') ? p
@@ -96,12 +96,12 @@ const OrderHistory = () => {
     navigate('/cart');
   };
 
-  // ── Filtered list ─────────────────────────────────────
+  // Filtered list─────
   const filtered = filterStatus === 'all'
     ? orders
     : orders.filter(o => o.status === filterStatus);
 
-  // ── Loading ───────────────────────────────────────────
+  // Loading 
   if (loading) {
     return (
       <div className="w-full min-h-screen flex items-center justify-center">
@@ -110,7 +110,7 @@ const OrderHistory = () => {
     );
   }
 
-  // ── Error ─────────────────────────────────────────────
+  // Error
   if (error) {
     return (
       <div className="w-full min-h-screen flex flex-col items-center justify-center gap-4">
@@ -125,7 +125,7 @@ const OrderHistory = () => {
     );
   }
 
-  // ── Empty ─────────────────────────────────────────────
+  // Empty
   if (orders.length === 0) {
     return (
       <div className="w-full min-h-screen bg-[#FDFDFD] pt-40 pb-20 px-6 flex flex-col items-center justify-center text-center">
@@ -143,7 +143,7 @@ const OrderHistory = () => {
     );
   }
 
-  // ── Main render ───────────────────────────────────────
+  // Main rende
   return (
     <div className="w-full min-h-screen bg-[#FDFDFD] pt-32 pb-20 px-6 md:px-14">
       <div className="max-w-5xl mx-auto">
