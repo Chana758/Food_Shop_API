@@ -1,5 +1,5 @@
 
-export const BAKONG_ACCOUNT_ID = 'abaakhppxxx@abaa';
+export const BAKONG_ACCOUNT_ID = 'demo_fake@abaa';
 export const MERCHANT_NAME = 'KHMER FRESH';
 export const MERCHANT_CITY = 'Phnom Penh';
 
@@ -12,7 +12,4 @@ export const SUPPORTED_BANKS = [
   { code: 'BAKONG', label: 'Bakong' },
 ];
 
-//  NEW — enable a fake/demo "Test Pay" button in POS so staff can
-// rehearse the checkout flow without a real KHQR scan. Set to false
-// (or remove usage) before going to production.
 export const ENABLE_TEST_PAYMENT = import.meta.env.DEV;
