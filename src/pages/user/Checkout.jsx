@@ -12,8 +12,20 @@ import { MERCHANT_NAME } from '../../config/khqrConfig';
 import BankBadges from '../../components/payment/BankBadges';
 import usePricing from '../../hooks/usePricing';
 
-const POLL_INTERVAL_MS   = 4000;
-const KHQR_EXPIRY_SECONDS = 180;
+const POLL_INTERVAL_MS    = 4000; // poll every 4s
+const KHQR_EXPIRY_SECONDS = 180;  // QR lifetime
+
+// FIX: base URL from env instead of hardcoded 127.0.0.1
+const API_BASE = (
+  import.meta.env.VITE_API_BASE_URL || 'https://food-shop-backend-xivl.onrender.com'
+).replace(/\/$/, '');
+
+// FIX: build a working image URL in production
+const getImageUrl = (p) => {
+  if (!p) return '/placeholder-food.jpg';                    // no image
+  if (p.startsWith('http')) return p;                        // full URL
+  return `${API_BASE}/storage/${p.replace(/^\/?storage\//, '')}`; // storage path
+};
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -26,14 +38,11 @@ const Checkout = () => {
     city: 'Phnom Penh', notes: '', paymentMethod: 'cash',
   });
 
-  const [errors, setErrors]                     = useState({});
-  const [orderError, setOrderError]             = useState(null);
-  const [showErrorModal, setShowErrorModal]     = useState(false);
-  const [isSubmitting, setIsSubmitting]         = useState(false);
+  const [errors, setErrors]                 = useState({});
+  const [orderError, setOrderError]         = useState(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [isSubmitting, setIsSubmitting]     = useState(false);
 
-  // ✅ FIX: no more orderId / paymentId / cancelPendingOrder for KHQR —
-  // nothing is created server-side until a poll confirms `paid: true`,
-  // so there is nothing to track or cancel while waiting.
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [timeLeft, setTimeLeft]                 = useState(KHQR_EXPIRY_SECONDS);
   const [khqrPayload, setKhqrPayload]           = useState(null);
@@ -43,14 +52,14 @@ const Checkout = () => {
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [confirmedOrder, setConfirmedOrder]     = useState(null);
 
-  const isPollingRef = useRef(false); // avoids overlapping poll requests
+  const isPollingRef = useRef(false); // prevent overlapping polls
 
-  // ─── Derived totals ───────────────────────────────────────
+  // Totals
   const subtotal = cartItems.reduce((t, i) => t + i.price * i.quantity, 0);
   const delivery = subtotal > 0 ? (subtotal >= FREE_THRESHOLD ? 0 : DELIVERY_FEE) : 0;
   const total    = subtotal + delivery;
 
-  // ─── Build shared order payload (cash + khqr) ──────────────
+  // Order payload shared by cash and KHQR
   const buildOrderPayload = useCallback(() => ({
     order_type:       'delivery',
     customer_name:    formData.fullName,
@@ -64,9 +73,12 @@ const Checkout = () => {
     })),
   }), [formData, cartItems]);
 
-  // ─── Load User & Cart (Auto-Fill Profile) ─────────────────
+  // Load user + cart, auto-fill profile
   useEffect(() => {
-    const storedUser = sessionStorage.getItem('currentUser') || localStorage.getItem('currentUser') || localStorage.getItem('user');
+    const storedUser =
+      sessionStorage.getItem('currentUser') ||
+      localStorage.getItem('currentUser') ||
+      localStorage.getItem('user');
     if (!storedUser) { navigate('/login'); return; }
 
     try {
@@ -95,8 +107,7 @@ const Checkout = () => {
     setSelectedItems(selected);
   }, [navigate]);
 
-  // ─── Countdown timer — just shows "expired" state on timeout.
-  //     Nothing to cancel: nothing was ever created. ─────────────
+  // QR countdown, marks expired at 0
   useEffect(() => {
     if (!showPaymentModal || paymentConfirmed) return;
 
@@ -115,9 +126,7 @@ const Checkout = () => {
     return () => clearInterval(t);
   }, [showPaymentModal, paymentConfirmed]);
 
-  // ─── Poll /orders/khqr every 4s — the ONLY place an Order/Payment
-  //     is ever created for this flow, and only once Bakong confirms
-  //     the money actually arrived (amount-verified server-side). ────
+  // Poll /orders/khqr, order is created only after payment is confirmed
   useEffect(() => {
     if (!showPaymentModal || !khqrPayload || paymentConfirmed || khqrError) return;
 
@@ -134,7 +143,6 @@ const Checkout = () => {
           setPaymentConfirmed(true);
           setConfirmedOrder(res.data.data);
         }
-        // paid === false → keep waiting, DB untouched
       } catch (err) {
         console.error('KHQR poll error:', err.response ?? err);
       } finally {
@@ -147,14 +155,14 @@ const Checkout = () => {
     return () => clearInterval(interval);
   }, [showPaymentModal, khqrPayload, paymentConfirmed, khqrError, buildOrderPayload]);
 
-  // ─── Auto-redirect once payment confirmed ─────────────────
+  // Redirect shortly after payment is confirmed
   useEffect(() => {
     if (!paymentConfirmed || !confirmedOrder) return;
     const t = setTimeout(() => clearCartAndRedirect(confirmedOrder), 1200);
     return () => clearTimeout(t);
   }, [paymentConfirmed, confirmedOrder]); // eslint-disable-line
 
-  // ─── Shared cart cleanup + redirect ───────────────────────
+  // Remove ordered items from cart, then go to success page
   const clearCartAndRedirect = (order) => {
     const currentCart = JSON.parse(localStorage.getItem('cart') || '[]');
     localStorage.setItem(
@@ -174,14 +182,13 @@ const Checkout = () => {
     });
   };
 
+  // Show error modal
   const showError = (msg) => {
     setOrderError(msg);
     setShowErrorModal(true);
   };
 
-  // ✅ FIX: closing is now purely client-side — nothing exists in the DB
-  // to cancel, so this can never leave a ghost/orphan order behind,
-  // regardless of how fast the customer clicks X.
+  // Close QR modal, nothing to cancel on the server
   const handleCloseModal = () => {
     setShowPaymentModal(false);
     setKhqrPayload(null);
@@ -189,8 +196,7 @@ const Checkout = () => {
     setKhqrErrorMsg(null);
   };
 
-  // ─── KHQR flow — generates QR client-side only. No backend call
-  //     happens here at all; polling (above) is what talks to the API. ──
+  // Generate QR on the client only
   const openPaymentModal = useCallback(() => {
     setGeneratingQr(true);
     setKhqrError(false);
@@ -211,10 +217,9 @@ const Checkout = () => {
     setGeneratingQr(false);
   }, [total]);
 
-  const handleRetryKhqr = () => openPaymentModal();
+  const handleRetryKhqr = () => openPaymentModal(); // new QR
 
-  // ─── Cash flow (unchanged) — cash is legitimately "pending" until the
-  //     rider collects money on delivery, so it's created immediately. ──
+  // Cash order: create order, then a cash payment
   const executeCashOrder = async () => {
     setIsSubmitting(true);
     try {
@@ -227,7 +232,6 @@ const Checkout = () => {
       });
 
       clearCartAndRedirect(order);
-
     } catch (err) {
       const message = err.response?.data?.message ?? 'Failed to place order. Please try again.';
       showError(message);
@@ -236,7 +240,7 @@ const Checkout = () => {
     }
   };
 
-  // ─── Validation ───────────────────────────────────────────
+  // Form validation
   const validateForm = () => {
     const e = {};
     if (!formData.fullName.trim())  e.fullName = 'Full name is required';
@@ -249,28 +253,26 @@ const Checkout = () => {
     return Object.keys(e).length === 0;
   };
 
+  // Place order: KHQR opens the modal, cash submits directly
   const handlePlaceOrder = () => {
     if (!validateForm()) return;
-    if (formData.paymentMethod === 'card' || formData.paymentMethod === 'khqr') {
+    if (formData.paymentMethod === 'khqr') {
       openPaymentModal();
     } else {
       executeCashOrder();
     }
   };
 
+  // Update field and clear its error
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
+  // mm:ss
   const formatTime = (s) =>
     `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-
-  const getImageUrl = (p) =>
-    !p ? '/placeholder-food.jpg'
-      : p.startsWith('http') ? p
-      : `http://127.0.0.1:8000/storage/${p}`;
 
   const qrStringValue = khqrPayload?.qr || '';
 
@@ -294,7 +296,7 @@ const Checkout = () => {
 
         <div className="grid lg:grid-cols-12 gap-16">
 
-          {/* Left: Form */}
+          {/* Left: form */}
           <div className="lg:col-span-7 space-y-12">
             <section>
               <h2 className="text-[11px] font-black text-[#2D4A22] uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
@@ -374,12 +376,13 @@ const Checkout = () => {
                   </div>
                 </label>
 
+                {/* FIX: value is now "khqr" to match the label */}
                 <label className={`cursor-pointer p-6 border-2 flex items-center gap-4 transition-all
-                  ${formData.paymentMethod === 'card' ? 'border-[#F58220] bg-orange-50/30' : 'border-gray-100'}`}>
-                  <input type="radio" name="paymentMethod" value="card"
-                    checked={formData.paymentMethod === 'card'}
+                  ${formData.paymentMethod === 'khqr' ? 'border-[#F58220] bg-orange-50/30' : 'border-gray-100'}`}>
+                  <input type="radio" name="paymentMethod" value="khqr"
+                    checked={formData.paymentMethod === 'khqr'}
                     onChange={handleInputChange} className="hidden" />
-                  <FaCreditCard className={formData.paymentMethod === 'card' ? 'text-[#F58220]' : 'text-gray-300'} size={24} />
+                  <FaCreditCard className={formData.paymentMethod === 'khqr' ? 'text-[#F58220]' : 'text-gray-300'} size={24} />
                   <div>
                     <p className="text-[10px] font-black text-[#2D4A22] uppercase tracking-widest">Pay Now via KHQR</p>
                     <p className="text-[8px] text-gray-400 font-bold uppercase mt-1">Auto-confirmed — no screenshot needed</p>
@@ -389,7 +392,7 @@ const Checkout = () => {
             </section>
           </div>
 
-          {/* Right: Order Summary */}
+          {/* Right: order summary */}
           <div className="lg:col-span-5">
             <div className="bg-gray-50 p-8 sticky top-32 border border-gray-100 rounded-sm">
               <h2 className="text-xs font-black text-[#2D4A22] uppercase tracking-[0.3em] mb-8 border-b border-gray-200 pb-4 flex items-center gap-2">
@@ -444,7 +447,7 @@ const Checkout = () => {
         </div>
       </div>
 
-      {/* Error Modal */}
+      {/* Error modal */}
       {showErrorModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8 flex flex-col items-center text-center">
@@ -467,7 +470,7 @@ const Checkout = () => {
         </div>
       )}
 
-      {/* KHQR Payment Modal */}
+      {/* KHQR modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-[#1a2e14]/60 backdrop-blur-md">
           <div className="bg-white w-full max-w-[540px] rounded-[2.5rem] shadow-2xl relative overflow-hidden">
@@ -529,8 +532,6 @@ const Checkout = () => {
                         <p className="text-xs font-bold text-red-400 uppercase text-center px-2 mb-4">
                           {khqrErrorMsg ?? 'Something went wrong. Please try again.'}
                         </p>
-                        {/* retry button — safe now, since nothing was
-                            ever created for the expired/failed attempt */}
                         <button
                           onClick={handleRetryKhqr}
                           className="px-5 py-2 bg-[#2D4A22] text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-[#F58220] transition-all"
