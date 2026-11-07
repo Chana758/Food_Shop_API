@@ -39,8 +39,9 @@ const ErrorState = ({ error, onRetry, compact = false, kind }) => {
       message: t('error.network', 'We could not reach the server. Please check your internet connection and try again.'),
     },
     server: {
-      title:   t('error.serverTitle', 'Our kitchen is busy'),
-      message: t('error.server', 'The server is having a temporary problem. Please try again in a moment.'),
+      title:   t('error.serverTitle', 'Server is waking up'),
+      message: t( 'error.server', 'Our server is starting after a period of inactivity. This may take a moment. Thank you for your patience!'
+    ),
     },
     notFound: {
       title:   t('error.notFoundTitle', 'Nothing here'),
