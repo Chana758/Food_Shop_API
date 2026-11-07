@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +6,7 @@ import { useCategories } from '../../../hooks/useCategories';
 import { IoSearch } from 'react-icons/io5';
 import { FaChevronRight, FaArrowLeft } from 'react-icons/fa';
 import { BiLeaf } from 'react-icons/bi';
+import ErrorState from '../../../components/common/ErrorState';
 import { getImageUrl } from '../../../utils/imageUrl';
 
 const formatSlugAsTitle = (slug) =>
@@ -21,7 +21,7 @@ const MenuCategoryDetail = () => {
     const PER_PAGE = 15;
 
     // Send category_slug to backend for proper server-side filtering and pagination
-    const { data, isLoading, error } = useProducts({
+    const { data, isLoading, error, refetch } = useProducts({
         page,
         per_page: PER_PAGE,
         search: searchQuery,
@@ -54,15 +54,13 @@ const MenuCategoryDetail = () => {
         </div>
     );
 
+    // Friendly error (no raw "status code 500" text)
     if (error) return (
-        <div className="w-full min-h-screen bg-[#FAFAFA] pt-32 flex flex-col items-center justify-center font-bold text-red-500">
-            <p>Error: {error.message}</p>
-            <button
-                onClick={() => window.location.reload()}
-                className="mt-4 px-4 py-2 bg-[#2D4A22] text-white text-xs rounded uppercase hover:bg-black transition-colors"
-            >
-                Retry Loading
-            </button>
+        <div className="w-full min-h-screen bg-[#FAFAFA] pt-32">
+            <ErrorState
+                error={error}
+                onRetry={refetch ?? (() => window.location.reload())}
+            />
         </div>
     );
 
@@ -116,6 +114,7 @@ const MenuCategoryDetail = () => {
                                             src={getImageUrl(item.image)}
                                             className="w-full h-full object-cover"
                                             alt={item.name}
+                                            onError={e => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x300?text=Khmer+Fresh'; }}
                                         />
                                         <div className="absolute top-3 right-3 bg-white/95 px-3 py-1 text-[#2D4A22] font-black text-xs rounded-full shadow-sm">
                                             ${parseFloat(item.price).toFixed(2)}

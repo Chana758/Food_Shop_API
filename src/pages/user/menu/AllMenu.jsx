@@ -7,7 +7,9 @@ import useFavorite from '../../../hooks/useFavorite';
 import { FaHeart, FaRegHeart, FaShoppingCart, FaFilter, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { IoSearch } from 'react-icons/io5';
 import Toast from '../../../components/common/Toast';
+import ErrorState from '../../../components/common/ErrorState';
 import { getImageUrl } from '../../../utils/imageUrl';
+
 const PRICE_RANGES = [
   { id: 'all',    labelKey: 'menu.allPrices' },
   { id: 'low',    labelKey: 'menu.under'     },
@@ -33,7 +35,12 @@ const AllMenu = () => {
   const { favorites, isFavorite, toggleFavorite } = useFavorite();
 
   // Fetch ALL products at once
-  const { data: productsData, isLoading: productsLoading, error: productsError } = useProducts({
+  const {
+    data: productsData,
+    isLoading: productsLoading,
+    error: productsError,
+    refetch: refetchProducts,
+  } = useProducts({
     per_page: FETCH_ALL_PER_PAGE,
   });
   const allMenuItems = productsData?.data?.data || productsData?.data || [];
@@ -105,7 +112,7 @@ const AllMenu = () => {
 
   // Add to Cart → localStorage
   const addToCart = (item) => {
-    
+
     if (!sessionStorage.getItem('currentUser')) { navigate('/login'); return; }
 
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -119,16 +126,20 @@ const AllMenu = () => {
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
-  // Loading / Error
+  // Loading
   if (productsLoading || categoriesLoading) return (
     <div className="text-center py-40 font-bold text-gray-400 animate-pulse">
       Loading menu...
     </div>
   );
 
+  // Friendly error (no raw "status code 500" text)
   if (productsError) return (
-    <div className="text-center py-40 font-bold text-red-500">
-      Error loading menu: {productsError.message}
+    <div className="max-w-7xl mx-auto px-4 pt-28">
+      <ErrorState
+        error={productsError}
+        onRetry={refetchProducts ?? (() => window.location.reload())}
+      />
     </div>
   );
 

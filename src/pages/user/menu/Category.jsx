@@ -1,3 +1,4 @@
+// src/pages/user/menu/Category.jsx
 import React, { useEffect } from 'react';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
@@ -5,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FaChevronRight } from 'react-icons/fa';
 import { useCategories } from '../../../hooks/useCategories';
+import ErrorState from '../../../components/common/ErrorState';
 
 const FALLBACK_IMG = 'https://placehold.co/400x300?text=Khmer+Fresh';
 
@@ -22,7 +24,7 @@ const Category = () => {
     AOS.init({ duration: 800, once: true });
   }, []);
 
-  const { data: categoriesData, isLoading, error } = useCategories({ per_page: 100 });
+  const { data: categoriesData, isLoading, error, refetch } = useCategories({ per_page: 100 });
 
   const categories =
     categoriesData?.data?.data ||
@@ -35,9 +37,14 @@ const Category = () => {
     </div>
   );
 
+  // Friendly error card instead of "Error: Request failed with status code 500"
   if (error) return (
-    <div className="text-center py-24 font-black text-gray-500">
-      {t('common.error', 'Error')}: {error.message}
+    <div className="bg-white">
+      <ErrorState
+        compact
+        error={error}
+        onRetry={refetch ?? (() => window.location.reload())}
+      />
     </div>
   );
 

@@ -4,12 +4,15 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 
-// ── Layout 
+// ── Layout
 import Navbar      from './components/layout/user/Navbar';
 import Footer      from './components/layout/user/Footer';
 import AdminLayout from './components/layout/admin/AdminLayout';
 
-// ── User Pages 
+// ── Error handling
+import ErrorBoundary from './components/common/ErrorBoundary';
+
+// ── User Pages
 import Home          from './pages/user/Home';
 import About         from './pages/user/About';
 import Contact       from './pages/user/Contact';
@@ -22,15 +25,15 @@ import Reservation   from './pages/user/Reservation';
 import SearchResults from './pages/user/menu/SearchResults';
 import Service       from './pages/user/Service';
 
-// ── Auth Pages 
+// ── Auth Pages
 import Login    from './pages/auth/Login';
 import Register from './pages/auth/Register';
 
-// ── Admin Guard 
+// ── Admin Guard
 import AdminRoute from './components/guards/AdminRoute';
 
-// ── Settings Context 
-import { SettingsProvider } from './context/SettingsContext'; // ✅ NEW
+// ── Settings Context
+import { SettingsProvider } from './context/SettingsContext';
 
 // ── Admin Pages ─────
 import AdminDashboard       from './pages/admin/AdminDashboard';
@@ -52,7 +55,7 @@ import ReservationManagement from './pages/admin/ReservationManagement.jsx';
 import ContactManagement     from './pages/admin/ContactManagement.jsx';
 import ReviewManagement      from './pages/admin/ReviewManagement.jsx';
 
-// ── Menu Pages 
+// ── Menu Pages
 import AllMenu           from './pages/user/menu/AllMenu';
 import MenuCategoryDetail from './pages/user/menu/MenuCategoryDetail';
 import ProductDetail     from './pages/user/menu/ProductDetail';
@@ -68,15 +71,12 @@ const ScrollToTop = () => {
   return null;
 };
 
-const App = () => {
-  useEffect(() => {
-    initDummyUsers();
-    AOS.init({ duration: 900, offset: 80, once: true });
-  }, []);
-
+// Resets the error boundary whenever the route changes,
+// so navigating away from a broken page recovers automatically.
+const RoutesWithBoundary = () => {
+  const { pathname } = useLocation();
   return (
-    <Router>
-      <ScrollToTop />
+    <ErrorBoundary key={pathname}>
       <Routes>
 
         {/* ── Public / User Routes */}
@@ -103,8 +103,8 @@ const App = () => {
         <Route path="/order-success" element={<><Navbar /><OrderSuccess /><Footer /></>} />
         <Route path="/order-history" element={<><Navbar /><OrderHistory /><Footer /></>} />
 
-        {/* ── Admin Routes (Protected) ──────────────────────────────────── */}
-        {/*— wrapped in <SettingsProvider> so every admin page
+        {/* ── Admin Routes (Protected) ----- */}
+        {/* wrapped in <SettingsProvider> so every admin page
             (Dashboard, POS, Header, Sidebar, etc.) can call useSettings()
             and immediately react to whatever was saved in Settings. */}
         <Route
@@ -146,6 +146,20 @@ const App = () => {
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>
+    </ErrorBoundary>
+  );
+};
+
+const App = () => {
+  useEffect(() => {
+    initDummyUsers();
+    AOS.init({ duration: 900, offset: 80, once: true });
+  }, []);
+
+  return (
+    <Router>
+      <ScrollToTop />
+      <RoutesWithBoundary />
     </Router>
   );
 };

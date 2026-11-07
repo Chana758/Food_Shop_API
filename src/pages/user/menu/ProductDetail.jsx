@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { productService } from '../../../service/productService';
 import { FaMinus, FaPlus, FaArrowLeft, FaHeart, FaRegHeart, FaStar, FaRegStar, FaCheckCircle } from 'react-icons/fa';
 import { BiLeaf } from 'react-icons/bi';
 import { useTranslation } from 'react-i18next';
 import Toast from '../../../components/common/Toast';
+import ErrorState from '../../../components/common/ErrorState';
 import useFavorite from '../../../hooks/useFavorite';
 import { useProductReviews, useReview } from '../../../hooks/useReview';
 import { useAuth } from '../../../context/AuthContext';
@@ -39,23 +40,24 @@ const ProductDetail = () => {
   // Has this user already reviewed this product?
   const myExistingReview = myReviews.find(r => String(r.product_id) === String(id));
 
-  // Fetch product by ID
-  useEffect(() => {
-    const fetchProduct = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await productService.getById(id);
-        setProduct(data.data || data);
-      } catch (err) {
-        console.error("Error fetching product:", err);
-        setError(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    if (id) fetchProduct();
+  // Fetch product by ID (reusable so the error card can retry)
+  const fetchProduct = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await productService.getById(id);
+      setProduct(data.data || data);
+    } catch (err) {
+      console.error('Error fetching product:', err);
+      setError(err);
+    } finally {
+      setIsLoading(false);
+    }
   }, [id]);
+
+  useEffect(() => {
+    if (id) fetchProduct();
+  }, [id, fetchProduct]);
 
   // Price Calculation Logic
   const originalPrice   = product ? parseFloat(product.price) : 0;
@@ -126,22 +128,36 @@ const ProductDetail = () => {
     </div>
   );
 
-  // Error State
-  if (error || !product) return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-center">
-      <p className="font-black text-gray-400 uppercase tracking-widest text-xs">
-        Product Not Found
-      </p>
-      <button
-        onClick={() => navigate(-1)}
-        className="text-[#2D4A22] font-black text-[9px] uppercase tracking-[0.2em] hover:text-[#F58220] transition-colors"
-      >
-        ← Go Back
-      </button>
+  // Error State: server / network problem → friendly card with retry
+  if (error) return (
+    <div className="min-h-screen bg-[#FAFAFA] pt-24">
+      <ErrorState error={error} onRetry={fetchProduct} />
+      <div className="text-center -mt-16 pb-16">
+        <button
+          onClick={() => navigate(-1)}
+          className="text-[#2D4A22] font-black text-[9px] uppercase tracking-[0.2em] hover:text-[#F58220] transition-colors"
+        >
+          ← {t('button.back') || 'Go Back'}
+        </button>
+      </div>
     </div>
   );
 
-  // ✅ Fixed: use shared helper (no more 127.0.0.1)
+  // Product genuinely not found
+  if (!product) return (
+    <div className="min-h-screen bg-[#FAFAFA] pt-24">
+      <ErrorState kind="notFound" />
+      <div className="text-center -mt-16 pb-16">
+        <button
+          onClick={() => navigate(-1)}
+          className="text-[#2D4A22] font-black text-[9px] uppercase tracking-[0.2em] hover:text-[#F58220] transition-colors"
+        >
+          ← {t('button.back') || 'Go Back'}
+        </button>
+      </div>
+    </div>
+  );
+
   const productImageUrl = getImageUrl(product.image);
 
   const totalPrice = (discountPrice * quantity).toFixed(2);
@@ -175,6 +191,7 @@ const ProductDetail = () => {
                 src={productImageUrl}
                 alt={product.name}
                 className="w-full h-full object-cover"
+                onError={e => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x300?text=Khmer+Fresh'; }}
               />
               <button
                 onClick={() => toggleFavorite(product, navigate)}
