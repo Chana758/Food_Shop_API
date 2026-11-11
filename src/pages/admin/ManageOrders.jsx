@@ -7,6 +7,7 @@ import {
 } from 'react-icons/lu';
 import useOrder from '../../hooks/useOrder';
 import orderService from '../../service/orderService';
+import { useTranslation } from 'react-i18next';
 
 /*
   Palette matched to the Khmer-Fresh admin (see Dashboard / Contacts /
@@ -61,17 +62,17 @@ const ORDER_TYPE_META = {
   'dine-in': {
     icon: <LuUtensilsCrossed size={13} />,
     chip: 'bg-[#E4F0E7] text-[#2F6844] border-[#C7E0CD]',
-    label: (order) => order.table?.name ?? 'Dine-in',
+    label: (order, t) => order.table?.name ?? t('orderType.dine-in'),
   },
   'delivery': {
     icon: <LuBike size={13} />,
     chip: 'bg-[#F5E5DE] text-[#9C4A2E] border-[#EAD0C2]',
-    label: () => 'Delivery',
+    label: (order, t) => t('orderType.delivery'),
   },
   'takeaway': {
     icon: <LuShoppingBag size={13} />,
     chip: 'bg-[#FBEDD9] text-[#8A5A12] border-[#F1D9AE]',
-    label: () => 'Takeaway',
+    label: (order, t) => t('orderType.takeaway'),
   },
 };
 const getOrderTypeMeta = (orderType) => ORDER_TYPE_META[orderType] ?? ORDER_TYPE_META['takeaway'];
@@ -91,6 +92,7 @@ const Modal = ({ onClose, children }) => (
 );
 
 const ManageOrders = () => {
+  const { t } = useTranslation();
   const { searchTerm = '' } = useOutletContext() || {};
   const { orders, loading, error, fetchOrders, advanceStatus, removeOrder } = useOrder();
 
@@ -158,18 +160,18 @@ const ManageOrders = () => {
   if (loading) return (
     <div className="p-8 flex flex-col items-center justify-center min-h-[300px] gap-3">
       <div className="w-8 h-8 border-4 border-[#E8E3D8] border-t-[#1E2A2E] rounded-full animate-spin" />
-      <p className="text-xs font-black uppercase tracking-widest text-[#9AA0A0]">Loading orders...</p>
+      <p className="text-xs font-black uppercase tracking-widest text-[#9AA0A0]">{t('common.loading')}</p>
     </div>
   );
 
   if (error) return (
     <div className="p-8 text-center text-[#B5453B] font-bold text-xs uppercase tracking-wider">
-      {error}
+      {t('admin.orders.loadFailed')}
       <button
         onClick={() => fetchOrders()}
         className="ml-3 underline text-[#5B6B6F] hover:text-[#1E2A2E] cursor-pointer"
       >
-        Retry
+        {t('error.retry')}
       </button>
     </div>
   );
@@ -180,14 +182,14 @@ const ManageOrders = () => {
       {/* ── HEADER & REFRESH ── */}
       <div className={`${CARD} p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4`}>
         <div>
-          <h1 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">Order Management</h1>
-          <p className="text-xs text-[#8B9296] font-semibold mt-0.5">Track and manage incoming food orders seamlessly from kitchen to payment</p>
+          <h1 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">{t('admin.page.orders')}</h1>
+          <p className="text-xs text-[#8B9296] font-semibold mt-0.5">{t('admin.orders.subtitle')}</p>
         </div>
         <button
           onClick={() => { fetchOrders(); fetchStatusCounts(); }}
           className="bg-white border border-[#E8E3D8] text-[#5B6B6F] px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#FBF9F5] transition cursor-pointer shadow-sm flex items-center gap-2"
         >
-          <LuRefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+          <LuRefreshCw size={14} className={loading ? 'animate-spin' : ''} /> {t('admin.common.refresh')}
         </button>
       </div>
 
@@ -205,7 +207,7 @@ const ManageOrders = () => {
                   : 'bg-white border-[#E8E3D8] text-[#5B6B6F] hover:bg-[#FBF9F5]'
               }`}
             >
-              {f}
+              {t(`status.${f}`)}
               {f !== 'all' && statusCounts[f] > 0 && (
                 <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-[#F1EFE9] text-[#5B6B6F]'}`}>
                   {statusCounts[f]}
@@ -221,13 +223,13 @@ const ManageOrders = () => {
         <table className="w-full text-left border-collapse">
           <thead className="bg-[#FBF9F5] text-[#8B9296] text-[11px] font-black uppercase tracking-wider border-b border-[#EFEBE2]">
             <tr>
-              <th className="px-5 py-3 w-20">Order ID</th>
-              <th className="px-5 py-3">Customer</th>
-              <th className="px-5 py-3">Type & Location</th>
-              <th className="px-5 py-3">Total Amount</th>
-              <th className="px-5 py-3 w-28">Status</th>
-              <th className="px-5 py-3">Placed At</th>
-              <th className="px-5 py-3 text-center w-48">Actions</th>
+              <th className="px-5 py-3 w-20">{t('orderHistory.orderID')}</th>
+              <th className="px-5 py-3">{t('admin.common.customer')}</th>
+              <th className="px-5 py-3">{t('admin.orders.typeLocation')}</th>
+              <th className="px-5 py-3">{t('checkout.totalAmount')}</th>
+              <th className="px-5 py-3 w-28">{t('admin.common.status')}</th>
+              <th className="px-5 py-3">{t('admin.orders.placedAt')}</th>
+              <th className="px-5 py-3 text-center w-48">{t('admin.common.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EFEBE2]">
@@ -250,7 +252,7 @@ const ManageOrders = () => {
                       {typeMeta.icon}
                     </div>
                     <span className="font-bold text-xs text-[#3A4548]">
-                      {typeMeta.label(order)}
+                      {typeMeta.label(order, t)}
                     </span>
                   </div>
                 </td>
@@ -259,7 +261,7 @@ const ManageOrders = () => {
                 </td>
                 <td className="px-5 py-3.5">
                   <span className={`text-[10px] font-black px-2.5 py-1 rounded-md border uppercase tracking-widest ${STATUS_STYLES[order.status] ?? 'bg-[#F1EFE9] text-[#8B9296] border-[#E3DFD3]'}`}>
-                    {order.status}
+                    {t(`status.${order.status}`, order.status)}
                   </span>
                 </td>
                 <td className="px-5 py-3.5 text-[#8B9296] text-xs font-medium">
@@ -270,7 +272,7 @@ const ManageOrders = () => {
                     <button
                       onClick={() => setViewing(order)}
                       className="p-2 bg-white border border-[#E8E3D8] hover:bg-[#FBF9F5] text-[#5B6B6F] rounded-lg cursor-pointer transition shadow-2xs"
-                      title="View details"
+                      title={t('admin.common.viewDetails')}
                     >
                       <LuEye size={13} />
                     </button>
@@ -279,23 +281,23 @@ const ManageOrders = () => {
                       <button
                         onClick={() => handleAdvance(order.id)}
                         className="px-2.5 py-1.5 bg-[#1E2A2E] hover:bg-[#2A3B3F] text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition cursor-pointer shadow-2xs flex items-center gap-1"
-                        title={`Advance to ${STATUS_FLOW[STATUS_FLOW.indexOf(order.status) + 1]}`}
+                        title={t('admin.orders.advanceTo', { status: t(`status.${STATUS_FLOW[STATUS_FLOW.indexOf(order.status) + 1]}`) })}
                       >
-                        <span>Advance</span>
+                        <span>{t('admin.orders.advance')}</span>
                         <LuArrowRight size={11} />
                       </button>
                     )}
 
                     {order.status === 'served' && (
                       <span className="px-2 py-1 bg-[#FBEDD9] text-[#8A5A12] border border-[#F1D9AE] rounded-lg text-[9px] font-black uppercase tracking-wider">
-                        Awaiting Payment
+                        {t('admin.orders.awaitingPayment')}
                       </span>
                     )}
 
                     <button
                       onClick={() => setDeleting(order)}
                       className="p-2 bg-white border border-[#EBC7C1] hover:bg-[#F5E1DE] text-[#B5453B] rounded-lg cursor-pointer transition shadow-2xs"
-                      title="Delete order"
+                      title={t('admin.orders.deleteTitle')}
                     >
                       <LuTrash2 size={13} />
                     </button>
@@ -308,7 +310,7 @@ const ManageOrders = () => {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={7} className="text-center py-12 text-[#9AA0A0] font-bold text-xs uppercase tracking-wider">
-                  {searchTerm ? `No orders match "${searchTerm}"` : 'No orders found matching your criteria.'}
+                  {searchTerm ? t('admin.common.noMatch', { term: searchTerm }) : t('admin.orders.none')}
                 </td>
               </tr>
             )}
@@ -323,7 +325,7 @@ const ManageOrders = () => {
               disabled={currentPage === 1}
               className="px-3 h-8 rounded-lg font-bold text-xs transition cursor-pointer border border-[#E8E3D8] bg-white text-[#5B6B6F] hover:bg-[#F3F0E9] disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Prev
+              {t('common.previous')}
             </button>
             {Array.from({ length: totalPages }, (_, i) => (
               <button
@@ -343,7 +345,7 @@ const ManageOrders = () => {
               disabled={currentPage === totalPages}
               className="px-3 h-8 rounded-lg font-bold text-xs transition cursor-pointer border border-[#E8E3D8] bg-white text-[#5B6B6F] hover:bg-[#F3F0E9] disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Next
+              {t('common.next')}
             </button>
           </div>
         )}
@@ -354,7 +356,7 @@ const ManageOrders = () => {
         <Modal onClose={() => setViewing(null)}>
           <div className="flex items-center justify-between pb-3 border-b border-[#EFEBE2]">
             <h2 className="text-xs font-black uppercase text-[#1E2A2E] tracking-wider">
-              Order Details #{viewing.id}
+              {t('admin.orders.details')} #{viewing.id}
             </h2>
             <button
               onClick={() => setViewing(null)}
@@ -367,29 +369,29 @@ const ManageOrders = () => {
           <div className="space-y-3 pt-4 text-xs">
             <div className="grid grid-cols-2 gap-3 bg-[#FBF9F5] p-3 rounded-lg border border-[#E8E3D8]">
               <div>
-                <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">Customer</span>
+                <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">{t('admin.common.customer')}</span>
                 <span className="font-bold text-[#1E2A2E]">{viewing.customer_name ?? viewing.user?.name ?? '—'}</span>
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">Order Type</span>
+                <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">{t('orderHistory.orderType')}</span>
                 <span className="font-bold text-[#1E2A2E]">
-                  {getOrderTypeMeta(viewing.order_type).label(viewing)}
+                  {getOrderTypeMeta(viewing.order_type).label(viewing, t)}
                 </span>
               </div>
               {viewing.order_type === 'delivery' && viewing.delivery_address && (
                 <div className="col-span-2">
-                  <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">Delivery Address</span>
+                  <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">{t('checkout.address')}</span>
                   <span className="font-bold text-[#1E2A2E]">{viewing.delivery_address}</span>
                 </div>
               )}
               <div>
-                <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">Status</span>
+                <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">{t('admin.common.status')}</span>
                 <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${STATUS_STYLES[viewing.status]}`}>
-                  {viewing.status}
+                  {t(`status.${viewing.status}`, viewing.status)}
                 </span>
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">Placed At</span>
+                <span className="text-[10px] font-black uppercase text-[#9AA0A0] block mb-0.5">{t('admin.orders.placedAt')}</span>
                 <span className="font-bold text-[#5B6B6F]">{viewing.created_at?.slice(0, 16).replace('T', ' ')}</span>
               </div>
             </div>
@@ -397,7 +399,7 @@ const ManageOrders = () => {
             {viewing.items?.length > 0 && (
               <div>
                 <span className="block text-[10px] font-black uppercase text-[#9AA0A0] mb-2">
-                  Ordered Items ({viewing.items.length})
+                  {t('orderHistory.orderedItems')} ({viewing.items.length})
                 </span>
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {viewing.items.map(item => (
@@ -406,10 +408,10 @@ const ManageOrders = () => {
                       className="flex justify-between items-center bg-[#FBF9F5] p-2.5 rounded-lg border border-[#E8E3D8] text-xs font-bold"
                     >
                       <div>
-                        <span className="text-[#1E2A2E] block">{item.product?.name ?? `Product #${item.product_id}`}</span>
+                        <span className="text-[#1E2A2E] block">{item.product?.name ?? `#${item.product_id}`}</span>
                         {item.note && (
                           <span className="text-[#8A5A12] font-semibold text-[10px] mt-0.5 block">
-                            Note: {item.note}
+                            {t('orderHistory.note')}: {item.note}
                           </span>
                         )}
                       </div>
@@ -422,7 +424,7 @@ const ManageOrders = () => {
                 </div>
 
                 <div className="flex justify-between items-center mt-3 pt-3 border-t border-[#EFEBE2]">
-                  <span className="text-[10px] font-black uppercase text-[#8B9296]">Total Amount</span>
+                  <span className="text-[10px] font-black uppercase text-[#8B9296]">{t('checkout.totalAmount')}</span>
                   <span className="text-base font-black text-[#2F6844]">
                     ${Number(viewing.total_amount).toFixed(2)}
                   </span>
@@ -433,7 +435,7 @@ const ManageOrders = () => {
             {viewing.notes && (
               <div className="bg-[#FBEDD9] p-3 rounded-lg border border-[#F1D9AE] text-xs">
                 <span className="font-black text-[#8A5A12] uppercase tracking-wider text-[10px] block mb-1">
-                  Order Special Note
+                  {t('admin.orders.specialNote')}
                 </span>
                 <p className="text-[#5C3D0C] font-semibold">{viewing.notes}</p>
               </div>
@@ -444,7 +446,7 @@ const ManageOrders = () => {
             onClick={() => setViewing(null)}
             className="mt-4 w-full bg-[#1E2A2E] hover:bg-[#2A3B3F] text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition cursor-pointer shadow-sm"
           >
-            Close
+            {t('common.close')}
           </button>
         </Modal>
       )}
@@ -453,7 +455,7 @@ const ManageOrders = () => {
       {deleting && (
         <Modal onClose={() => setDeleting(null)}>
           <div className="flex items-center justify-between pb-3 border-b border-[#EFEBE2]">
-            <h2 className="text-xs font-black uppercase text-[#1E2A2E] tracking-wider">Delete Order</h2>
+            <h2 className="text-xs font-black uppercase text-[#1E2A2E] tracking-wider">{t('admin.orders.deleteTitle')}</h2>
             <button
               onClick={() => setDeleting(null)}
               className="text-[#9AA0A0] hover:text-[#1E2A2E] cursor-pointer"
@@ -464,7 +466,7 @@ const ManageOrders = () => {
 
           <div className="py-4 space-y-3 text-xs">
             <p className="text-[#3A4548] font-bold">
-              Are you sure you want to delete <span className="font-black text-[#1E2A2E]">Order #{deleting.id}</span>?
+              {t('admin.orders.deleteQ')} <span className="font-black text-[#1E2A2E]">#{deleting.id}</span>?
             </p>
             <div className="p-3 bg-[#F5E1DE] border border-[#EBC7C1] rounded-lg text-[#8C3327] font-semibold">
               ⚠️ Stock will be restored automatically. This action cannot be undone.
@@ -476,14 +478,14 @@ const ManageOrders = () => {
               onClick={() => setDeleting(null)}
               className="flex-1 py-2.5 border border-[#E8E3D8] rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-[#FBF9F5] cursor-pointer text-[#5B6B6F] transition"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleDelete}
               disabled={submitting}
               className="flex-1 py-2.5 bg-[#B5453B] text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-[#9C3B32] cursor-pointer transition shadow-sm disabled:opacity-50"
             >
-              {submitting ? 'Deleting...' : 'Confirm Delete'}
+              {submitting ? t('admin.common.deleting') : t('admin.orders.confirmDelete')}
             </button>
           </div>
         </Modal>

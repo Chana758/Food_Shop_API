@@ -5,11 +5,14 @@ import ch1 from '../../../assets/image/channa.jpg';
 import { useAuth } from '../../../context/AuthContext';
 import useAdminBell from '../../../hooks/useAdminBell';
 import useEcho from '../../../hooks/useEcho';
+import LanguageSwitcher from '../../common/LanguageSwitcher';
+import { useTranslation } from 'react-i18next';
 
-const AdminHeader = ({ title, searchTerm, setSearchTerm, toggleSidebar, placeholder = 'Search menu...' }) => {
+const AdminHeader = ({ title, searchTerm, setSearchTerm, toggleSidebar, placeholder }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const userName = user?.name || 'Guest';
+  const userName = user?.name || t('nav.guest');
   const userRole = user?.role || 'staff';
 
   const [bellOpen, setBellOpen] = useState(false);
@@ -82,7 +85,7 @@ const AdminHeader = ({ title, searchTerm, setSearchTerm, toggleSidebar, placehol
               onClick={() => setSearchTerm('')}
               type="button"
               className="absolute right-3 p-1 rounded-full transition-colors hover:bg-black/10"
-              title="Clear search"
+              title={t('admin.header.clearSearch')}
             >
               <LuX size={14} style={{ color: 'var(--header-fg-muted)' }} />
             </button>
@@ -98,10 +101,13 @@ const AdminHeader = ({ title, searchTerm, setSearchTerm, toggleSidebar, placehol
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Khmer / English */}
+        <LanguageSwitcher />
+
         <button
           onClick={() => navigate('/admin/contacts')}
           className="relative p-2 rounded-full transition-colors hover:bg-black/5"
-          title="Contact Messages"
+          title={t('admin.page.contacts')}
         >
           <LuMail size={20} style={{ color: 'var(--header-fg)' }} />
           {unreadMailCount > 0 && (
@@ -115,7 +121,7 @@ const AdminHeader = ({ title, searchTerm, setSearchTerm, toggleSidebar, placehol
           <button
             onClick={() => setBellOpen(prev => !prev)}
             className="relative p-2 rounded-full transition-colors hover:bg-black/5"
-            title="Action Items"
+            title={t('admin.header.actionItems')}
           >
             <LuBell size={20} style={{ color: 'var(--header-fg)' }} />
             {totalCount > 0 && (
@@ -133,24 +139,24 @@ const AdminHeader = ({ title, searchTerm, setSearchTerm, toggleSidebar, placehol
           {bellOpen && (
             <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-[#1E2A2E] rounded-xl border border-gray-100 dark:border-[#32444A] shadow-xl overflow-hidden z-50">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50 dark:border-[#243338]">
-                <p className="text-sm font-black text-[#1e292b] dark:text-[#FBF9F5]">Action Items</p>
+                <p className="text-sm font-black text-[#1e292b] dark:text-[#FBF9F5]">{t('admin.header.actionItems')}</p>
                 <button
                   onClick={refresh}
                   className="text-[11px] font-bold text-gray-400 dark:text-[#7C8A8D] hover:text-[var(--accent)] transition-colors"
                 >
-                  Refresh
+                  {t('admin.common.refresh')}
                 </button>
               </div>
 
               <div className="max-h-80 overflow-y-auto divide-y divide-gray-50 dark:divide-[#243338]">
                 {loading ? (
                   <div className="p-8 text-center text-xs text-gray-400 dark:text-[#7C8A8D] font-bold uppercase tracking-widest animate-pulse">
-                    Loading...
+                    {t('common.loading')}
                   </div>
                 ) : items.length === 0 ? (
                   <div className="p-8 text-center space-y-2">
                     <LuCircleCheckBig size={24} className="text-green-300 mx-auto" />
-                    <p className="text-xs text-gray-400 dark:text-[#7C8A8D] font-bold uppercase tracking-widest">All caught up!</p>
+                    <p className="text-xs text-gray-400 dark:text-[#7C8A8D] font-bold uppercase tracking-widest">{t('admin.header.allCaughtUp')}</p>
                   </div>
                 ) : (
                   items.map((item) => (
@@ -162,9 +168,9 @@ const AdminHeader = ({ title, searchTerm, setSearchTerm, toggleSidebar, placehol
                       <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${item.dot}`} />
                       <div className="min-w-0 flex-1">
                         <p className={`text-xs font-black truncate ${item.color}`}>
-                          {item.title}
+                          {t(item.titleKey, { count: item.count })}
                         </p>
-                        <p className="text-[11px] text-gray-500 dark:text-[#9AA5A3] truncate">{item.sub}</p>
+                        <p className="text-[11px] text-gray-500 dark:text-[#9AA5A3] truncate">{t(item.subKey)}</p>
                       </div>
                     </div>
                   ))
@@ -180,7 +186,7 @@ const AdminHeader = ({ title, searchTerm, setSearchTerm, toggleSidebar, placehol
         >
           <div className="text-right">
             <p className="text-xs font-bold" style={{ color: 'var(--header-fg)' }}>{userName}</p>
-            <p className="text-[10px] capitalize" style={{ color: 'var(--header-fg-muted)' }}>{userRole}</p>
+            <p className="text-[10px] capitalize" style={{ color: 'var(--header-fg-muted)' }}>{t(`admin.role.${userRole.toLowerCase()}`, userRole)}</p>
           </div>
 
           {userRole.toLowerCase() === 'admin' ? (
@@ -188,7 +194,7 @@ const AdminHeader = ({ title, searchTerm, setSearchTerm, toggleSidebar, placehol
               className="w-9 h-9 rounded-full object-cover border"
               style={{ borderColor: 'color-mix(in srgb, var(--header-fg) 20%, transparent)' }}
               src={ch1}
-              alt="Profile"
+              alt={t('admin.header.profile')}
             />
           ) : (
             <div

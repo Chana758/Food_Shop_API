@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../../api/axios";
 import {
   BarChart,
   Bar,
@@ -16,6 +16,7 @@ import {
   LuDownload, LuTrendingUp, LuTrendingDown, 
   LuDollarSign, LuShoppingCart, LuUsers, LuPackage, LuRefreshCw 
 } from "react-icons/lu";
+import { useTranslation } from 'react-i18next';
 
 // ── Sub-components styled like Delivery Page ─────
 const StatCard = ({ icon, cardBg, label, value, change, positive, subtext }) => (
@@ -60,6 +61,7 @@ const SectionCard = ({ title, children, action, subtitle }) => (
 
 // ── Main Component ────
 const Report = () => {
+  const { t } = useTranslation();
   const [period, setPeriod] = useState("this_month");
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState({
@@ -76,10 +78,10 @@ const Report = () => {
   });
 
   const periods = [
-    { label: "Today", value: "today" },
-    { label: "This Week", value: "this_week" },
-    { label: "This Month", value: "this_month" },
-    { label: "This Year", value: "this_year" }
+    { label: t("admin.report.today"), value: "today" },
+    { label: t("admin.report.thisWeek"), value: "this_week" },
+    { label: t("admin.report.thisMonth"), value: "this_month" },
+    { label: t("admin.report.thisYear"), value: "this_year" }
   ];
 
   useEffect(() => {
@@ -89,11 +91,9 @@ const Report = () => {
   const fetchReportData = async (selectedPeriod) => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token") || sessionStorage.getItem("access_token");
-      
-      // connect to Laravel API Endpoint -> Backend
-      const response = await axios.get(`http://127.0.0.1:8000/api/admin/reports/stats?period=${selectedPeriod}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      // shared client: right API URL in every environment, adds the token
+      const response = await axiosInstance.get("/admin/reports/stats", {
+        params: { period: selectedPeriod },
       });
       
       if (response.data && response.data.status === "success") {
@@ -112,9 +112,9 @@ const Report = () => {
       {/* Header Banner */}
       <div className="bg-white rounded-2xl p-6 border border-[#E8E3D8] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black uppercase text-[#1E2A2E] tracking-wider m-0">Reports & Analytics</h1>
+          <h1 className="text-xl font-black uppercase text-[#1E2A2E] tracking-wider m-0">{t('admin.report.title')}</h1>
           <p className="text-xs font-bold text-gray-500 mt-1 uppercase tracking-wider">
-            Daily, monthly, and yearly business metrics with actionable data
+            {t('admin.report.subtitle')}
           </p>
         </div>
         
@@ -139,7 +139,7 @@ const Report = () => {
             onClick={() => window.print()}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl border-none bg-[#2F6844] cursor-pointer text-xs font-black uppercase tracking-wider text-white hover:bg-[#255235] transition-colors shadow-sm"
           >
-            <LuDownload size={15} /> Export Report
+            <LuDownload size={15} /> {t('admin.report.export')}
           </button>
         </div>
       </div>
@@ -149,36 +149,36 @@ const Report = () => {
         <StatCard
           icon={<LuDollarSign size={20} />}
           cardBg="bg-[#2F6844]"
-          label="Total Revenue"
+          label={t('admin.report.totalRevenue')}
           value={`$${Number(reportData.stats.total_revenue || 0).toLocaleString()}`}
-          subtext="Total earnings"
+          subtext={t('admin.report.totalEarnings')}
           change={reportData.stats.revenue_change_pct}
           positive={reportData.stats.revenue_positive}
         />
         <StatCard
           icon={<LuShoppingCart size={20} />}
           cardBg="bg-[#1E2A2E]"
-          label="Total Orders"
+          label={t('admin.report.totalOrders')}
           value={Number(reportData.stats.total_orders || 0).toLocaleString()}
-          subtext="Processed sales"
+          subtext={t('admin.report.processedSales')}
           change={reportData.stats.orders_change_pct}
           positive={reportData.stats.orders_positive}
         />
         <StatCard
           icon={<LuUsers size={20} />}
           cardBg="bg-[#3B82F6]"
-          label="New Customers"
+          label={t('admin.report.newCustomers')}
           value={Number(reportData.stats.new_customers || 0).toLocaleString()}
-          subtext="Registered users"
+          subtext={t('admin.report.registeredUsers')}
           change={reportData.stats.customers_change_pct}
           positive={reportData.stats.customers_positive}
         />
         <StatCard
           icon={<LuPackage size={20} />}
           cardBg="bg-[#B9791F]"
-          label="Avg. Order Value"
+          label={t('admin.report.avgOrder')}
           value={`$${Number(reportData.stats.avg_order_value || 0).toLocaleString()}`}
-          subtext="Per transaction"
+          subtext={t('admin.report.perTransaction')}
           change={reportData.stats.avg_change_pct}
           positive={reportData.stats.avg_positive}
         />
@@ -188,15 +188,15 @@ const Report = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <SectionCard
-            title="Performance Breakdown"
-            subtitle="Comparative analysis of revenue and order volume"
+            title={t('admin.report.performance')}
+            subtitle={t('admin.report.performanceSub')}
             action={
               <div className="flex gap-4 text-xs font-bold text-gray-600">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-[#3B82F6] inline-block" /> Revenue ($)
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#3B82F6] inline-block" /> {t('admin.report.revenue')} ($)
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-[#2F6844] inline-block" /> Orders
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#2F6844] inline-block" /> {t('admin.nav.orders')}
                 </span>
               </div>
             }
@@ -211,15 +211,15 @@ const Report = () => {
                     contentStyle={{ borderRadius: 12, border: "1px solid #E8E3D8", fontSize: 12, fontWeight: 700, backgroundColor: "#FFF" }}
                     cursor={{ fill: "#FAF8F5" }}
                   />
-                  <Bar dataKey="revenue" fill="#3B82F6" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="orders" fill="#2F6844" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="revenue" name={t('admin.report.revenue')} fill="#3B82F6" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="orders" name={t('admin.nav.orders')} fill="#2F6844" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </SectionCard>
         </div>
 
-        <SectionCard title="Sales by Category" subtitle="Distribution share percentage">
+        <SectionCard title={t('admin.report.byCategory')} subtitle={t('admin.report.byCategorySub')}>
           <div className="flex flex-col items-center">
             <ResponsiveContainer width="100%" height={165}>
               <PieChart>
@@ -243,7 +243,7 @@ const Report = () => {
                 </div>
               ))}
               {reportData.category_data.length === 0 && (
-                <div className="text-xs text-gray-500 text-center py-4">No category data</div>
+                <div className="text-xs text-gray-500 text-center py-4">{t('admin.report.noCategoryData')}</div>
               )}
             </div>
           </div>
@@ -253,13 +253,13 @@ const Report = () => {
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SectionCard 
-          title="Recent Transactions" 
-          subtitle="Latest orders processed in the system"
+          title={t('admin.report.recent')}
+          subtitle={t('admin.report.recentSub')}
           action={
             <button 
               onClick={() => fetchReportData(period)}
               className="p-2 rounded-xl border border-[#E8E3D8] hover:bg-[#FAF8F5] text-gray-600 transition-colors cursor-pointer"
-              title="Refresh Transactions"
+              title={t('admin.common.refresh')}
             >
               <LuRefreshCw size={14} className={loading ? "animate-spin" : ""} />
             </button>
@@ -269,28 +269,28 @@ const Report = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#F0ECE1]">
-                  {["Order ID", "Customer", "Amount", "Date", "Status"].map((h) => (
+                  {[t("orderHistory.orderID"), t("admin.common.customer"), t("admin.common.amount"), t("admin.common.date"), t("admin.common.status")].map((h) => (
                     <th key={h} className="text-[10px] font-black text-gray-500 uppercase tracking-wider pb-3">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="text-xs font-bold text-gray-700">
-                {reportData.recent_transactions.map((t) => (
-                  <tr key={t.id} className="border-b border-[#F4F1EA] hover:bg-[#FAF8F5] transition-colors">
-                    <td className="py-3 text-[#1E2A2E]">{t.id}</td>
-                    <td className="py-3 text-gray-800">{t.customer}</td>
-                    <td className="py-3 text-[#1E2A2E]">{t.amount}</td>
-                    <td className="py-3 text-gray-500 font-medium">{t.date}</td>
+                {reportData.recent_transactions.map((tx) => (
+                  <tr key={tx.id} className="border-b border-[#F4F1EA] hover:bg-[#FAF8F5] transition-colors">
+                    <td className="py-3 text-[#1E2A2E]">{tx.id}</td>
+                    <td className="py-3 text-gray-800">{tx.customer}</td>
+                    <td className="py-3 text-[#1E2A2E]">{tx.amount}</td>
+                    <td className="py-3 text-gray-500 font-medium">{tx.date}</td>
                     <td className="py-3">
-                      <span className={`inline-block text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${statusStyle(t.status)}`}>
-                        {t.status}
+                      <span className={`inline-block text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${statusStyle(tx.status)}`}>
+                        {t(`status.${String(tx.status).toLowerCase()}`, tx.status)}
                       </span>
                     </td>
                   </tr>
                 ))}
                 {reportData.recent_transactions.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="py-8 text-center text-gray-500 font-medium">No recent transactions found.</td>
+                    <td colSpan="5" className="py-8 text-center text-gray-500 font-medium">{t('admin.report.noTransactions')}</td>
                   </tr>
                 )}
               </tbody>
@@ -298,7 +298,7 @@ const Report = () => {
           </div>
         </SectionCard>
 
-        <SectionCard title="Top Products Performance" subtitle="Best-selling items by revenue and volume">
+        <SectionCard title={t('admin.report.topProducts')} subtitle={t('admin.report.topProductsSub')}>
           <div className="flex flex-col gap-3 max-h-72 overflow-y-auto pr-1">
             {reportData.top_products.map((p, i) => (
               <div key={p.name} className="flex items-center gap-3 p-2 rounded-xl bg-[#FAF8F5] border border-[#F0ECE1]">
@@ -311,7 +311,7 @@ const Report = () => {
                 </div>
                 <div className="text-right shrink-0">
                   <div className="text-xs font-black text-[#1E2A2E]">{p.revenue}</div>
-                  <div className="text-[10px] font-bold text-gray-500">{p.sold} sold</div>
+                  <div className="text-[10px] font-bold text-gray-500">{t('admin.report.sold', { count: p.sold })}</div>
                 </div>
                 <div className={`p-1.5 rounded-lg shrink-0 ${p.trend === "up" ? "bg-[#E4F0E7] text-[#2F6844]" : "bg-[#FCE8E6] text-[#C53030]"}`}>
                   {p.trend === "up" ? <LuTrendingUp size={14} /> : <LuTrendingDown size={14} />}
@@ -319,7 +319,7 @@ const Report = () => {
               </div>
             ))}
             {reportData.top_products.length === 0 && (
-              <div className="text-xs text-gray-500 text-center py-8 font-medium">No top products available.</div>
+              <div className="text-xs text-gray-500 text-center py-8 font-medium">{t('admin.report.noTopProducts')}</div>
             )}
           </div>
         </SectionCard>

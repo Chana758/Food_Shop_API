@@ -49,7 +49,7 @@ const MenuCategoryDetail = () => {
         <div className="w-full min-h-screen bg-[#FAFAFA] pt-32 flex flex-col items-center justify-center">
             <div className="w-10 h-10 border-4 border-gray-200 border-t-[#2D4A22] rounded-full animate-spin" />
             <p className="text-[11px] font-black uppercase tracking-widest text-gray-400 mt-4 animate-pulse">
-                Loading Delicious Dishes...
+                {t('menu.loadingDishes')}
             </p>
         </div>
     );
@@ -72,14 +72,14 @@ const MenuCategoryDetail = () => {
                     to="/"
                     className="inline-flex items-center gap-2 text-[#2D4A22] font-black text-[9px] uppercase tracking-[0.2em] hover:text-[#F58220] transition-colors mb-6"
                 >
-                    <FaArrowLeft size={9} /> {t('menu.backToCategories') || 'All categories'}
+                    <FaArrowLeft size={9} /> {t('menu.backToCategories')}
                 </Link>
 
                 <div className="mb-14 border-b border-gray-200/60 pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
                     <div>
                         <div className="flex items-center gap-2 text-[#F58220] text-[10px] font-black uppercase tracking-[0.2em] mb-2">
                             <BiLeaf size={14} />
-                            <span>Khmer Fresh Organic Selection</span>
+                            <span>{t('menu.organicSelection')}</span>
                         </div>
                         <h1 className="text-3xl md:text-4xl font-extrabold text-[#2D4A22] uppercase tracking-tight">
                             {t('menu.category')} <span className="text-[#F58220] font-light">/ {categoryName}</span>
@@ -123,7 +123,7 @@ const MenuCategoryDetail = () => {
                                     <div className="p-5 flex flex-col flex-1">
                                         <h3 className="text-sm font-bold text-[#2D4A22] uppercase line-clamp-1 mb-2">{item.name}</h3>
                                         <p className="text-xs text-gray-400 leading-relaxed mb-6 flex-1 line-clamp-2">
-                                            {item.description || 'Authentic organic recipe.'}
+                                            {item.description || t('product.defaultDesc')}
                                         </p>
                                         <Link
                                             to={`/menu/product/${item.id}`}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { apiErrorMessage } from '../../utils/apiError';
 import axiosInstance from '../../api/axios';
 import { useSettings } from '../../context/SettingsContext';
+import { useTranslation } from 'react-i18next';
 
 // SVG ICONS 
 const Icon = ({ d, size = 18, color = 'currentColor' }) => (
@@ -136,18 +138,19 @@ const ToggleRow = ({ label, hint, checked, onChange, theme }) => (
 // color, so the customer can preview which target they're picking before
 // they even save.
 const ThemeTargetPicker = ({ value, onChange, theme }) => {
+  const { t } = useTranslation();
   const options = [
     {
       value: 'sidebar',
       icon: I.layoutSidebar,
-      label: 'Sidebar & Header',
-      desc: 'Accent color paints the sidebar and top header. Page content stays on the fixed background.',
+      label: t('admin.settings.targetSidebar'),
+      desc: t('admin.settings.targetSidebarDesc'),
     },
     {
       value: 'page',
       icon: I.layoutPage,
-      label: 'Page Content',
-      desc: 'Accent color tints the page background. Sidebar and header stay on the fixed brand navy.',
+      label: t('admin.settings.targetPage'),
+      desc: t('admin.settings.targetPageDesc'),
     },
   ];
 
@@ -189,7 +192,7 @@ const ThemeTargetPicker = ({ value, onChange, theme }) => {
                     fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', color: '#fff',
                     background: theme.accent, borderRadius: 999, padding: '2px 7px',
                   }}>
-                    ACTIVE
+                    {t('status.active')}
                   </span>
                 )}
               </div>
@@ -204,6 +207,7 @@ const ThemeTargetPicker = ({ value, onChange, theme }) => {
 
 // MAIN COMPONENT──
 const ManageSettings = () => {
+  const { t, i18n } = useTranslation();
   const { settings: globalSettings, loading: globalLoading, refresh } = useSettings();
 
   const [savingSection, setSavingSection] = useState(null);
@@ -240,7 +244,6 @@ const ManageSettings = () => {
 
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
   const [showPw, setShowPw] = useState(false);
-  const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
 
   useEffect(() => {
@@ -262,13 +265,12 @@ const ManageSettings = () => {
     try {
       await axiosInstance.put('/admin/settings', payload);
       await refresh(); 
-      showToast(`${sectionName} settings saved successfully!`);
+      showToast(t('admin.settings.saved', { section: t(`admin.settings.section.${sectionName}`) }));
+      // Default Language also switches the admin UI right away
+      if (sectionName === 'General' && ['en', 'kh'].includes(payload.language)) i18n.changeLanguage(payload.language);
     } catch (error) {
       console.error(`Save ${sectionName} failed:`, error.response ?? error);
-      showToast(
-        error.response?.data?.message || `Failed to save ${sectionName} settings.`,
-        'error'
-      );
+      showToast(t('admin.settings.saveFailed', { section: t(`admin.settings.section.${sectionName}`) }), 'error');
     } finally {
       setSavingSection(null);
     }
@@ -277,41 +279,51 @@ const ManageSettings = () => {
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setLogoFile(file);
       setLogoPreview(URL.createObjectURL(file));
-      showToast('Logo selected. Click Save Appearance to upload.');
+      // The API has no logo upload yet, so be honest that this is only a preview
+      showToast(t('admin.settings.logoPreviewOnly'));
     }
   };
 
   const handlePasswordUpdate = async () => {
     if (!passwords.current) {
-      showToast('Please enter your current password.', 'error');
+      showToast(t('admin.settings.enterCurrentPw'), 'error');
       return;
     }
     if (passwords.new !== passwords.confirm) {
-      showToast('New passwords do not match!', 'error');
+      showToast(t('auth.passwordMismatch'), 'error');
       return;
     }
     if (passwords.new.length < 8) {
-      showToast('Password must be at least 8 characters long.', 'error');
+      showToast(t('auth.passwordMin'), 'error');
       return;
     }
 
     setSavingSection('Password');
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      showToast('Password updated successfully!');
+      await axiosInstance.put('/user/password', {
+        current_password: passwords.current,
+        password: passwords.new,
+        password_confirmation: passwords.confirm,
+      });
+      showToast(t('admin.settings.pwUpdated'));
       setPasswords({ current: '', new: '', confirm: '' });
     } catch (error) {
-      showToast('Failed to update password.', 'error');
+      const code = error.response?.data?.code;
+      showToast(
+        code === 'wrong_password' ? t('admin.settings.wrongPw')
+          : code === 'demo_account' ? t('admin.settings.demoPw')
+          : apiErrorMessage(error, t),
+        'error'
+      );
     } finally {
       setSavingSection(null);
     }
   };
 
-  const handleDangerAction = async (actionType, confirmText) => {
-    if (!window.confirm(`WARNING: Are you sure you want to perform: "${confirmText}"? This cannot be undone.`)) return;
-    showToast(`Action "${confirmText}" executed successfully.`);
+  const handleDangerAction = (actionType, confirmText) => {
+    if (!window.confirm(t('admin.settings.dangerConfirm', { action: confirmText }))) return;
+    showToast(t('admin.settings.dangerDisabled'), 'error');
   };
 
   const Btn = ({ label, variant = 'green', onClick, section }) => {
@@ -367,7 +379,7 @@ const ManageSettings = () => {
   if (globalLoading) {
     return (
       <div style={{ display: 'flex', height: '80vh', alignItems: 'center', justifyContent: 'center', background: theme.pageBg, color: theme.subtext, fontSize: 14, fontWeight: 600, gap: 10 }}>
-        <span style={{ animation: 'spin 1s linear infinite' }}><Icon d={I.loader} size={20} color={theme.accent} /></span> Loading system settings...
+        <span style={{ animation: 'spin 1s linear infinite' }}><Icon d={I.loader} size={20} color={theme.accent} /></span> {t('common.loading')}
       </div>
     );
   }
@@ -410,58 +422,57 @@ const ManageSettings = () => {
             <Icon d={I.settings} size={22} color="#fff" />
           </div>
           <div>
-            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: theme.heading, letterSpacing: '-0.025em' }}>System Settings</h2>
-            <p style={{ margin: '6px 0 0', fontSize: 13, color: theme.subtext, fontWeight: 500 }}>Configure regional preferences, notification triggers, point-of-sale receipt layout, and application security.</p>
+            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: theme.heading, letterSpacing: '-0.025em' }}>{t('admin.settings.title')}</h2>
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: theme.subtext, fontWeight: 500 }}>{t('admin.settings.subtitle')}</p>
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: theme.headerBarBg, padding: '10px 16px', borderRadius: 10, border: `1px solid ${theme.headerBarBd}`, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
           <Icon d={I.sliders} size={16} color={theme.heading} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: theme.heading }}>Live Control Panel</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: theme.heading }}>{t('admin.settings.livePanel')}</span>
         </div>
       </div>
 
       {/* 1. GENERAL SETTINGS */}
-      <Section theme={theme} icon="store" iconBg={isDark ? '#0B1315' : '#0f172a'} title="General Settings" subtitle="Core restaurant identity and localization parameters">
-        <Row theme={theme} label="Restaurant Name" hint="Appears on dashboard titles, login screens, and printed invoices">
+      <Section theme={theme} icon="store" iconBg={isDark ? '#0B1315' : '#0f172a'} title={t('admin.settings.general')} subtitle={t('admin.settings.generalSub')}>
+        <Row theme={theme} label={t('admin.settings.restaurantName')} hint={t('admin.settings.restaurantNameHint')}>
           <Input theme={theme} value={settings.restaurant_name} onChange={val => setSettings({...settings, restaurant_name: val})} placeholder="Khmer-Fresh" />
         </Row>
-        <Row theme={theme} label="Tagline" hint="Subtitle displayed underneath your primary brand logo">
-          <Input theme={theme} value={settings.tagline} onChange={val => setSettings({...settings, tagline: val})} placeholder="Authentic Traditional Food" />
+        <Row theme={theme} label={t('admin.settings.tagline')} hint={t('admin.settings.taglineHint')}>
+          <Input theme={theme} value={settings.tagline} onChange={val => setSettings({...settings, tagline: val})} placeholder={t('admin.settings.taglinePlaceholder')} />
         </Row>
-        <Row theme={theme} label="Support Phone">
+        <Row theme={theme} label={t('admin.settings.phone')}>
           <Input theme={theme} value={settings.phone} onChange={val => setSettings({...settings, phone: val})} placeholder="+855 12 345 678" />
         </Row>
-        <Row theme={theme} label="Contact Email">
+        <Row theme={theme} label={t('admin.settings.email')}>
           <Input theme={theme} value={settings.email} onChange={val => setSettings({...settings, email: val})} type="email" placeholder="support@khmerfresh.com" />
         </Row>
-        <Row theme={theme} label="Physical Address">
-          <Input theme={theme} value={settings.address} onChange={val => setSettings({...settings, address: val})} placeholder="Street, City, Country" />
+        <Row theme={theme} label={t('admin.settings.address')}>
+          <Input theme={theme} value={settings.address} onChange={val => setSettings({...settings, address: val})} placeholder={t('admin.settings.addressPlaceholder')} />
         </Row>
-        <Row theme={theme} label="Primary Currency" hint="Changes the $ / ៛ / ฿ symbol used across POS, receipts, and reports">
+        <Row theme={theme} label={t('admin.settings.currency')} hint={t('admin.settings.currencyHint')}>
           <Select theme={theme} value={settings.currency} onChange={val => setSettings({...settings, currency: val})} options={[
-            { value: 'USD', label: '$ USD — US Dollar' },
-            { value: 'KHR', label: '៛ KHR — Cambodian Riel' },
-            { value: 'THB', label: '฿ THB — Thai Baht' }
+            { value: 'USD', label: t('admin.settings.usd') },
+            { value: 'KHR', label: t('admin.settings.khr') },
+            { value: 'THB', label: t('admin.settings.thb') }
           ]} />
         </Row>
-        <Row theme={theme} label="System Timezone">
+        <Row theme={theme} label={t('admin.settings.timezone')}>
           <Select theme={theme} value={settings.timezone} onChange={val => setSettings({...settings, timezone: val})} options={[
             { value: 'Asia/Phnom_Penh', label: 'Asia/Phnom_Penh (UTC+7)' },
             { value: 'Asia/Bangkok', label: 'Asia/Bangkok (UTC+7)' },
             { value: 'UTC', label: 'UTC' }
           ]} />
         </Row>
-        <Row theme={theme} label="Default Language">
+        <Row theme={theme} label={t('admin.settings.language')}>
           <Select theme={theme} value={settings.language} onChange={val => setSettings({...settings, language: val})} options={[
             { value: 'en', label: 'English' },
-            { value: 'km', label: 'ភាសាខ្មែរ (Khmer)' },
-            { value: 'zh', label: '中文 (Chinese)' }
+            { value: 'kh', label: 'ភាសាខ្មែរ (Khmer)' },
           ]} />
         </Row>
         <div style={{ marginTop: 20 }}>
           <Btn
-            label="Save General Settings"
+            label={t('admin.settings.saveGeneral')}
             section="General"
             onClick={() => saveSection('General', {
               restaurant_name: settings.restaurant_name,
@@ -478,15 +489,15 @@ const ManageSettings = () => {
       </Section>
 
       {/* 2. NOTIFICATIONS SETTINGS */}
-      <Section theme={theme} icon="bell" iconBg="#d97706" title="Notification Triggers" subtitle="Manage alerts, auditory notifications, and automated reporting channels">
-        <ToggleRow theme={theme} label="New Order Alerts" hint="Play audio notification and trigger popup panel on incoming orders" checked={settings.notify_new_order} onChange={val => setSettings({...settings, notify_new_order: val})} />
-        <ToggleRow theme={theme} label="Low Stock Inventory Warning" hint="Trigger warnings when raw ingredients dip under required limits" checked={settings.notify_low_stock} onChange={val => setSettings({...settings, notify_low_stock: val})} />
-        <ToggleRow theme={theme} label="Payment Confirmations" hint="Send notifications on successful cashier completions or gateway clearances" checked={settings.notify_payment} onChange={val => setSettings({...settings, notify_payment: val})} />
-        <ToggleRow theme={theme} label="Daily Sales Closing Report" hint="Dispatch email summary report automatically upon closing hours" checked={settings.notify_daily_report} onChange={val => setSettings({...settings, notify_daily_report: val})} />
-        <ToggleRow theme={theme} label="Critical Event Sound Effects" hint="Play audio cues for vital operations" checked={settings.sound_alert} onChange={val => setSettings({...settings, sound_alert: val})} />
+      <Section theme={theme} icon="bell" iconBg="#d97706" title={t('admin.settings.notifications')} subtitle={t('admin.settings.notificationsSub')}>
+        <ToggleRow theme={theme} label={t('admin.settings.newOrder')} hint={t('admin.settings.newOrderHint')} checked={settings.notify_new_order} onChange={val => setSettings({...settings, notify_new_order: val})} />
+        <ToggleRow theme={theme} label={t('admin.settings.lowStock')} hint={t('admin.settings.lowStockHint')} checked={settings.notify_low_stock} onChange={val => setSettings({...settings, notify_low_stock: val})} />
+        <ToggleRow theme={theme} label={t('admin.settings.payment')} hint={t('admin.settings.paymentHint')} checked={settings.notify_payment} onChange={val => setSettings({...settings, notify_payment: val})} />
+        <ToggleRow theme={theme} label={t('admin.settings.dailyReport')} hint={t('admin.settings.dailyReportHint')} checked={settings.notify_daily_report} onChange={val => setSettings({...settings, notify_daily_report: val})} />
+        <ToggleRow theme={theme} label={t('admin.settings.sound')} hint={t('admin.settings.soundHint')} checked={settings.sound_alert} onChange={val => setSettings({...settings, sound_alert: val})} />
         <div style={{ marginTop: 20 }}>
           <Btn
-            label="Save Notification Settings"
+            label={t('admin.settings.saveNotifications')}
             section="Notifications"
             onClick={() => saveSection('Notifications', {
               notify_new_order: settings.notify_new_order,
@@ -500,22 +511,22 @@ const ManageSettings = () => {
       </Section>
 
       {/* 3. RECEIPT & POS SETTINGS */}
-      <Section theme={theme} icon="printer" iconBg="#2563eb" title="Receipt & POS Rules" subtitle="Configure printing elements, tax parameters, and table modes">
-        <ToggleRow theme={theme} label="Print Company Logo" hint="Render organization badge at top of customer receipts" checked={settings.show_logo_receipt} onChange={val => setSettings({...settings, show_logo_receipt: val})} />
-        <ToggleRow theme={theme} label="Display Tax Breakdowns" hint="Itemize computed tax lines on printed tickets and the POS cart totals" checked={settings.show_tax_receipt} onChange={val => setSettings({...settings, show_tax_receipt: val})} />
-        <ToggleRow theme={theme} label="Table Service Mode" hint="Enable diner assignments to physical tables inside the POS interface" checked={settings.table_service} onChange={val => setSettings({...settings, table_service: val})} />
-        <ToggleRow theme={theme} label="Takeaway / Delivery Orders" hint="Allow direct dispatch flags on incoming ticket rows" checked={settings.takeaway} onChange={val => setSettings({...settings, takeaway: val})} />
+      <Section theme={theme} icon="printer" iconBg="#2563eb" title={t('admin.settings.receipt')} subtitle={t('admin.settings.receiptSub')}>
+        <ToggleRow theme={theme} label={t('admin.settings.printLogo')} hint={t('admin.settings.printLogoHint')} checked={settings.show_logo_receipt} onChange={val => setSettings({...settings, show_logo_receipt: val})} />
+        <ToggleRow theme={theme} label={t('admin.settings.showTax')} hint={t('admin.settings.showTaxHint')} checked={settings.show_tax_receipt} onChange={val => setSettings({...settings, show_tax_receipt: val})} />
+        <ToggleRow theme={theme} label={t('admin.settings.tableService')} hint={t('admin.settings.tableServiceHint')} checked={settings.table_service} onChange={val => setSettings({...settings, table_service: val})} />
+        <ToggleRow theme={theme} label={t('admin.settings.takeaway')} hint={t('admin.settings.takeawayHint')} checked={settings.takeaway} onChange={val => setSettings({...settings, takeaway: val})} />
         {settings.show_tax_receipt && (
-          <Row theme={theme} label="Standard Tax Rate (%)" hint="Computed automatically against taxable sale categories">
+          <Row theme={theme} label={t('admin.settings.taxRate')} hint={t('admin.settings.taxRateHint')}>
             <Input theme={theme} value={settings.tax_rate} onChange={val => setSettings({...settings, tax_rate: val})} type="number" placeholder="10" style={{ maxWidth: 140 }} />
           </Row>
         )}
-        <Row theme={theme} label="Receipt Footer Note" hint="Custom message printed at the bottom of bills">
-          <Input theme={theme} value={settings.receipt_note} onChange={val => setSettings({...settings, receipt_note: val})} placeholder="Thank you for dining with us!" />
+        <Row theme={theme} label={t('admin.settings.footerNote')} hint={t('admin.settings.footerNoteHint')}>
+          <Input theme={theme} value={settings.receipt_note} onChange={val => setSettings({...settings, receipt_note: val})} placeholder={t('admin.settings.footerNotePlaceholder')} />
         </Row>
         <div style={{ marginTop: 20 }}>
           <Btn
-            label="Save Receipt Configuration"
+            label={t('admin.settings.saveReceipt')}
             section="Receipt"
             onClick={() => saveSection('Receipt', {
               show_logo_receipt: settings.show_logo_receipt,
@@ -530,11 +541,11 @@ const ManageSettings = () => {
       </Section>
 
       {/* 4. APPEARANCE SETTINGS */}
-      <Section theme={theme} icon="palette" iconBg="#7c3aed" title="Appearance & Branding" subtitle="Control visual layout, theme preferences, and system asset files">
-        <ToggleRow theme={theme} label="Dark Mode Theme" hint="Toggle sidebar and content backdrops into high-contrast dark style" checked={settings.dark_mode} onChange={val => setSettings({...settings, dark_mode: val})} />
-        <ToggleRow theme={theme} label="Compact Padding Mode" hint="Shrink interface element spacing for higher density metrics" checked={settings.compact_mode} onChange={val => setSettings({...settings, compact_mode: val})} />
+      <Section theme={theme} icon="palette" iconBg="#7c3aed" title={t('admin.settings.appearance')} subtitle={t('admin.settings.appearanceSub')}>
+        <ToggleRow theme={theme} label={t('admin.settings.darkMode')} hint={t('admin.settings.darkModeHint')} checked={settings.dark_mode} onChange={val => setSettings({...settings, dark_mode: val})} />
+        <ToggleRow theme={theme} label={t('admin.settings.compact')} hint={t('admin.settings.compactHint')} checked={settings.compact_mode} onChange={val => setSettings({...settings, compact_mode: val})} />
 
-        <Row theme={theme} label="Accent Color Palette" hint="Used globally on active links, buttons, toggles, and state indicators">
+        <Row theme={theme} label={t('admin.settings.accent')} hint={t('admin.settings.accentHint')}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <input type="color" value={settings.accent_color} onChange={e => setSettings({...settings, accent_color: e.target.value})}
               style={{ width: 44, height: 38, borderRadius: 8, border: `1px solid ${theme.inputBorder}`, cursor: 'pointer', padding: 2, background: theme.inputBg }} />
@@ -548,7 +559,7 @@ const ManageSettings = () => {
         {/* ✅ NEW — the 2-option "apply accent color to" picker requested:
             Sidebar & Header  vs  Page Content. Only one moves at a time,
             the other side stays pinned to the fixed brand color. */}
-        <Row theme={theme} label="Apply Accent Color To" hint="Choose which area of the app picks up your accent color. The other area keeps the fixed brand color.">
+        <Row theme={theme} label={t('admin.settings.applyTo')} hint={t('admin.settings.applyToHint')}>
           <ThemeTargetPicker
             theme={theme}
             value={settings.theme_target}
@@ -556,13 +567,13 @@ const ManageSettings = () => {
           />
         </Row>
 
-        <Row theme={theme} label="Organization Brand Logo" hint="Upload square transparent PNG or Vector SVG (Max file size: 2MB)">
+        <Row theme={theme} label={t('admin.settings.logo')} hint={t('admin.settings.logoHint')}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {logoPreview && (
-              <img src={logoPreview} alt="Logo Preview" style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, border: `1px solid ${theme.inputBorder}`, background: '#fff' }} />
+              <img src={logoPreview} alt={t('admin.settings.logoPreview')} style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, border: `1px solid ${theme.inputBorder}`, background: '#fff' }} />
             )}
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 8, border: `1px dashed ${theme.inputBorder}`, background: theme.inputBg, color: theme.label, fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
-              <Icon d={I.upload} size={15} color={theme.subtext} /> Upload New Logo
+              <Icon d={I.upload} size={15} color={theme.subtext} /> {t('admin.settings.uploadLogo')}
               <input type="file" accept="image/png, image/svg+xml, image/jpeg" onChange={handleLogoUpload} style={{ display: 'none' }} />
             </label>
           </div>
@@ -570,7 +581,7 @@ const ManageSettings = () => {
 
         <div style={{ marginTop: 20 }}>
           <Btn
-            label="Save Appearance Settings"
+            label={t('admin.settings.saveAppearance')}
             section="Appearance"
             onClick={() => saveSection('Appearance', {
               dark_mode: settings.dark_mode,
@@ -583,40 +594,40 @@ const ManageSettings = () => {
       </Section>
 
       {/* 5. SECURITY SETTINGS */}
-      <Section theme={theme} icon="lock" iconBg="#dc2626" title="Security & Authentication" subtitle="Password updates, multi-factor tokens, and session timeouts">
-        <Row theme={theme} label="Current Password">
+      <Section theme={theme} icon="lock" iconBg="#dc2626" title={t('admin.settings.security')} subtitle={t('admin.settings.securitySub')}>
+        <Row theme={theme} label={t('admin.settings.currentPw')}>
           <div style={{ position: 'relative', maxWidth: 360 }}>
-            <Input theme={theme} value={passwords.current} onChange={val => setPasswords({...passwords, current: val})} type={showPw ? 'text' : 'password'} placeholder="Enter current active password" />
+            <Input theme={theme} value={passwords.current} onChange={val => setPasswords({...passwords, current: val})} type={showPw ? 'text' : 'password'} placeholder={t('admin.settings.currentPwPlaceholder')} />
             <span onClick={() => setShowPw(!showPw)} style={{ position: 'absolute', right: 12, top: 11, cursor: 'pointer' }}>
               <Icon d={showPw ? I.eyeOff : I.eye} size={16} color={theme.hint} />
             </span>
           </div>
         </Row>
-        <Row theme={theme} label="New Secure Password">
-          <Input theme={theme} value={passwords.new} onChange={val => setPasswords({...passwords, new: val})} type={showPw ? 'text' : 'password'} placeholder="Minimum 8 characters" style={{ maxWidth: 360 }} />
+        <Row theme={theme} label={t('admin.settings.newPw')}>
+          <Input theme={theme} value={passwords.new} onChange={val => setPasswords({...passwords, new: val})} type={showPw ? 'text' : 'password'} placeholder={t('admin.settings.newPwPlaceholder')} style={{ maxWidth: 360 }} />
         </Row>
-        <Row theme={theme} label="Confirm New Password">
-          <Input theme={theme} value={passwords.confirm} onChange={val => setPasswords({...passwords, confirm: val})} type={showPw ? 'text' : 'password'} placeholder="Retype matching new password" style={{ maxWidth: 360 }} />
+        <Row theme={theme} label={t('admin.settings.confirmPw')}>
+          <Input theme={theme} value={passwords.confirm} onChange={val => setPasswords({...passwords, confirm: val})} type={showPw ? 'text' : 'password'} placeholder={t('admin.settings.confirmPwPlaceholder')} style={{ maxWidth: 360 }} />
         </Row>
 
-        <ToggleRow theme={theme} label="Two-Factor Authentication (2FA)" hint="Mandate OTP challenge upon login via authenticated email tokens" checked={settings.two_fa} onChange={val => setSettings({...settings, two_fa: val})} />
-        <ToggleRow theme={theme} label="Automatic Idle Logout" hint="Terminate administrative sessions automatically following periods of inactivity" checked={settings.auto_logout} onChange={val => setSettings({...settings, auto_logout: val})} />
+        <ToggleRow theme={theme} label={t('admin.settings.twoFa')} hint={t('admin.settings.twoFaHint')} checked={settings.two_fa} onChange={val => setSettings({...settings, two_fa: val})} />
+        <ToggleRow theme={theme} label={t('admin.settings.autoLogout')} hint={t('admin.settings.autoLogoutHint')} checked={settings.auto_logout} onChange={val => setSettings({...settings, auto_logout: val})} />
 
         {settings.auto_logout && (
-          <Row theme={theme} label="Inactivity Timeout Limit">
+          <Row theme={theme} label={t('admin.settings.timeout')}>
             <Select theme={theme} value={settings.logout_time} onChange={val => setSettings({...settings, logout_time: val})} options={[
-              { value: '15', label: '15 minutes' },
-              { value: '30', label: '30 minutes' },
-              { value: '60', label: '1 hour' },
-              { value: '120', label: '2 hours' }
+              { value: '15', label: t('admin.settings.minutes', { count: 15 }) },
+              { value: '30', label: t('admin.settings.minutes', { count: 30 }) },
+              { value: '60', label: t('admin.settings.hours', { count: 1 }) },
+              { value: '120', label: t('admin.settings.hours', { count: 2 }) }
             ]} />
           </Row>
         )}
 
         <div style={{ marginTop: 20, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <Btn label="Update Account Password" variant="dark" section="Password" onClick={handlePasswordUpdate} />
+          <Btn label={t('admin.settings.updatePw')} variant="dark" section="Password" onClick={handlePasswordUpdate} />
           <Btn
-            label="Save Security Settings"
+            label={t('admin.settings.saveSecurity')}
             section="Security"
             onClick={() => saveSection('Security', {
               two_fa: settings.two_fa,
@@ -635,15 +646,15 @@ const ManageSettings = () => {
               <Icon d={I.trash} size={20} color="#dc2626" />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#dc2626' }}>Danger Zone</h3>
-              <p style={{ margin: '6px 0 0', fontSize: 13, color: isDark ? '#f19a92' : '#ef4444', lineHeight: '1.5' }}>Irreversible database operations — proceed with extreme caution</p>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#dc2626' }}>{t('admin.settings.danger')}</h3>
+              <p style={{ margin: '6px 0 0', fontSize: 13, color: isDark ? '#f19a92' : '#ef4444', lineHeight: '1.5' }}>{t('admin.settings.dangerSub')}</p>
             </div>
           </div>
           <div style={{ padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: 16, justifyContent: 'center' }}>
             {[
-              { key: 'clear_orders', label: 'Clear All Completed Orders', hint: 'Permanently purge historical order rows from reporting databases' },
-              { key: 'reset_settings', label: 'Restore Factory Settings', hint: 'Wipe all current custom parameters and revert default configurations' },
-              { key: 'purge_data', label: 'Purge Entire System Database', hint: 'Erase all catalog items, user logs, and assets — cannot be undone' },
+              { key: 'clear_orders', label: t('admin.settings.clearOrders'), hint: t('admin.settings.clearOrdersHint') },
+              { key: 'reset_settings', label: t('admin.settings.reset'), hint: t('admin.settings.resetHint') },
+              { key: 'purge_data', label: t('admin.settings.purge'), hint: t('admin.settings.purgeHint') },
             ].map(item => (
               <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: `1px solid ${theme.dangerRowBd}` }}>
                 <div>

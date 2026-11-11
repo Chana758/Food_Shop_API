@@ -1,4 +1,5 @@
 //  Shared price & discount helpers ──
+import i18n from '../i18n';
 
 /**
  * Check whether a product has a valid, NOT-expired discount price.
@@ -32,7 +33,7 @@ export const getDiscountPercent = (price, discount_price, discount_expires_at = 
   const p   = parseFloat(price);
   const d   = parseFloat(discount_price);
   const pct = Math.round(((p - d) / p) * 100);
-  return `${pct}% OFF`;
+  return i18n.t('price.percentOff', { pct });
 };
 
 /**
@@ -50,14 +51,14 @@ export const getDiscountExpiryLabel = (discount_expires_at) => {
   if (isNaN(expiry.getTime())) return null;
 
   const diffMs = expiry.getTime() - Date.now();
-  if (diffMs <= 0) return { label: 'Expired', urgent: true, expired: true };
+  if (diffMs <= 0) return { label: i18n.t('price.expired'), urgent: true, expired: true };
 
   const hours = diffMs / 36e5;
   if (hours <= 24) {
-    return { label: `Ends in ${Math.max(1, Math.ceil(hours))}h`, urgent: true, expired: false };
+    return { label: i18n.t('price.endsInHours', { count: Math.max(1, Math.ceil(hours)) }), urgent: true, expired: false };
   }
   const days = Math.ceil(hours / 24);
-  return { label: `Ends in ${days}d`, urgent: days <= 3, expired: false };
+  return { label: i18n.t('price.endsInDays', { count: days }), urgent: days <= 3, expired: false };
 };
 
 const CURRENCY_CONFIG = {

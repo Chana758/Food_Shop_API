@@ -4,6 +4,7 @@ import { FaShoppingCart, FaTrash, FaMinus, FaPlus, FaArrowLeft, FaTag } from 're
 import { MdDeliveryDining, MdOutlineReceiptLong, MdCheckCircle } from 'react-icons/md';
 import usePricing from '../../hooks/usePricing';
 import { getImageUrl } from '../../utils/imageUrl';
+import { useTranslation } from 'react-i18next';
 
 const FALLBACK_IMG = 'https://placehold.co/400x300?text=Khmer+Fresh';
 
@@ -11,6 +12,7 @@ const isLoggedIn = () =>
   !!(localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser'));
 
 const Cart = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
@@ -104,7 +106,7 @@ const Cart = () => {
   };
 
   const clearCart = () => {
-    if (window.confirm('Are you sure you want to clear your entire cart?')) {
+    if (window.confirm(t('cart.confirmClear'))) {
       setCartItems([]);
       setSelectedItems([]);
       localStorage.removeItem('cart');
@@ -141,7 +143,7 @@ const Cart = () => {
 
   const handleProceedToCheckout = () => {
     if (selectedItems.length === 0) {
-      alert('Please select at least one item to proceed to checkout!');
+      alert(t('cart.selectItem'));
       return;
     }
     localStorage.setItem('selectedItems', JSON.stringify(selectedItems));
@@ -170,16 +172,16 @@ const Cart = () => {
             <FaShoppingCart className="text-2xl text-gray-300" />
           </div>
           <h2 className="text-xl font-black text-[#2D4A22] uppercase tracking-widest mb-3">
-            Your cart is empty
+            {t('cart.empty')}
           </h2>
           <p className="text-gray-400 text-xs uppercase tracking-widest mb-8 leading-loose">
-            It looks like you haven't added any delicious meals yet. Start exploring our menu today!
+            {t('cart.emptyDesc')}
           </p>
           <Link
-            to="/MenuFood"
+            to="/menu"
             className="block w-full bg-[#2D4A22] text-white py-4 px-8 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-[#1e3317] transition-all shadow-lg shadow-[#2D4A22]/20 text-center"
           >
-            Browse Menu
+            {t('cart.browseMenu')}
           </Link>
         </div>
       </div>
@@ -206,20 +208,20 @@ const Cart = () => {
               onClick={() => navigate(-1)}
               className="flex items-center gap-2 text-[#2D4A22] font-black text-[10px] uppercase tracking-[0.3em] hover:text-[#F58220] transition-colors mb-6 group"
             >
-              <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back
+              <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> {t('common.back')}
             </button>
             <h1 className="text-4xl font-black text-[#2D4A22] uppercase tracking-tighter">
-              My Shopping <span className="text-[#F58220]">Cart</span>
+              {t('cart.titleA')} <span className="text-[#F58220]">{t('cart.titleB')}</span>
             </h1>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-2">
-              You have {cartItems.length} item{cartItems.length !== 1 ? 's' : ''} in your list
+              {t('cart.itemCount', { count: cartItems.length })}
             </p>
           </div>
           <button
             onClick={clearCart}
             className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 flex items-center gap-2 transition-colors"
           >
-            <FaTrash size={10} /> Clear All Items
+            <FaTrash size={10} /> {t('cart.clearAll')}
           </button>
         </div>
 
@@ -237,7 +239,7 @@ const Cart = () => {
                 className="w-4 h-4 accent-[#2D4A22] cursor-pointer"
               />
               <span className="text-[10px] font-black text-[#2D4A22] uppercase tracking-widest">
-                Select All Items ({selectedItems.length}/{cartItems.length})
+                {t('cart.selectAll')} ({selectedItems.length}/{cartItems.length})
               </span>
             </div>
 
@@ -297,7 +299,7 @@ const Cart = () => {
                       <button
                         onClick={() => removeFromCart(item.id, item.type)}
                         className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
-                        title="Remove item"
+                        title={t('cart.removeItem')}
                       >
                         <FaTrash size={12} />
                       </button>
@@ -309,7 +311,7 @@ const Cart = () => {
                           onClick={() => updateQuantity(item.id, item.type, (item.quantity || 1) - 1)}
                           className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors border-r border-gray-200 disabled:opacity-30"
                           disabled={item.quantity <= 1}
-                          title="Decrease"
+                          title={t('cart.decrease')}
                         >
                           <FaMinus size={7} />
                         </button>
@@ -323,7 +325,7 @@ const Cart = () => {
                         <button
                           onClick={() => updateQuantity(item.id, item.type, (item.quantity || 0) + 1)}
                           className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors border-l border-gray-200"
-                          title="Increase"
+                          title={t('cart.increase')}
                         >
                           <FaPlus size={7} />
                         </button>
@@ -331,7 +333,7 @@ const Cart = () => {
 
                       <div className="text-right">
                         <p className="text-[8px] text-gray-400 font-black uppercase tracking-tighter">
-                          Subtotal
+                          {t('cart.subtotal')}
                         </p>
                         <p className="text-sm font-black text-[#2D4A22]">
                           ${((parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0)).toFixed(2)}
@@ -350,15 +352,15 @@ const Cart = () => {
             <div className="bg-gray-50 p-8 rounded-sm sticky top-32">
 
               <h2 className="text-xs font-black text-[#2a6a12] uppercase tracking-[0.3em] mb-10 border-b border-gray-200 pb-4 flex items-center gap-2">
-                <MdOutlineReceiptLong size={16} /> Summary
+                <MdOutlineReceiptLong size={16} /> {t('cart.orderSummary')}
               </h2>
 
               <div className="space-y-6 mb-10">
                 <div className="flex justify-between text-[11px] font-bold text-gray-500 uppercase tracking-widest">
                   <span>
-                    Cart Subtotal{' '}
+                    {t('cart.subtotal')}{' '}
                     <span className="text-gray-400 normal-case font-normal">
-                      ({selectedItems.length} selected)
+                      ({t('cart.selectedCount', { count: selectedItems.length })})
                     </span>
                   </span>
                   <span className="text-[#2D4A22]">${subtotal}</span>
@@ -366,7 +368,7 @@ const Cart = () => {
 
                 <div className="flex justify-between text-[11px] font-bold text-gray-500 uppercase tracking-widest">
                   <span className="flex items-center gap-2">
-                    <MdDeliveryDining size={16} className="text-[#F58220]" /> Delivery Fee
+                    <MdDeliveryDining size={16} className="text-[#F58220]" /> {t('cart.deliveryFee')}
                   </span>
                   <span
                     className={
@@ -376,7 +378,7 @@ const Cart = () => {
                     }
                   >
                     {deliveryFee === 0 && parseFloat(subtotal) > 0
-                      ? 'FREE'
+                      ? t('cart.free')
                       : `$${deliveryFee.toFixed(2)}`}
                   </span>
                 </div>
@@ -384,7 +386,7 @@ const Cart = () => {
                 <div className="border-t border-gray-200 pt-6">
                   <div className="flex justify-between items-end">
                     <span className="text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">
-                      Grand Total
+                      {t('cart.grandTotal')}
                     </span>
                     <span className="text-3xl font-black text-[#2D4A22]">${total}</span>
                   </div>
@@ -396,14 +398,14 @@ const Cart = () => {
                 className="w-full bg-[#2D4A22] text-white py-4 px-6 font-black text-[11px] uppercase tracking-[0.2em] hover:bg-orange-500 transition-all shadow-lg shadow-[#2D4A22]/20 mb-6 disabled:opacity-40 disabled:cursor-not-allowed"
                 disabled={selectedItems.length === 0}
               >
-                Checkout Now
+                {t('cart.proceedCheckout')}
               </button>
 
               <Link
-                to="/MenuFood"
+                to="/menu"
                 className="block text-center text-gray-400 hover:text-[#2D4A22] font-black text-[9px] uppercase tracking-widest transition-colors"
               >
-                ← Continue Shopping
+                ← {t('cart.continueShopping')}
               </Link>
 
               {/* Free Delivery Progress Bar */}
@@ -411,7 +413,7 @@ const Cart = () => {
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-[10px] font-black text-[#2D4A22] uppercase tracking-widest flex items-center gap-1">
-                      <FaTag size={9} /> Special Offer
+                      <FaTag size={9} /> {t('cart.specialOffer')}
                     </p>
                     {freeDeliveryUnlocked && (
                       <MdCheckCircle className="text-green-500" size={14} />
@@ -420,11 +422,11 @@ const Cart = () => {
 
                   {freeDeliveryUnlocked ? (
                     <p className="text-[9px] text-green-500 font-black uppercase tracking-tighter">
-                      🎉 You've unlocked free delivery!
+                      🎉 {t('cart.freeUnlocked')}
                     </p>
                   ) : (
                     <p className="text-[9px] text-gray-400 leading-relaxed font-bold uppercase tracking-tighter mb-3">
-                      Add ${remaining} more for free delivery!
+                      {t('cart.addMoreForFree', { amount: `$${remaining}` })}
                     </p>
                   )}
 
@@ -436,7 +438,7 @@ const Cart = () => {
                   </div>
                   <div className="flex justify-between mt-1">
                     <span className="text-[8px] text-gray-300 font-bold">$0</span>
-                    <span className="text-[8px] text-gray-300 font-bold">${FREE_THRESHOLD} FREE</span>
+                    <span className="text-[8px] text-gray-300 font-bold">${FREE_THRESHOLD} {t('cart.free')}</span>
                   </div>
                 </div>
               </div>

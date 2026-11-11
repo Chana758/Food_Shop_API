@@ -10,11 +10,12 @@ import useFavorite from '../../../hooks/useFavorite';
 import { useProductReviews, useReview } from '../../../hooks/useReview';
 import { useAuth } from '../../../context/AuthContext';
 import { getImageUrl } from '../../../utils/imageUrl';
+import { hasDiscount as hasValidDiscount } from '../../../utils/priceUtils';
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
 
   const [product, setProduct] = useState(null);
@@ -62,7 +63,8 @@ const ProductDetail = () => {
   // Price Calculation Logic
   const originalPrice   = product ? parseFloat(product.price) : 0;
   const discount        = product ? parseFloat(product.discount_price || 0) : 0;
-  const hasDiscount     = discount > 0 && discount < originalPrice;
+  // also checks discount_expires_at, same as the server
+  const hasDiscount     = product ? hasValidDiscount(product.price, product.discount_price, product.discount_expires_at) : false;
   const discountPrice   = hasDiscount ? discount : originalPrice;
   const discountPercent = hasDiscount
     ? Math.round(((originalPrice - discount) / originalPrice) * 100)
@@ -78,16 +80,16 @@ const ProductDetail = () => {
     if (!product) return;
     const sessUser = JSON.parse(sessionStorage.getItem('currentUser'));
     if (sessUser?.status === 'blocked') {
-      alert("Action restricted: Your account has been blocked.");
+      alert(t('product.blockedMsg'));
       return;
     }
     const cart  = JSON.parse(localStorage.getItem('cart') || '[]');
-    const index = cart.findIndex(item => String(item.id) === String(product.id));
+    const index = cart.findIndex(item => String(item.id) === String(product.id) && item.type === 'product');
     if (index >= 0) cart[index].quantity += quantity;
-    else cart.push({ ...product, quantity, price: discountPrice });
+    else cart.push({ ...product, quantity, price: discountPrice, originalPrice, type: 'product' });
     localStorage.setItem('cart', JSON.stringify(cart));
     window.dispatchEvent(new Event('cartUpdated'));
-    setToastMessage(`${product.name} added to cart!`);
+    setToastMessage(t('favorites.addedToCartMsg', { name: product.name }));
     setShowToast(true);
   };
 
@@ -95,7 +97,7 @@ const ProductDetail = () => {
   const handleSubmitReview = async (e) => {
     e.preventDefault();
     if (reviewRating < 1) {
-      setReviewError('Please select a star rating.');
+      setReviewError(t('product.selectRating'));
       return;
     }
     setSubmittingReview(true);
@@ -112,7 +114,7 @@ const ProductDetail = () => {
       refetchReviews();
       setTimeout(() => setReviewSuccess(false), 3000);
     } catch (err) {
-      setReviewError(err?.response?.data?.message || 'Failed to submit review.');
+      setReviewError(err?.response?.status === 403 ? t('product.reviewNotAllowed') : t('product.reviewFailed'));
     } finally {
       setSubmittingReview(false);
     }
@@ -123,7 +125,7 @@ const ProductDetail = () => {
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
       <div className="w-10 h-10 border-4 border-gray-200 border-t-[#2D4A22] rounded-full animate-spin" />
       <p className="text-[11px] font-black uppercase tracking-widest text-gray-400 animate-pulse">
-        Loading...
+        {t('common.loading')}
       </p>
     </div>
   );
@@ -137,7 +139,7 @@ const ProductDetail = () => {
           onClick={() => navigate(-1)}
           className="text-[#2D4A22] font-black text-[9px] uppercase tracking-[0.2em] hover:text-[#F58220] transition-colors"
         >
-          ← {t('button.back') || 'Go Back'}
+          ← {t('button.back')}
         </button>
       </div>
     </div>
@@ -152,7 +154,7 @@ const ProductDetail = () => {
           onClick={() => navigate(-1)}
           className="text-[#2D4A22] font-black text-[9px] uppercase tracking-[0.2em] hover:text-[#F58220] transition-colors"
         >
-          ← {t('button.back') || 'Go Back'}
+          ← {t('button.back')}
         </button>
       </div>
     </div>
@@ -177,7 +179,7 @@ const ProductDetail = () => {
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-[#2D4A22] font-black text-[9px] uppercase tracking-[0.2em] hover:text-[#F58220] transition-colors"
           >
-            <FaArrowLeft size={9} /> {t('button.back') || 'Go Back'}
+            <FaArrowLeft size={9} /> {t('button.back')}
           </button>
         </div>
 
@@ -210,7 +212,7 @@ const ProductDetail = () => {
             {/* Category Badge */}
             <div className="inline-flex items-center gap-2 bg-[#FFF8F2] text-[#F58220] text-[8px] font-black uppercase tracking-[0.2em] px-2 py-1 mb-3 w-fit border border-[#F58220]/10">
               <BiLeaf size={10} />
-              <span>{product.category?.name || 'Menu Item'}</span>
+              <span>{product.category?.name || t('product.menuItem')}</span>
             </div>
 
             <h1 className="text-2xl font-black text-[#2D4A22] uppercase tracking-tight mb-2">
@@ -224,7 +226,7 @@ const ProductDetail = () => {
                 {stats.average > 0 ? stats.average.toFixed(1) : '—'}
               </span>
               <span className="text-[10px] text-gray-400">
-                ({stats.count} {stats.count === 1 ? 'review' : 'reviews'})
+                ({t('product.reviewCount', { count: stats.count })})
               </span>
             </div>
 
@@ -232,7 +234,7 @@ const ProductDetail = () => {
               SKU: {product.sku || 'N/A'}
             </p>
             <p className="text-xs text-gray-500 leading-relaxed mb-6">
-              {product.description || 'Authentic organic recipe.'}
+              {product.description || t('product.defaultDesc')}
             </p>
 
             {/* Price */}
@@ -253,7 +255,7 @@ const ProductDetail = () => {
             {/* Quantity */}
             <div className="mb-6">
               <span className="block text-[9px] font-black text-[#2D4A22] uppercase mb-2">
-                Adjust Quantity
+                {t('product.adjustQuantity')}
               </span>
               <div className="flex items-center gap-4">
                 <div className="flex items-center border border-gray-200 bg-white shadow-sm">
@@ -288,12 +290,12 @@ const ProductDetail = () => {
                     : 'bg-[#2D4A22] text-white hover:bg-[#F58220]'
                   }`}
               >
-                {isBlocked ? 'Blocked' : 'Add To Cart'}
+                {isBlocked ? t('status.blocked') : t('product.addToCart')}
               </button>
               <button
                 onClick={() => {
                   if (!isBlocked) { addToCart(); navigate('/cart'); }
-                  else { alert("Account Blocked"); }
+                  else { alert(t('product.blockedMsg')); }
                 }}
                 disabled={isBlocked}
                 className={`flex-1 border-2 py-3 font-black text-[9px] uppercase tracking-widest
@@ -302,7 +304,7 @@ const ProductDetail = () => {
                     : 'border-[#2D4A22] text-[#2D4A22] hover:bg-gray-50'
                   }`}
               >
-                Buy Now
+                {t('product.buyNow')}
               </button>
             </div>
           </div>
@@ -311,7 +313,7 @@ const ProductDetail = () => {
         {/* Reviews Section */}
         <div className="max-w-5xl mx-auto mt-10 bg-white border border-gray-100 shadow-sm p-8 md:p-10">
           <h2 className="text-lg font-black text-[#2D4A22] uppercase tracking-tight mb-6">
-            Customer Reviews
+            {t('product.customerReviews')}
           </h2>
 
           {/* Rating summary bar */}
@@ -322,7 +324,7 @@ const ProductDetail = () => {
               </p>
               <StarDisplay rating={stats.average} size={14} />
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                {stats.count} {stats.count === 1 ? 'Review' : 'Reviews'}
+                {t('product.reviewCount', { count: stats.count })}
               </p>
             </div>
             <div className="flex-1 space-y-1.5">
@@ -347,17 +349,17 @@ const ProductDetail = () => {
             myExistingReview ? (
               <div className="mb-8 bg-green-50 border border-green-100 rounded-xl p-4 text-sm text-green-700 font-semibold flex items-center gap-2">
                 <FaCheckCircle size={14} />
-                You already reviewed this product. Thanks for your feedback!
+                {t('product.alreadyReviewed')}
               </div>
             ) : (
               <form onSubmit={handleSubmitReview} className="mb-8 bg-[#FAFAFA] border border-gray-100 rounded-xl p-5 space-y-4">
                 <p className="text-[11px] font-black uppercase tracking-widest text-gray-500">
-                  Write a Review
+                  {t('product.writeReview')}
                 </p>
 
                 {reviewSuccess && (
                   <div className="flex items-center gap-2 bg-green-50 border border-green-100 text-green-700 rounded-lg px-3 py-2 text-xs font-semibold">
-                    <FaCheckCircle size={12} /> Review submitted successfully!
+                    <FaCheckCircle size={12} /> {t('product.reviewSubmitted')}
                   </div>
                 )}
                 {reviewError && (
@@ -387,7 +389,7 @@ const ProductDetail = () => {
                   rows={3}
                   value={reviewComment}
                   onChange={e => setReviewComment(e.target.value)}
-                  placeholder="Share your experience with this product..."
+                  placeholder={t('product.reviewPlaceholder')}
                   className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#9ff3a9] resize-none bg-white"
                 />
 
@@ -396,7 +398,7 @@ const ProductDetail = () => {
                   disabled={submittingReview}
                   className="px-6 py-2.5 bg-[#2D4A22] text-white font-black text-[9px] uppercase tracking-widest hover:bg-[#F58220] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submittingReview ? 'Submitting...' : 'Submit Review'}
+                  {submittingReview ? t('product.submitting') : t('product.submitReview')}
                 </button>
               </form>
             )
@@ -406,20 +408,20 @@ const ProductDetail = () => {
                 onClick={() => navigate('/login')}
                 className="font-bold text-[#2D4A22] hover:text-[#F58220] underline"
               >
-                Log in
+                {t('nav.login')}
               </button>{' '}
-              to write a review for this product.
+              {t('product.loginToReview')}
             </div>
           )}
 
           {/* Review list */}
           {reviewsLoading ? (
             <p className="text-center text-gray-400 text-xs font-bold uppercase tracking-widest py-8 animate-pulse">
-              Loading reviews...
+              {t('product.loadingReviews')}
             </p>
           ) : reviews.length === 0 ? (
             <p className="text-center text-gray-400 text-xs font-bold uppercase tracking-widest py-8">
-              No reviews yet — be the first to review this product!
+              {t('product.noReviews')}
             </p>
           ) : (
             <div className="space-y-5">
@@ -430,15 +432,15 @@ const ProductDetail = () => {
                       <div className="w-7 h-7 rounded-full bg-[#2D4A22] text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">
                         {(r.user?.name || 'G').slice(0, 2).toUpperCase()}
                       </div>
-                      <span className="text-sm font-bold text-gray-700">{r.user?.name || 'Guest'}</span>
+                      <span className="text-sm font-bold text-gray-700">{r.user?.name || t('nav.guest')}</span>
                       {r.order_id && (
                         <span className="flex items-center gap-1 text-[9px] font-black text-green-600 uppercase tracking-wider bg-green-50 px-2 py-0.5 rounded-full">
-                          <FaCheckCircle size={9} /> Verified Purchase
+                          <FaCheckCircle size={9} /> {t('product.verifiedPurchase')}
                         </span>
                       )}
                     </div>
                     <span className="text-[10px] text-gray-400 flex-shrink-0">
-                      {new Date(r.created_at).toLocaleDateString()}
+                      {new Date(r.created_at).toLocaleDateString(i18n.language === 'kh' ? 'km-KH' : 'en-US')}
                     </span>
                   </div>
                   <StarDisplay rating={r.rating} size={12} />

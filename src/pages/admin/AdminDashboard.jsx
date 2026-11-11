@@ -16,6 +16,7 @@ import useEcho from '../../hooks/useEcho';
 import { reservationService } from '../../service/reservationService';
 import { contactService } from '../../service/contactService';
 import * as XLSX from 'xlsx';
+import { useTranslation } from 'react-i18next';
 
 /*
   DESIGN TOKENS — Khmer-Fresh admin
@@ -46,6 +47,7 @@ const DELIVERY_STATUS_STYLES = {
   failed:     'bg-[#F5E1DE] text-[#8C3327] border-[#EBC7C1]',
 };
 
+// keys only; shown with t(`deliveryStatus.${key}`)
 const DELIVERY_STATUS_LABELS = {
   unassigned: 'Unassigned',
   assigned:   'Assigned',
@@ -137,10 +139,11 @@ const EMPTY_STATE = {
   low_stock:              [],
 };
 
+// returns a translation key
 const GREETING_BY_HOUR = (hour) => {
-  if (hour < 11) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 11) return 'admin.dashboard.morning';
+  if (hour < 17) return 'admin.dashboard.afternoon';
+  return 'admin.dashboard.evening';
 };
 
 const KramaAccent = ({ className = '', count = 7 }) => (
@@ -159,6 +162,7 @@ const KramaAccent = ({ className = '', count = 7 }) => (
 );
 
 const AdminDashboard = () => {
+  const { t, i18n } = useTranslation();
   const navigate                        = useNavigate();
   const [data, setData]                 = useState(EMPTY_STATE);
   const [loading, setLoading]           = useState(true);
@@ -218,27 +222,27 @@ const AdminDashboard = () => {
   const unassignedDeliveryCount = stats.unassigned_delivery_count ?? 0;
 
   const now        = new Date();
-  const greeting   = GREETING_BY_HOUR(now.getHours());
-  const todayLabel = now.toLocaleDateString(undefined, {
+  const greeting   = t(GREETING_BY_HOUR(now.getHours()));
+  const todayLabel = now.toLocaleDateString(i18n.language === 'kh' ? 'km-KH' : undefined, {
     weekday: 'long', month: 'long', day: 'numeric',
   });
 
   const handleExportExcel = () => {
     if (!recent_orders.length) return;
     const rows = recent_orders.map(o => ({
-      'Order ID': o.id,
-      'Customer': o.customer ?? 'Guest',
-      'Type':     o.order_type === 'delivery' ? 'Delivery' : 'Dine-in / Takeaway',
-      'Status':   o.status,
-      'Total':    o.total != null ? Number(o.total).toFixed(2) : '',
-      'Placed':   o.placed ?? '',
+      [t('orderHistory.orderID')]:     o.id,
+      [t('admin.common.customer')]:    o.customer ?? t('nav.guest'),
+      [t('admin.backup.type')]:        o.order_type === 'delivery' ? t('orderType.delivery') : t('admin.dashboard.dineOrTakeaway'),
+      [t('admin.common.status')]:      t(`status.${o.status}`, o.status),
+      [t('checkout.total')]:           o.total != null ? Number(o.total).toFixed(2) : '',
+      [t('admin.orders.placedAt')]:    o.placed ?? '',
     }));
     const worksheet = XLSX.utils.json_to_sheet(rows);
     worksheet['!cols'] = [
       { wch: 10 }, { wch: 22 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 10 },
     ];
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Recent Orders');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Recent Orders'); // sheet names must stay ASCII-safe
     XLSX.writeFile(workbook, `recent-orders-${now.toISOString().slice(0, 10)}.xlsx`);
   };
 
@@ -251,9 +255,9 @@ const AdminDashboard = () => {
       tone: 'payment',
       icon: <LuBell size={17} />,
       count: pendingCount,
-      title: `${pendingCount} payment${pendingCount > 1 ? 's' : ''} awaiting confirmation`,
-      subtitle: 'Paid via KHQR — review the receipt and confirm.',
-      cta: 'Review',
+      title: t('admin.dashboard.alertPayments', { count: pendingCount }),
+      subtitle: t('admin.dashboard.alertPaymentsSub'),
+      cta: t('admin.dashboard.review'),
       onClick: () => navigate('/admin/payments'),
     });
   }
@@ -264,9 +268,9 @@ const AdminDashboard = () => {
       tone: 'delivery',
       icon: <LuBike size={17} />,
       count: unassignedDeliveryCount,
-      title: `${unassignedDeliveryCount} delivery order${unassignedDeliveryCount > 1 ? 's' : ''} need${unassignedDeliveryCount === 1 ? 's' : ''} a rider`,
-      subtitle: 'Assign a rider so the order can go out.',
-      cta: 'Assign',
+      title: t('admin.dashboard.alertDelivery', { count: unassignedDeliveryCount }),
+      subtitle: t('admin.dashboard.alertDeliverySub'),
+      cta: t('admin.delivery.assign'),
       onClick: () => navigate('/admin/delivery'),
     });
   }
@@ -281,12 +285,12 @@ const AdminDashboard = () => {
       icon: <LuClipboardList size={17} />,
       count: live_queue.pending,
       title: isBacklog
-        ? `${live_queue.pending} orders stuck in pending`
-        : `${live_queue.pending} new order${live_queue.pending > 1 ? 's' : ''} waiting`,
+        ? t('admin.dashboard.alertBacklog', { count: live_queue.pending })
+        : t('admin.dashboard.alertNewOrders', { count: live_queue.pending }),
       subtitle: isBacklog
-        ? "The kitchen may need backup — orders haven't started cooking."
-        : 'Confirm and start preparing these orders.',
-      cta: 'View',
+        ? t('admin.dashboard.alertBacklogSub')
+        : t('admin.dashboard.alertNewOrdersSub'),
+      cta: t('admin.dashboard.view'),
       onClick: () => navigate('/admin/orders'),
     });
   }
@@ -297,9 +301,9 @@ const AdminDashboard = () => {
       tone: 'reservation',
       icon: <LuCalendarDays size={17} />,
       count: reservationStats.pending,
-      title: `${reservationStats.pending} reservation${reservationStats.pending > 1 ? 's' : ''} pending confirmation`,
-      subtitle: 'A table booking is waiting on your response.',
-      cta: 'Review',
+      title: t('admin.dashboard.alertReservations', { count: reservationStats.pending }),
+      subtitle: t('admin.dashboard.alertReservationsSub'),
+      cta: t('admin.dashboard.review'),
       onClick: () => navigate('/admin/reservations'),
     });
   }
@@ -310,9 +314,9 @@ const AdminDashboard = () => {
       tone: 'message',
       icon: <LuMail size={17} />,
       count: contactStats.unread,
-      title: `${contactStats.unread} new message${contactStats.unread > 1 ? 's' : ''}`,
-      subtitle: 'A customer sent a contact message.',
-      cta: 'Review',
+      title: t('admin.dashboard.alertMessages', { count: contactStats.unread }),
+      subtitle: t('admin.dashboard.alertMessagesSub'),
+      cta: t('admin.dashboard.review'),
       onClick: () => navigate('/admin/contacts'),
     });
   }
@@ -335,7 +339,7 @@ const AdminDashboard = () => {
             <KramaAccent className="mt-3" />
             {lastSync && (
               <p className="text-[11px] text-[#9AA0A0] font-medium mt-3">
-                Last updated {lastSync.toLocaleTimeString()}
+                {t('admin.dashboard.lastUpdated')} {lastSync.toLocaleTimeString(i18n.language === 'kh' ? 'km-KH' : undefined)}
               </p>
             )}
           </div>
@@ -345,13 +349,13 @@ const AdminDashboard = () => {
               disabled={!recent_orders.length}
               className="flex items-center gap-2 text-[12px] font-semibold text-[#5B6B6F] hover:text-[#1E2A2E] transition-colors bg-white border border-[#E3DFD3] px-4 py-2.5 rounded-xl shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <LuDownload size={14} /> Export
+              <LuDownload size={14} /> {t('admin.dashboard.export')}
             </button>
             <button
               onClick={handleManualRefresh}
               className="flex items-center gap-2 text-[12px] font-semibold text-[#5B6B6F] hover:text-[#1E2A2E] transition-colors bg-white border border-[#E3DFD3] px-4 py-2.5 rounded-xl shadow-sm"
             >
-              <LuRefreshCw size={14} /> Refresh
+              <LuRefreshCw size={14} /> {t('admin.common.refresh')}
             </button>
           </div>
         </div>
@@ -365,7 +369,7 @@ const AdminDashboard = () => {
         {alerts.length > 0 && (
           <div className={`${CARD} overflow-hidden`}>
             <div className="px-6 py-4 flex items-center justify-between border-b border-[#EFEBE2]">
-              <h2 style={FONT_SERIF} className={H2}>Needs your attention</h2>
+              <h2 style={FONT_SERIF} className={H2}>{t('admin.dashboard.attention')}</h2>
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#9AA0A0]">
                 {alerts.length} item{alerts.length > 1 ? 's' : ''}
               </span>
@@ -412,9 +416,9 @@ const AdminDashboard = () => {
           <div className="col-span-4">
             <HeroStatCard
               icon={<LuDollarSign size={22} />}
-              title="Today's sales"
+              title={t('admin.dashboard.todaySales')}
               value={loading ? '—' : `$${Number(stats.today_sales ?? 0).toFixed(2)}`}
-              sub="vs yesterday"
+              sub={t('admin.dashboard.vsYesterday')}
               trendPct={stats.sales_change_pct}
               loading={loading}
             />
@@ -423,26 +427,26 @@ const AdminDashboard = () => {
             <StatCard
               icon={<LuClipboardList size={19} />}
               fill="sky"
-              badge="Orders"
-              title="Orders today"
+              badge={t('admin.nav.orders')}
+              title={t('admin.dashboard.ordersToday')}
               value={loading ? '—' : stats.orders_today ?? 0}
-              sub="all statuses"
+              sub={t('admin.dashboard.allStatuses')}
             />
             <StatCard
               icon={<LuUserPlus size={19} />}
               fill="herb"
-              badge="Users"
-              title="New customers"
+              badge={t('admin.dashboard.users')}
+              title={t('admin.report.newCustomers')}
               value={loading ? '—' : stats.new_customers_today ?? 0}
-              sub="today"
+              sub={t('admin.report.today')}
             />
             <StatCard
               icon={<LuPackageX size={19} />}
               fill="chili"
-              badge="Alert"
-              title="Low stock items"
+              badge={t('admin.dashboard.alert')}
+              title={t('admin.dashboard.lowStockItems')}
               value={loading ? '—' : stats.low_stock_count ?? 0}
-              sub="needs restock"
+              sub={t('admin.products.needsRestock')}
               onClick={() => navigate('/admin/products')}
             />
           </div>
@@ -456,18 +460,18 @@ const AdminDashboard = () => {
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
                 <LuCalendarDays size={16} className="text-[#3B6E91]" />
-                <h2 style={FONT_SERIF} className={H2}>Table reservations</h2>
+                <h2 style={FONT_SERIF} className={H2}>{t('admin.dashboard.tableReservations')}</h2>
               </div>
               <span className="text-[10px] font-bold text-[#9AA0A0] uppercase tracking-widest">
-                View all →
+                {t('admin.dashboard.viewAll')} →
               </span>
             </div>
             <div className="grid grid-cols-4 gap-4">
               {[
-                { label: 'Total',     value: reservationStats.total,     tint: 'bg-[#1E2A2E] text-white' },
-                { label: 'Pending',   value: reservationStats.pending,   tint: 'bg-[#D99A3D] text-white' },
-                { label: 'Confirmed', value: reservationStats.confirmed, tint: 'bg-[#3F7D58] text-white' },
-                { label: 'Today',     value: reservationStats.today,     tint: 'bg-[#3B6E91] text-white' },
+                { label: t('admin.common.total'),  value: reservationStats.total,     tint: 'bg-[#1E2A2E] text-white' },
+                { label: t('status.pending'),      value: reservationStats.pending,   tint: 'bg-[#D99A3D] text-white' },
+                { label: t('status.confirmed'),    value: reservationStats.confirmed, tint: 'bg-[#3F7D58] text-white' },
+                { label: t('admin.report.today'),  value: reservationStats.today,     tint: 'bg-[#3B6E91] text-white' },
               ].map(s => (
                 <div key={s.label} className={`${s.tint} rounded-xl p-4 text-center shadow-[0_4px_14px_rgba(30,42,46,0.1)]`}>
                   <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">{s.label}</p>
@@ -483,14 +487,14 @@ const AdminDashboard = () => {
           <div className="col-span-8 space-y-6">
 
             <div className={`${CARD} p-6`}>
-              <h2 style={FONT_SERIF} className={`${H2} mb-6`}>Sales trend · last 7 days</h2>
+              <h2 style={FONT_SERIF} className={`${H2} mb-6`}>{t('admin.dashboard.salesTrend')}</h2>
               <div className="h-[280px] w-full">
                 {sales_trend.length === 0 ? (
                   <EmptyPanel
                     loading={loading}
                     icon={<LuDollarSign size={26} />}
-                    title="No sales yet"
-                    sub="Paid orders will start filling in this chart."
+                    title={t('admin.dashboard.noSales')}
+                    sub={t('admin.dashboard.noSalesSub')}
                   />
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -500,7 +504,7 @@ const AdminDashboard = () => {
                       <YAxis axisLine={false} tickLine={false} fontSize={12} tick={{ fill: '#9AA0A0' }} />
                       <Tooltip
                         cursor={{ fill: '#FBF9F5' }}
-                        formatter={(v) => [`$${v}`, 'Sales']}
+                        formatter={(v) => [`$${v}`, t('admin.dashboard.sales')]}
                         contentStyle={{ borderRadius: 10, border: '1px solid #E8E3D8', fontSize: 12 }}
                       />
                       <Bar dataKey="sales" fill="#D99A3D" barSize={34} radius={[6, 6, 0, 0]} />
@@ -512,35 +516,35 @@ const AdminDashboard = () => {
 
             <div className={`${CARD} p-6`}>
               <div className="flex items-center justify-between mb-5">
-                <h2 style={FONT_SERIF} className={H2}>Live order queue</h2>
+                <h2 style={FONT_SERIF} className={H2}>{t('admin.dashboard.liveQueue')}</h2>
                 <span className="text-[10px] font-bold text-[#C4C0B4] uppercase tracking-widest">
-                  Refreshes every {POLL_MS / 1000}s
+                  {t('admin.dashboard.refreshesEvery', { count: POLL_MS / 1000 })}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <QueueChip label="Pending" count={live_queue.pending ?? 0} icon={<LuClipboardList />}  styleKey="pending" />
-                <QueueChip label="Cooking" count={live_queue.cooking ?? 0} icon={<LuUtensilsCrossed />} styleKey="cooking" />
-                <QueueChip label="Served"  count={live_queue.served  ?? 0} icon={<LuShoppingBag />}    styleKey="served"  />
+                <QueueChip label={t('status.pending')} count={live_queue.pending ?? 0} icon={<LuClipboardList />}  styleKey="pending" />
+                <QueueChip label={t('status.cooking')} count={live_queue.cooking ?? 0} icon={<LuUtensilsCrossed />} styleKey="cooking" />
+                <QueueChip label={t('status.served')} count={live_queue.served  ?? 0} icon={<LuShoppingBag />}    styleKey="served"  />
               </div>
             </div>
 
             <div className={`${CARD} p-6`}>
               <div className="flex items-center justify-between mb-5">
                 <h2 style={FONT_SERIF} className={`${H2} flex items-center gap-2`}>
-                  <LuBike size={17} className="text-[#C1653D]" /> Live delivery queue
+                  <LuBike size={17} className="text-[#C1653D]" /> {t('admin.dashboard.liveDelivery')}
                 </h2>
                 <button
                   onClick={() => navigate('/admin/delivery')}
                   className="text-[10px] font-bold text-[#9AA0A0] hover:text-[#1E2A2E] uppercase tracking-widest transition-colors"
                 >
-                  Manage →
+                  {t('admin.dashboard.manage')} →
                 </button>
               </div>
               <div className="grid grid-cols-3 lg:grid-cols-6 gap-2.5">
                 {Object.keys(DELIVERY_STATUS_LABELS).map(key => (
                   <DeliveryChip
                     key={key}
-                    label={DELIVERY_STATUS_LABELS[key]}
+                    label={t(`deliveryStatus.${key}`)}
                     count={live_delivery_queue[key] ?? 0}
                     styleKey={key}
                     needsAction={key === 'unassigned' && (live_delivery_queue[key] ?? 0) > 0}
@@ -565,7 +569,7 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${DELIVERY_STATUS_STYLES[order.delivery_status] ?? DELIVERY_STATUS_STYLES.unassigned}`}>
-                        {DELIVERY_STATUS_LABELS[order.delivery_status] ?? order.delivery_status}
+                        {t(`deliveryStatus.${order.delivery_status}`, order.delivery_status)}
                       </span>
                     </div>
                   ))}
@@ -578,12 +582,12 @@ const AdminDashboard = () => {
 
             <div className={`${CARD} p-6`}>
               <div className="flex items-center justify-between mb-5">
-                <h2 style={FONT_SERIF} className={H2}>Recent orders</h2>
+                <h2 style={FONT_SERIF} className={H2}>{t('admin.dashboard.recentOrders')}</h2>
                 <button
                   onClick={() => navigate('/admin/orders')}
                   className="text-[10px] font-bold text-[#9AA0A0] hover:text-[#1E2A2E] uppercase tracking-widest transition-colors"
                 >
-                  View all →
+                  {t('admin.dashboard.viewAll')} →
                 </button>
               </div>
               {recent_orders.length === 0 ? (
@@ -591,8 +595,8 @@ const AdminDashboard = () => {
                   compact
                   loading={loading}
                   icon={<LuClipboardList size={20} />}
-                  title="No orders yet"
-                  sub="New orders will show up here as they come in."
+                  title={t('admin.dashboard.noOrders')}
+                  sub={t('admin.dashboard.noOrdersSub')}
                 />
               ) : (
                 <div className="space-y-0.5">
@@ -603,7 +607,7 @@ const AdminDashboard = () => {
                       className="flex items-center justify-between py-3 border-b border-[#EFEBE2] last:border-0 cursor-pointer hover:bg-[#FBF9F5] -mx-2 px-2 rounded-lg transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <Avatar name={order.customer ?? 'Guest'} />
+                        <Avatar name={order.customer ?? t('nav.guest')} />
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-[#1E2A2E] flex items-center gap-1">
                             #{order.id}
@@ -612,12 +616,12 @@ const AdminDashboard = () => {
                             )}
                           </p>
                           <p className="text-[11px] text-[#8B9296] truncate">
-                            {order.customer ?? 'Guest'}
+                            {order.customer ?? t('nav.guest')}
                           </p>
                         </div>
                       </div>
                       <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold border whitespace-nowrap ${STATUS_STYLES[order.status] ?? STATUS_STYLES.pending}`}>
-                        {order.status}
+                        {t(`status.${order.status}`, order.status)}
                       </span>
                     </div>
                   ))}
@@ -627,7 +631,7 @@ const AdminDashboard = () => {
 
             <div className={`${CARD} p-6`}>
               <div className="flex items-center justify-between mb-5">
-                <h2 style={FONT_SERIF} className={H2}>Low stock items</h2>
+                <h2 style={FONT_SERIF} className={H2}>{t('admin.dashboard.lowStockItems')}</h2>
                 {low_stock.length > 0 && <LuTriangleAlert size={15} className="text-[#B5453B]" />}
               </div>
               <div className="space-y-3.5">
@@ -635,14 +639,16 @@ const AdminDashboard = () => {
                   <div className="flex items-center gap-2">
                     <LuCheck size={14} className="text-[#2F6844]" />
                     <p className="text-[#9AA0A0] font-semibold uppercase tracking-widest text-[10px]">
-                      {loading ? 'Loading…' : 'All stock levels OK'}
+                      {loading ? t('common.loading') : t('admin.dashboard.stockOk')}
                     </p>
                   </div>
                 ) : low_stock.map(item => (
                   <StockItem
                     key={item.label ?? item.name}
                     label={item.label ?? item.name}
-                    weight={item.weight ?? item.stock}
+                    weight={item.stock != null
+                      ? (Number(item.stock) === 0 ? t('admin.products.outOfStock') : t('admin.dashboard.left', { count: Number(item.stock) }))
+                      : item.weight}
                     critical={item.critical}
                   />
                 ))}
@@ -656,6 +662,7 @@ const AdminDashboard = () => {
 };
 
 const HeroStatCard = ({ icon, title, value, sub, trendPct, loading }) => {
+  const { t } = useTranslation();
   const showTrend = typeof trendPct === 'number' && !loading;
   const isUp   = showTrend && trendPct > 0;
   const isDown = showTrend && trendPct < 0;
@@ -666,7 +673,7 @@ const HeroStatCard = ({ icon, title, value, sub, trendPct, loading }) => {
     >
       <div className="flex items-start justify-between">
         <div className="bg-[#D99A3D]/15 text-[#E8C97A] p-3 rounded-xl border border-[#D99A3D]/30">{icon}</div>
-        <span className="text-[9px] font-bold uppercase tracking-widest bg-white/10 text-[#E8C97A] px-2.5 py-1 rounded-full">Today</span>
+        <span className="text-[9px] font-bold uppercase tracking-widest bg-white/10 text-[#E8C97A] px-2.5 py-1 rounded-full">{t('admin.report.today')}</span>
       </div>
       <div>
         <p className="text-[#B9C2C4] text-[12px] font-semibold mt-4">{title}</p>
@@ -757,12 +764,15 @@ const Avatar = ({ name }) => {
   );
 };
 
-const EmptyPanel = ({ icon, title, sub, loading, compact }) => (
-  <div className={`flex flex-col items-center justify-center text-center ${compact ? 'py-8' : 'h-full'}`}>
-    {!loading && <div className="text-[#E3DFD3] mb-3">{icon}</div>}
-    <p className="text-[#9AA0A0] text-sm font-semibold uppercase tracking-widest">{loading ? 'Loading…' : title}</p>
-    {!loading && sub && <p className="text-[#C4C0B4] text-[11px] font-medium mt-1 max-w-[220px]">{sub}</p>}
-  </div>
-);
+const EmptyPanel = ({ icon, title, sub, loading, compact }) => {
+  const { t } = useTranslation();
+  return (
+    <div className={`flex flex-col items-center justify-center text-center ${compact ? 'py-8' : 'h-full'}`}>
+      {!loading && <div className="text-[#E3DFD3] mb-3">{icon}</div>}
+      <p className="text-[#9AA0A0] text-sm font-semibold uppercase tracking-widest">{loading ? t('common.loading') : title}</p>
+      {!loading && sub && <p className="text-[#C4C0B4] text-[11px] font-medium mt-1 max-w-[220px]">{sub}</p>}
+    </div>
+  );
+};
 
 export default AdminDashboard;

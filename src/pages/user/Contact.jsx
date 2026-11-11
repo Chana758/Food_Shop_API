@@ -9,7 +9,7 @@ import { useContact } from '../../hooks/useContact';
 
 const Contact = () => {
   const { t } = useTranslation();
-  const { loading, success, error, sendMessage, reset } = useContact();
+  const { loading, success, error, sendMessage } = useContact();
 
   const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
 
@@ -42,7 +42,7 @@ const Contact = () => {
         {/* --- Header Section --- */}
         <div data-aos="fade-down" className="mb-16 border-l-4 border-[#2D4A22] pl-6 relative">
           <h1 className="text-3xl md:text-4xl font-bold text-[#2D4A22] uppercase tracking-tight">
-            {t('contact.title')} <span className="text-[#F58220] font-light">/ Contact</span>
+            {t('contact.title')} <span className="text-[#F58220] font-light">/ {t('nav.contact')}</span>
           </h1>
           <p className="text-gray-400 font-medium mt-2 text-sm tracking-widest uppercase">
             {t('contact.subtitle')}
@@ -78,7 +78,7 @@ const Contact = () => {
               <div className="flex items-start gap-3">
                 <FaMapMarkerAlt className="text-[#2D4A22] text-sm mt-1" />
                 <p className="text-[#2D4A22] font-semibold text-lg leading-snug">
-                  #123 Phnom Penh, Cambodia
+                  {t('contact.addressValue')}
                 </p>
               </div>
             </div>
@@ -98,7 +98,7 @@ const Contact = () => {
             {success && (
               <div className="mb-6 flex items-center gap-3 bg-green-50 border border-green-100 text-green-700 rounded-xl px-4 py-3 text-sm font-semibold">
                 <LuCircleCheckBig size={18} className="flex-shrink-0" />
-                Your message has been sent successfully. We'll get back to you soon!
+                {t('contact.sent')}
               </div>
             )}
 
@@ -106,7 +106,7 @@ const Contact = () => {
             {error && (
               <div className="mb-6 flex items-center gap-3 bg-red-50 border border-red-100 text-red-600 rounded-xl px-4 py-3 text-sm font-semibold">
                 <LuCircleAlert size={18} className="flex-shrink-0" />
-                {error}
+                {t('contact.sendFailed')}
               </div>
             )}
 
@@ -122,7 +122,7 @@ const Contact = () => {
                   required
                   value={form.name}
                   onChange={handleChange}
-                  placeholder="Your Name"
+                  placeholder={t('contact.namePlaceholder')}
                   className="w-full bg-transparent border-b border-gray-200 py-2 focus:border-[#2D4A22] outline-none transition-all font-medium text-base text-gray-700 placeholder:text-gray-300 placeholder:font-light"
                 />
               </div>
@@ -146,7 +146,7 @@ const Contact = () => {
               {/* Phone (optional) */}
               <div className="space-y-2 group">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 group-focus-within:text-[#2D4A22] transition-colors">
-                  Phone (optional)
+                  {t('contact.phoneOptional')}
                 </label>
                 <input
                   type="tel"
@@ -161,14 +161,14 @@ const Contact = () => {
               {/* Subject (optional) */}
               <div className="space-y-2 group">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 group-focus-within:text-[#2D4A22] transition-colors">
-                  Subject (optional)
+                  {t('contact.subjectOptional')}
                 </label>
                 <input
                   type="text"
                   name="subject"
                   value={form.subject}
                   onChange={handleChange}
-                  placeholder="What's this about?"
+                  placeholder={t('contact.subjectPlaceholder')}
                   className="w-full bg-transparent border-b border-gray-200 py-2 focus:border-[#2D4A22] outline-none transition-all font-medium text-base text-gray-700 placeholder:text-gray-300 placeholder:font-light"
                 />
               </div>
@@ -184,7 +184,7 @@ const Contact = () => {
                   rows="3"
                   value={form.message}
                   onChange={handleChange}
-                  placeholder="Write your message..."
+                  placeholder={t('contact.messagePlaceholder')}
                   className="w-full bg-transparent border-b border-gray-200 py-2 focus:border-[#2D4A22] outline-none transition-all font-medium text-base text-gray-700 resize-none placeholder:text-gray-300 placeholder:font-light"
                 ></textarea>
               </div>
@@ -198,7 +198,7 @@ const Contact = () => {
                 >
                   {loading ? (
                     <>
-                      <LuLoaderCircle size={14} className="animate-spin" /> Sending...
+                      <LuLoaderCircle size={14} className="animate-spin" /> {t('contact.sending')}
                     </>
                   ) : (
                     <>
@@ -215,9 +215,9 @@ const Contact = () => {
 
         {/* --- Footer Simple --- */}
         <div data-aos="fade-up" className="mt-20 pt-8 border-t border-gray-50 flex justify-between items-center text-[10px] text-gray-300 font-bold uppercase tracking-[0.3em]">
-             <span>Khmer-Fresh Organic Store</span>
+             <span>{t('contact.storeName')}</span>
              <BiLeaf size={20} className="opacity-20"/>
-             <span>Established 2018</span>
+             <span>{t('contact.established')}</span>
         </div>
 
       </div>

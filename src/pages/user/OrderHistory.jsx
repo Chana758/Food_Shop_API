@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getImageUrl as buildImageUrl } from '../../utils/imageUrl';
 import {
   FaHistory, FaMapMarkerAlt, FaChevronDown, FaChevronUp,
   FaShoppingBag, FaArrowLeft, FaUser, FaSpinner,
 } from 'react-icons/fa';
 import { MdOutlineReceiptLong } from 'react-icons/md';
 import axiosInstance from '../../api/axios';
+import { useTranslation } from 'react-i18next';
 
 const OrderHistory = () => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
 
   const [orders, setOrders]           = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -18,7 +21,7 @@ const OrderHistory = () => {
 
   // Fetch orders from API 
   useEffect(() => {
-    const user = localStorage.getItem('user') || localStorage.getItem('currentUser');
+    const user = sessionStorage.getItem('user') || sessionStorage.getItem('currentUser');
     if (!user) { navigate('/login'); return; }
 
     const fetchOrders = async () => {
@@ -33,7 +36,7 @@ const OrderHistory = () => {
         setOrders(list);
       } catch (err) {
         console.error('Failed to fetch orders:', err.response ?? err);
-        setError('Failed to load order history.');
+        setError(true);
       } finally {
         setLoading(false);
       }
@@ -43,13 +46,11 @@ const OrderHistory = () => {
   }, [navigate]);
 
   // Helpers 
-  const getImageUrl = (p) =>
-    !p ? '/placeholder-food.jpg'
-      : p.startsWith('http') ? p
-      : `http://127.0.0.1:8000/storage/${p}`;
+  const FALLBACK_IMG = 'https://placehold.co/400x300?text=Khmer+Fresh';
+  const getImageUrl = (p) => buildImageUrl(p, FALLBACK_IMG);
 
   const formatDate = (str) =>
-    new Date(str).toLocaleDateString('en-US', {
+    new Date(str).toLocaleDateString(i18n.language === 'kh' ? 'km-KH' : 'en-US', {
       year: 'numeric', month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
@@ -82,16 +83,23 @@ const OrderHistory = () => {
   };
 
   const handleReorder = (items) => {
-    const currentCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const newItems = items.map(item => ({
-      id:       item.product_id,
-      name:     item.product?.name,
-      price:    item.price,
-      quantity: item.quantity,
-      image:    item.product?.image,
-      type:     'food',
-    }));
-    localStorage.setItem('cart', JSON.stringify([...currentCart, ...newItems]));
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    items.forEach(item => {
+      const idx = cart.findIndex(c => c.id === item.product_id && c.type === 'product');
+      if (idx > -1) {
+        cart[idx].quantity += item.quantity;
+      } else {
+        cart.push({
+          id:       item.product_id,
+          name:     item.product?.name,
+          price:    item.price,
+          quantity: item.quantity,
+          image:    item.product?.image,
+          type:     'product',
+        });
+      }
+    });
+    localStorage.setItem('cart', JSON.stringify(cart));
     window.dispatchEvent(new Event('cartUpdated'));
     navigate('/cart');
   };
@@ -114,12 +122,12 @@ const OrderHistory = () => {
   if (error) {
     return (
       <div className="w-full min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-red-400 font-bold uppercase text-sm">{error}</p>
+        <p className="text-red-400 font-bold uppercase text-sm">{t('orderHistory.loadFailed')}</p>
         <button
           onClick={() => window.location.reload()}
           className="px-6 py-3 bg-[#2D4A22] text-white text-[10px] font-black uppercase tracking-widest"
         >
-          Retry
+          {t('error.retry')}
         </button>
       </div>
     );
@@ -132,12 +140,12 @@ const OrderHistory = () => {
         <div className="w-24 h-24 bg-gray-50 border border-gray-100 flex items-center justify-center mb-8">
           <FaHistory className="text-3xl text-gray-200" />
         </div>
-        <h2 className="text-2xl font-black text-[#2D4A22] uppercase tracking-tighter mb-4">No History Yet</h2>
+        <h2 className="text-2xl font-black text-[#2D4A22] uppercase tracking-tighter mb-4">{t('orderHistory.noOrders')}</h2>
         <button
-          onClick={() => navigate('/MenuFood')}
+          onClick={() => navigate('/menu')}
           className="px-10 py-4 bg-[#2D4A22] text-white font-black text-[11px] uppercase tracking-[0.3em] hover:bg-[#F58220] transition-all"
         >
-          Browse Menu
+          {t('cart.browseMenu')}
         </button>
       </div>
     );
@@ -155,10 +163,10 @@ const OrderHistory = () => {
               onClick={() => navigate('/')}
               className="flex items-center gap-2 text-[#2D4A22] font-black text-[10px] uppercase tracking-[0.3em] hover:text-[#F58220] transition-colors mb-6 group"
             >
-              <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back
+              <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> {t('common.back')}
             </button>
             <h1 className="text-4xl font-black text-[#2D4A22] uppercase tracking-tighter">
-              Order <span className="text-[#F58220]">History</span>
+              {t('orderHistory.titleA')} <span className="text-[#F58220]">{t('orderHistory.titleB')}</span>
             </h1>
           </div>
 
@@ -171,7 +179,7 @@ const OrderHistory = () => {
                 className={`px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all
                   ${filterStatus === s ? 'bg-white text-[#2D4A22] shadow-sm' : 'text-gray-400 hover:text-[#2D4A22]'}`}
               >
-                {s}
+                {t(`status.${s}`)}
               </button>
             ))}
           </div>
@@ -204,7 +212,7 @@ const OrderHistory = () => {
                         {formatDate(order.created_at)}
                       </h3>
                       <p className="text-[9px] font-bold text-gray-400 uppercase mt-0.5">
-                        {order.order_type}
+                        {t(`orderType.${order.order_type}`, order.order_type)}
                       </p>
                     </div>
                   </div>
@@ -214,15 +222,15 @@ const OrderHistory = () => {
                     {isDelivery && order.delivery_status && (
                       <span className={`px-3 py-1 text-[8px] font-black uppercase tracking-widest rounded-full
                         ${getDeliveryStatusStyle(order.delivery_status)}`}>
-                        {order.delivery_status.replace('_', ' ')}
+                        {t(`deliveryStatus.${order.delivery_status}`, order.delivery_status.replace(/_/g, ' '))}
                       </span>
                     )}
                     <div className="text-right">
-                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
+                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{t('checkout.total')}</p>
                       <p className="text-sm font-black text-[#2D4A22]">${Number(order.total_amount).toFixed(2)}</p>
                     </div>
                     <span className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] border ${getStatusStyle(order.status)}`}>
-                      {order.status}
+                      {t(`status.${order.status}`, order.status)}
                     </span>
                     {isExpanded ? <FaChevronUp className="text-gray-300" /> : <FaChevronDown className="text-gray-300" />}
                   </div>
@@ -235,7 +243,7 @@ const OrderHistory = () => {
                     {/* Items */}
                     <div>
                       <h4 className="text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-                        <MdOutlineReceiptLong className="text-[#F58220]" /> Items
+                        <MdOutlineReceiptLong className="text-[#F58220]" /> {t('orderHistory.orderedItems')}
                       </h4>
                       <div className="space-y-4">
                         {(order.items ?? []).map((item, idx) => (
@@ -246,14 +254,14 @@ const OrderHistory = () => {
                                   src={getImageUrl(item.product?.image)}
                                   alt={item.product?.name}
                                   className="w-full h-full object-cover"
-                                  onError={e => { e.target.src = '/placeholder-food.jpg'; }}
+                                  onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }}
                                 />
                               </div>
                               <div>
                                 <p className="text-[10px] font-black text-[#2D4A22] uppercase">
                                   {item.product?.name ?? '—'}
                                 </p>
-                                <p className="text-[9px] font-bold text-gray-400">Qty: {item.quantity}</p>
+                                <p className="text-[9px] font-bold text-gray-400">{t('checkout.qty')}: {item.quantity}</p>
                               </div>
                             </div>
                             <span className="text-xs font-black text-[#2D4A22]">
@@ -285,7 +293,7 @@ const OrderHistory = () => {
                             {order.rider && (
                               <div className="flex gap-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                                 <span className="text-[#F58220]">🛵</span>
-                                <span>Rider: {order.rider.name} · {order.rider.phone}</span>
+                                <span>{t('orderHistory.rider')}: {order.rider.name} · {order.rider.phone}</span>
                               </div>
                             )}
                           </>
@@ -294,18 +302,18 @@ const OrderHistory = () => {
                         {/* Notes */}
                         {order.notes && (
                           <div className="flex gap-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest italic">
-                            <span>Note: {order.notes}</span>
+                            <span>{t('orderHistory.note')}: {order.notes}</span>
                           </div>
                         )}
 
                         {/* Totals */}
                         <div className="pt-3 border-t border-gray-200 space-y-1">
                           <div className="flex justify-between text-[9px] font-bold text-gray-400 uppercase tracking-widest">
-                            <span>Order Type</span>
-                            <span className="text-[#2D4A22]">{order.order_type}</span>
+                            <span>{t('orderHistory.orderType')}</span>
+                            <span className="text-[#2D4A22]">{t(`orderType.${order.order_type}`, order.order_type)}</span>
                           </div>
                           <div className="flex justify-between text-[10px] font-black text-[#2D4A22] uppercase tracking-widest pt-1">
-                            <span>Total</span>
+                            <span>{t('checkout.total')}</span>
                             <span>${Number(order.total_amount).toFixed(2)}</span>
                           </div>
                         </div>
@@ -317,7 +325,7 @@ const OrderHistory = () => {
                           onClick={() => handleReorder(order.items)}
                           className="w-full py-4 bg-[#2D4A22] text-white text-[9px] font-black uppercase tracking-[0.3em] hover:bg-[#F58220] transition-colors shadow-lg"
                         >
-                          Reorder These Items
+                          {t('orderHistory.reorderItems')}
                         </button>
                       )}
                     </div>

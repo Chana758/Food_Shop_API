@@ -20,7 +20,7 @@ export const useProductReviews = (productId) => {
       // rating stats client-side from the returned page below.
       const paginator = res?.data?.data ?? null;
       setReviews(Array.isArray(paginator?.data) ? paginator.data : []);
-    } catch (err) {
+    } catch {
       setError('Failed to load reviews.');
     } finally {
       setLoading(false);
@@ -69,7 +69,7 @@ export const useReview = () => {
       // ✅ FIXED — unwrap { status, data: <paginator> } → paginator.data (array)
       const paginator = res?.data?.data ?? null;
       setMyReviews(Array.isArray(paginator?.data) ? paginator.data : []);
-    } catch (err) {
+    } catch {
       setError('Failed to load your reviews.');
     } finally {
       setLoading(false);
@@ -128,7 +128,7 @@ export const useAdminReview = () => {
       // array. The actual rows are one level deeper, at .data.data.data
       const paginator = res?.data?.data ?? null;
       setReviews(Array.isArray(paginator?.data) ? paginator.data : []);
-    } catch (err) {
+    } catch {
       setError('Failed to load reviews.');
     } finally {
       setLoading(false);

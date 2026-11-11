@@ -25,7 +25,7 @@ export const useReservation = () => {
     try {
       const res = await reservationService.getMyReservations();
       setReservations(extractList(res.data));
-    } catch (err) {
+    } catch {
       setError('Failed to load reservations.');
       setReservations([]);
     } finally {
@@ -78,7 +78,7 @@ export const useAdminReservation = () => {
       ]);
       setReservations(extractList(listRes.data));
       setStats(statsRes.data?.data ?? statsRes.data);
-    } catch (err) {
+    } catch {
       setError('Failed to load reservations.');
       setReservations([]);
     } finally {

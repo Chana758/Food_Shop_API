@@ -7,6 +7,7 @@ import {
 } from 'react-icons/lu';
 import { useAdminReservation } from '../../hooks/useReservation';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 /*
   Palette matched to the Khmer-Fresh admin (see Dashboard / Contacts /
@@ -38,6 +39,7 @@ const FILTERS = ['all', 'pending', 'confirmed', 'rejected', 'completed', 'cancel
 
 // component
 const ReservationManagement = () => {
+  const { t, i18n } = useTranslation();
   const { user }  = useAuth();
   const isAdmin   = user?.role === 'admin';
 
@@ -76,12 +78,16 @@ const ReservationManagement = () => {
     setTimeout(() => setActionMsg(null), 3000);
   };
 
+  const locale = i18n.language === 'kh' ? 'km-KH' : 'en-US';
+
   const handleOpen = (r) => {
     setSelected(r);
     setNoteText('');
   };
 
   const handleAction = useCallback(async (action, id, message = '') => {
+    if (action === 'delete' && !window.confirm(t('admin.reservations.confirmDelete'))) return;
+
     setProcessingIds(prev => {
       if (prev.has(id)) return prev;
       const next = new Set(prev);
@@ -98,10 +104,10 @@ const ReservationManagement = () => {
       if (action === 'complete') await completeReservation(id, { message });
       if (action === 'delete')   { await deleteReservation(id); setSelected(null); }
 
-      const labels = { confirm: 'Confirmed', reject: 'Rejected', complete: 'Completed', delete: 'Deleted' };
-      showMsg('success', `Reservation ${labels[action]}! ${message ? 'Email sent to customer.' : ''}`);
+      showMsg('success', `${t(`admin.reservations.done.${action}`)} ${message ? t('admin.reservations.emailSent') : ''}`);
     } catch (err) {
-      showMsg('error', err?.response?.data?.message || 'Action failed.');
+      const apiMessage = err?.response?.data?.message || '';
+      showMsg('error', apiMessage.includes('already booked') ? t('reservation.errBooked') : t('admin.trash.actionFailed'));
     } finally {
       setSending(false);
       setProcessingIds(prev => {
@@ -110,7 +116,7 @@ const ReservationManagement = () => {
         return next;
       });
     }
-  }, [confirmReservation, rejectReservation, completeReservation, deleteReservation, processingIds]);
+  }, [confirmReservation, rejectReservation, completeReservation, deleteReservation, processingIds, t]);
 
   // render
   return (
@@ -130,17 +136,17 @@ const ReservationManagement = () => {
         <div className={`${CARD} p-5 space-y-4`}>
           <div className="flex justify-between items-center">
             <div>
-              <h2 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">Reservation performance report</h2>
-              <p className="text-xs font-semibold text-[#8B9296]">Daily, monthly, and yearly reservation metrics with actionable data</p>
+              <h2 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">{t('admin.reservations.reportTitle')}</h2>
+              <p className="text-xs font-semibold text-[#8B9296]">{t('admin.reservations.reportSub')}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: 'TOTAL RESERVATIONS', value: stats.total,     fill: 'ink',   sub: 'Active tracking' },
-              { label: 'PENDING',            value: stats.pending,   fill: 'chili', sub: 'Requires action' },
-              { label: 'CONFIRMED',          value: stats.confirmed, fill: 'herb',  sub: 'Ready for arrival' },
-              { label: "TODAY'S",            value: stats.today,     fill: 'sky',   sub: "Today's schedule" },
+              { label: t('admin.reservations.total'),     value: stats.total,     fill: 'ink',   sub: t('admin.reviews.totalSub') },
+              { label: t('status.pending'),               value: stats.pending,   fill: 'chili', sub: t('admin.reviews.pendingSub') },
+              { label: t('status.confirmed'),             value: stats.confirmed, fill: 'herb',  sub: t('admin.reservations.readySub') },
+              { label: t('admin.reservations.today'),     value: stats.today,     fill: 'sky',   sub: t('admin.reservations.todaySub') },
             ].map(s => {
               const f = STAT_FILL[s.fill];
               return (
@@ -161,7 +167,7 @@ const ReservationManagement = () => {
       <div className={`${CARD} p-5 flex flex-wrap gap-4 items-center justify-between`}>
         <div className="flex items-center gap-2 flex-wrap flex-1">
           <span className="text-xs font-black uppercase tracking-wider text-[#5B6B6F] flex items-center gap-1.5 mr-2">
-            <LuFilter size={15} /> Filter:
+            <LuFilter size={15} /> {t('admin.common.filter')}:
           </span>
           {FILTERS.map(f => (
             <button
@@ -170,7 +176,7 @@ const ReservationManagement = () => {
               className={`px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border
                 ${filter === f ? 'bg-[#1E2A2E] text-white border-[#1E2A2E] shadow-xs' : 'bg-[#FBF9F5] text-[#5B6B6F] border-[#E8E3D8] hover:bg-[#F3F0E9]'}`}
             >
-              {f}
+              {t(`status.${f}`)}
             </button>
           ))}
         </div>
@@ -183,9 +189,9 @@ const ReservationManagement = () => {
             className="border border-[#E8E3D8] bg-[#FBF9F5] rounded-lg px-3.5 py-2 text-xs font-bold text-[#1E2A2E] focus:outline-none focus:ring-2 focus:ring-[#1E2A2E]/15"
           />
           {dateFilter && (
-            <button onClick={() => setDateFilter('')} className="text-xs text-[#B5453B] hover:text-[#9C3B32] font-bold">Clear</button>
+            <button onClick={() => setDateFilter('')} className="text-xs text-[#B5453B] hover:text-[#9C3B32] font-bold">{t('common.clear')}</button>
           )}
-          <button onClick={refetch} className="p-2.5 bg-[#FBF9F5] hover:bg-[#F3F0E9] border border-[#E8E3D8] rounded-lg transition-colors cursor-pointer text-[#5B6B6F] font-bold" title="Refresh">
+          <button onClick={refetch} className="p-2.5 bg-[#FBF9F5] hover:bg-[#F3F0E9] border border-[#E8E3D8] rounded-lg transition-colors cursor-pointer text-[#5B6B6F] font-bold" title={t('admin.common.refresh')}>
             <LuRefreshCw size={15} />
           </button>
         </div>
@@ -196,30 +202,30 @@ const ReservationManagement = () => {
         <div className="px-6 py-4 border-b border-[#EFEBE2] flex justify-between items-center bg-[#FBF9F5]">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#3F7D58]"></span>
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#1E2A2E]">All Reservations</h3>
+            <h3 className="text-xs font-black uppercase tracking-wider text-[#1E2A2E]">{t('admin.reservations.all')}</h3>
           </div>
           <span className="text-xs bg-[#EFEBE2] text-[#1E2A2E] px-3 py-1 rounded-full font-black">
-            {filtered.length} records
+            {t('admin.common.records', { count: filtered.length })}
           </span>
         </div>
 
         <div className="overflow-x-auto">
           {loading ? (
             <div className="p-16 text-center text-[#8B9296] font-bold text-sm uppercase tracking-wider animate-pulse">
-              Loading reservations...
+              {t('common.loading')}
             </div>
           ) : error ? (
-            <div className="p-16 text-center text-[#B5453B] font-bold text-sm">{error}</div>
+            <div className="p-16 text-center text-[#B5453B] font-bold text-sm">{t('admin.common.loadFailed')}</div>
           ) : filtered.length === 0 ? (
             <div className="p-16 text-center space-y-2">
               <LuCalendarDays size={38} className="text-[#E3DFD3] mx-auto" />
-              <p className="text-[#9AA0A0] font-black text-xs uppercase tracking-wider">No reservations found</p>
+              <p className="text-[#9AA0A0] font-black text-xs uppercase tracking-wider">{t('admin.reservations.none')}</p>
             </div>
           ) : (
             <table className="w-full min-w-[700px]">
               <thead className="bg-[#FBF9F5] border-b border-[#EFEBE2]">
                 <tr>
-                  {['Order / #', 'Customer', 'Table', 'Guests', 'Date & Time', 'Status', 'Notes', 'Actions'].map(h => (
+                  {['#', t('admin.common.customer'), t('admin.reservations.table'), t('reservation.guests'), t('admin.reservations.dateTime'), t('admin.common.status'), t('orderHistory.note'), t('admin.common.actions')].map(h => (
                     <th key={h} className="text-left px-6 py-3.5 text-[11px] font-black uppercase tracking-widest text-[#8B9296] whitespace-nowrap">
                       {h}
                     </th>
@@ -244,30 +250,30 @@ const ReservationManagement = () => {
                           {(r.user?.name || 'G').slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-xs font-black text-[#1E2A2E]">{r.user?.name || 'Guest'}</p>
+                          <p className="text-xs font-black text-[#1E2A2E]">{r.user?.name || t('nav.guest')}</p>
                           <p className="text-[11px] font-semibold text-[#8B9296]">{r.user?.email || ''}</p>
                         </div>
                       </div>
                     </td>
 
                     <td className="px-6 py-4 text-xs text-[#1E2A2E] font-bold whitespace-nowrap">
-                      {r.table?.name ?? `Table #${r.table_id ?? '—'}`}
+                      {r.table?.name ?? t('reservation.tableNo', { number: r.table_id ?? '—' })}
                     </td>
                     <td className="px-6 py-4 text-xs text-[#1E2A2E] font-bold">{r.guest_count}</td>
 
                     {/* DateTime */}
                     <td className="px-6 py-4 text-xs text-[#1E2A2E] font-bold whitespace-nowrap">
-                      {new Date(r.reserved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {new Date(r.reserved_at).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })}
                       <br />
                       <span className="text-[#8B9296] text-xs font-semibold">
-                        {new Date(r.reserved_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(r.reserved_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </td>
 
                     {/* Status */}
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase border whitespace-nowrap ${STATUS_STYLES[r.status] ?? STATUS_STYLES.pending}`}>
-                        {r.status}
+                        {t(`status.${r.status}`, r.status)}
                       </span>
                     </td>
 
@@ -282,12 +288,12 @@ const ReservationManagement = () => {
                         {isAdmin && r.status === 'pending' && (
                           <>
                             <ActionBtn
-                              color="herb" icon={<LuCheck size={14}/>} title="Confirm"
+                              color="herb" icon={<LuCheck size={14}/>} title={t('common.confirm')}
                               disabled={isProcessing}
                               onClick={() => handleAction('confirm', r.id)}
                             />
                             <ActionBtn
-                              color="chili" icon={<LuX size={14}/>} title="Reject"
+                              color="chili" icon={<LuX size={14}/>} title={t('admin.reviews.reject')}
                               disabled={isProcessing}
                               onClick={() => handleAction('reject', r.id)}
                             />
@@ -295,14 +301,14 @@ const ReservationManagement = () => {
                         )}
                         {isAdmin && r.status === 'confirmed' && (
                           <ActionBtn
-                            color="sky" icon={<LuCircleCheckBig size={14}/>} title="Complete"
+                            color="sky" icon={<LuCircleCheckBig size={14}/>} title={t('admin.reservations.complete')}
                             disabled={isProcessing}
                             onClick={() => handleAction('complete', r.id)}
                           />
                         )}
                         {isAdmin && (
                           <ActionBtn
-                            color="neutral" icon={<LuTrash2 size={14}/>} title="Delete"
+                            color="neutral" icon={<LuTrash2 size={14}/>} title={t('common.delete')}
                             disabled={isProcessing}
                             onClick={() => handleAction('delete', r.id)}
                           />
@@ -331,7 +337,7 @@ const ReservationManagement = () => {
             {/* Modal Header */}
             <div className="flex justify-between items-start mb-5">
               <div>
-                <p className="text-[11px] font-black uppercase tracking-widest text-[#8B9296]">Reservation Details</p>
+                <p className="text-[11px] font-black uppercase tracking-widest text-[#8B9296]">{t('admin.reservations.details')}</p>
                 <h2 className="text-xl font-black text-[#1E2A2E]">#{selected.id}</h2>
               </div>
               <button onClick={() => setSelected(null)} className="p-2 hover:bg-[#FBF9F5] rounded-lg cursor-pointer text-[#5B6B6F] hover:text-[#1E2A2E]">
@@ -341,21 +347,21 @@ const ReservationManagement = () => {
 
             {/* Status Badge */}
             <span className={`inline-block px-3 py-1 rounded-full text-[11px] font-black uppercase border mb-5 ${STATUS_STYLES[selected.status]}`}>
-              {selected.status}
+              {t(`status.${selected.status}`, selected.status)}
             </span>
 
             {/* Details Box */}
             <div className="space-y-4 bg-[#FBF9F5] p-4.5 rounded-xl border border-[#E8E3D8]">
-              <DetailRow icon={<LuUser size={15}/>}         label="Customer" value={selected.user?.name || 'Guest'} sub={selected.user?.email} />
-              <DetailRow icon={<LuTable2 size={15}/>}       label="Table"    value={selected.table?.name ?? `Table #${selected.table_id ?? '—'}`} />
-              <DetailRow icon={<LuUsers size={15}/>}        label="Guests"   value={`${selected.guest_count} ${selected.guest_count === 1 ? 'Person' : 'People'}`} />
-              <DetailRow icon={<LuCalendarDays size={15}/>} label="Date"     value={new Date(selected.reserved_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} />
-              <DetailRow icon={<LuClock size={15}/>}        label="Time"     value={new Date(selected.reserved_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} />
+              <DetailRow icon={<LuUser size={15}/>}         label={t('admin.common.customer')} value={selected.user?.name || t('nav.guest')} sub={selected.user?.email} />
+              <DetailRow icon={<LuTable2 size={15}/>}       label={t('admin.reservations.table')} value={selected.table?.name ?? t('reservation.tableNo', { number: selected.table_id ?? '—' })} />
+              <DetailRow icon={<LuUsers size={15}/>}        label={t('reservation.guests')} value={t('reservation.people', { count: selected.guest_count })} />
+              <DetailRow icon={<LuCalendarDays size={15}/>} label={t('reservation.date')} value={new Date(selected.reserved_at).toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} />
+              <DetailRow icon={<LuClock size={15}/>}        label={t('reservation.time')} value={new Date(selected.reserved_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })} />
               {selected.notes && (
-                <DetailRow icon={<LuStickyNote size={15}/>} label="Customer Notes" value={selected.notes} />
+                <DetailRow icon={<LuStickyNote size={15}/>} label={t('admin.reservations.customerNotes')} value={selected.notes} />
               )}
               {selected.confirmed_by && (
-                <DetailRow icon={<LuUser size={15}/>} label="Actioned by" value={selected.confirmedBy?.name || `User #${selected.confirmed_by}`} />
+                <DetailRow icon={<LuUser size={15}/>} label={t('admin.reservations.actionedBy')} value={selected.confirmedBy?.name || `#${selected.confirmed_by}`} />
               )}
             </div>
 
@@ -363,13 +369,13 @@ const ReservationManagement = () => {
             {isAdmin && selected.status !== 'cancelled' && (
               <div className="mt-4 space-y-2">
                 <label className="text-[11px] font-black uppercase tracking-widest text-[#5B6B6F] flex items-center gap-1.5">
-                  <LuMail size={13} /> Message to Customer (optional, sent by email)
+                  <LuMail size={13} /> {t('admin.reservations.messageToCustomer')}
                 </label>
                 <textarea
                   rows={3}
                   value={noteText}
                   onChange={e => setNoteText(e.target.value)}
-                  placeholder="e.g. Your table is by the window as requested!"
+                  placeholder={t('admin.reservations.messagePlaceholder')}
                   className="w-full border border-[#E8E3D8] rounded-xl p-3 text-xs font-semibold text-[#1E2A2E] focus:outline-none focus:ring-2 focus:ring-[#3B6E91]/20 bg-white resize-none"
                 />
               </div>
@@ -387,14 +393,14 @@ const ReservationManagement = () => {
                         onClick={() => { handleAction('confirm', selected.id, noteText.trim()); setSelected(null); }}
                         className="flex-1 py-3 bg-[#3F7D58] text-white text-xs font-black uppercase rounded-xl hover:bg-[#35674A] transition-colors disabled:opacity-40 cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
                       >
-                        <LuSend size={14}/> Confirm & Notify
+                        <LuSend size={14}/> {t('admin.reservations.confirmNotify')}
                       </button>
                       <button
                         disabled={sending || modalProcessing}
                         onClick={() => { handleAction('reject', selected.id, noteText.trim()); setSelected(null); }}
                         className="flex-1 py-3 bg-[#B5453B] text-white text-xs font-black uppercase rounded-xl hover:bg-[#9C3B32] transition-colors disabled:opacity-40 cursor-pointer shadow-xs"
                       >
-                        ✕ Reject
+                        ✕ {t('admin.reviews.reject')}
                       </button>
                     </>
                   )}
@@ -404,7 +410,7 @@ const ReservationManagement = () => {
                       onClick={() => { handleAction('complete', selected.id, noteText.trim()); setSelected(null); }}
                       className="flex-1 py-3 bg-[#3B6E91] text-white text-xs font-black uppercase rounded-xl hover:bg-[#325F7D] transition-colors disabled:opacity-40 cursor-pointer shadow-xs"
                     >
-                      ✔ Mark Complete
+                      ✔ {t('admin.reservations.markComplete')}
                     </button>
                   )}
                   <button

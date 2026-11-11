@@ -11,6 +11,7 @@ import { generateDynamicKHQR } from '../../utils/khqr';
 import { MERCHANT_NAME } from '../../config/khqrConfig';
 import BankBadges from '../../components/payment/BankBadges';
 import usePricing from '../../hooks/usePricing';
+import { useTranslation } from 'react-i18next';
 
 const POLL_INTERVAL_MS    = 4000; // poll every 4s
 const KHQR_EXPIRY_SECONDS = 180;  // QR lifetime
@@ -20,14 +21,17 @@ const API_BASE = (
   import.meta.env.VITE_API_BASE_URL || 'https://food-shop-backend-xivl.onrender.com'
 ).replace(/\/$/, '');
 
+const FALLBACK_IMG = 'https://placehold.co/400x300?text=Khmer+Fresh';
+
 // FIX: build a working image URL in production
 const getImageUrl = (p) => {
-  if (!p) return '/placeholder-food.jpg';                    // no image
+  if (!p) return FALLBACK_IMG;                               // no image
   if (p.startsWith('http')) return p;                        // full URL
   return `${API_BASE}/storage/${p.replace(/^\/?storage\//, '')}`; // storage path
 };
 
 const Checkout = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { delivery_fee: DELIVERY_FEE, free_delivery_threshold: FREE_THRESHOLD } = usePricing();
 
@@ -111,20 +115,20 @@ const Checkout = () => {
   useEffect(() => {
     if (!showPaymentModal || paymentConfirmed) return;
 
-    const t = setInterval(() => {
+    const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          clearInterval(t);
+          clearInterval(timer);
           setKhqrError(true);
-          setKhqrErrorMsg('QR code expired. Please try again.');
+          setKhqrErrorMsg(t('checkout.qrExpired'));
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(t);
-  }, [showPaymentModal, paymentConfirmed]);
+    return () => clearInterval(timer);
+  }, [showPaymentModal, paymentConfirmed, t]);
 
   // Poll /orders/khqr, order is created only after payment is confirmed
   useEffect(() => {
@@ -158,8 +162,8 @@ const Checkout = () => {
   // Redirect shortly after payment is confirmed
   useEffect(() => {
     if (!paymentConfirmed || !confirmedOrder) return;
-    const t = setTimeout(() => clearCartAndRedirect(confirmedOrder), 1200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => clearCartAndRedirect(confirmedOrder), 1200);
+    return () => clearTimeout(timer);
   }, [paymentConfirmed, confirmedOrder]); // eslint-disable-line
 
   // Remove ordered items from cart, then go to success page
@@ -209,13 +213,13 @@ const Checkout = () => {
     const result = generateDynamicKHQR({ amount: total, billNumber: `KF-${Date.now()}` });
     if (!result) {
       setKhqrError(true);
-      setKhqrErrorMsg('Failed to generate QR code.');
+      setKhqrErrorMsg(t('checkout.qrFailed'));
       setGeneratingQr(false);
       return;
     }
     setKhqrPayload(result);
     setGeneratingQr(false);
-  }, [total]);
+  }, [total, t]);
 
   const handleRetryKhqr = () => openPaymentModal(); // new QR
 
@@ -233,8 +237,12 @@ const Checkout = () => {
 
       clearCartAndRedirect(order);
     } catch (err) {
-      const message = err.response?.data?.message ?? 'Failed to place order. Please try again.';
-      showError(message);
+      // The API answers in English; show the customer a message in their language
+      const apiMessage = err.response?.data?.message || '';
+      const outOfStock = apiMessage.match(/^Insufficient stock for: (.+?)\.?$/);
+      if (outOfStock) showError(t('checkout.outOfStock', { name: outOfStock[1] }));
+      else if (!err.response) showError(t('error.network'));
+      else showError(t('checkout.orderFailedMsg'));
     } finally {
       setIsSubmitting(false);
     }
@@ -243,12 +251,12 @@ const Checkout = () => {
   // Form validation
   const validateForm = () => {
     const e = {};
-    if (!formData.fullName.trim())  e.fullName = 'Full name is required';
-    if (!formData.phone.trim())     e.phone    = 'Phone number is required';
+    if (!formData.fullName.trim())  e.fullName = t('checkout.errName');
+    if (!formData.phone.trim())     e.phone    = t('checkout.errPhone');
     else if (!/^[0-9]{9,10}$/.test(formData.phone.replace(/\s/g, '')))
-                                    e.phone    = 'Invalid phone number';
-    if (!formData.address.trim())   e.address  = 'Delivery address is required';
-    if (!formData.city.trim())      e.city     = 'City is required';
+                                    e.phone    = t('checkout.errPhoneInvalid');
+    if (!formData.address.trim())   e.address  = t('checkout.errAddress');
+    if (!formData.city.trim())      e.city     = t('checkout.errCity');
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -287,10 +295,10 @@ const Checkout = () => {
             className="flex items-center gap-2 text-[#2D4A22] font-black text-[10px] uppercase tracking-[0.3em] hover:text-[#F58220] transition-colors mb-6 group"
           >
             <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
-            Back to Cart
+            {t('checkout.backToCart')}
           </button>
           <h1 className="text-4xl font-black text-[#2D4A22] uppercase tracking-tighter">
-            Final <span className="text-[#F58220]">Checkout</span>
+            {t('checkout.titleA')} <span className="text-[#F58220]">{t('checkout.titleB')}</span>
           </h1>
         </div>
 
@@ -300,15 +308,15 @@ const Checkout = () => {
           <div className="lg:col-span-7 space-y-12">
             <section>
               <h2 className="text-[11px] font-black text-[#2D4A22] uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
-                <span className="w-8 h-[1px] bg-[#F58220]" /> 01. Shipping Details
+                <span className="w-8 h-[1px] bg-[#F58220]" /> 01. {t('checkout.deliveryInfo')}
               </h2>
               <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
 
                 <div className="md:col-span-2">
-                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Full Name *</label>
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t('checkout.fullName')} *</label>
                   <input
                     type="text" name="fullName" value={formData.fullName}
-                    onChange={handleInputChange} placeholder="E.g. John Doe"
+                    onChange={handleInputChange} placeholder={t('auth.namePlaceholder')}
                     className={`w-full py-3 bg-transparent border-b-2 outline-none text-sm font-bold text-[#2D4A22] transition-colors
                       ${errors.fullName ? 'border-red-400' : 'border-gray-100 focus:border-[#2D4A22]'}`}
                   />
@@ -316,7 +324,7 @@ const Checkout = () => {
                 </div>
 
                 <div>
-                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Phone Number *</label>
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t('checkout.phoneNumber')} *</label>
                   <input
                     type="tel" name="phone" value={formData.phone}
                     onChange={handleInputChange} placeholder="012345678"
@@ -327,10 +335,10 @@ const Checkout = () => {
                 </div>
 
                 <div>
-                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 block">City *</label>
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t('checkout.city')} *</label>
                   <input
                     type="text" name="city" value={formData.city}
-                    onChange={handleInputChange} placeholder="Phnom Penh"
+                    onChange={handleInputChange} placeholder={t('checkout.cityPlaceholder')}
                     className={`w-full py-3 bg-transparent border-b-2 outline-none text-sm font-bold text-[#2D4A22] transition-colors
                       ${errors.city ? 'border-red-400' : 'border-gray-100 focus:border-[#2D4A22]'}`}
                   />
@@ -338,10 +346,10 @@ const Checkout = () => {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Address *</label>
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t('checkout.address')} *</label>
                   <input
                     type="text" name="address" value={formData.address}
-                    onChange={handleInputChange} placeholder="Street, Building, Room Number"
+                    onChange={handleInputChange} placeholder={t('checkout.addressPlaceholder')}
                     className={`w-full py-3 bg-transparent border-b-2 outline-none text-sm font-bold text-[#2D4A22] transition-colors
                       ${errors.address ? 'border-red-400' : 'border-gray-100 focus:border-[#2D4A22]'}`}
                   />
@@ -349,10 +357,10 @@ const Checkout = () => {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Notes (Optional)</label>
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t('checkout.notes')}</label>
                   <textarea
                     name="notes" value={formData.notes} onChange={handleInputChange}
-                    rows="2" placeholder="Special instructions..."
+                    rows="2" placeholder={t('checkout.notesPlaceholder')}
                     className="w-full py-3 bg-transparent border-b-2 border-gray-100 outline-none text-sm font-bold text-[#2D4A22] focus:border-[#2D4A22] resize-none transition-colors"
                   />
                 </div>
@@ -361,7 +369,7 @@ const Checkout = () => {
 
             <section>
               <h2 className="text-[11px] font-black text-[#2D4A22] uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
-                <span className="w-8 h-[1px] bg-[#F58220]" /> 02. Payment Method
+                <span className="w-8 h-[1px] bg-[#F58220]" /> 02. {t('checkout.paymentMethod')}
               </h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className={`cursor-pointer p-6 border-2 flex items-center gap-4 transition-all
@@ -371,8 +379,8 @@ const Checkout = () => {
                     onChange={handleInputChange} className="hidden" />
                   <FaMoneyBillWave className={formData.paymentMethod === 'cash' ? 'text-[#F58220]' : 'text-gray-300'} size={24} />
                   <div>
-                    <p className="text-[10px] font-black text-[#2D4A22] uppercase tracking-widest">Cash on Delivery</p>
-                    <p className="text-[8px] text-gray-400 font-bold uppercase mt-1">Pay the delivery rider directly</p>
+                    <p className="text-[10px] font-black text-[#2D4A22] uppercase tracking-widest">{t('checkout.cashOnDelivery')}</p>
+                    <p className="text-[8px] text-gray-400 font-bold uppercase mt-1">{t('checkout.codDesc')}</p>
                   </div>
                 </label>
 
@@ -384,8 +392,8 @@ const Checkout = () => {
                     onChange={handleInputChange} className="hidden" />
                   <FaCreditCard className={formData.paymentMethod === 'khqr' ? 'text-[#F58220]' : 'text-gray-300'} size={24} />
                   <div>
-                    <p className="text-[10px] font-black text-[#2D4A22] uppercase tracking-widest">Pay Now via KHQR</p>
-                    <p className="text-[8px] text-gray-400 font-bold uppercase mt-1">Auto-confirmed — no screenshot needed</p>
+                    <p className="text-[10px] font-black text-[#2D4A22] uppercase tracking-widest">{t('checkout.payKhqr')}</p>
+                    <p className="text-[8px] text-gray-400 font-bold uppercase mt-1">{t('checkout.khqrDesc')}</p>
                   </div>
                 </label>
               </div>
@@ -396,7 +404,7 @@ const Checkout = () => {
           <div className="lg:col-span-5">
             <div className="bg-gray-50 p-8 sticky top-32 border border-gray-100 rounded-sm">
               <h2 className="text-xs font-black text-[#2D4A22] uppercase tracking-[0.3em] mb-8 border-b border-gray-200 pb-4 flex items-center gap-2">
-                <MdOutlineReceiptLong size={16} /> Order Summary
+                <MdOutlineReceiptLong size={16} /> {t('checkout.orderSummary')}
               </h2>
 
               <div className="space-y-4 mb-8 max-h-[260px] overflow-y-auto pr-2">
@@ -407,12 +415,12 @@ const Checkout = () => {
                         <img
                           src={getImageUrl(item.image)} alt={item.name}
                           className="w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all"
-                          onError={e => { e.target.onerror = null; e.target.src = '/placeholder-food.jpg'; }}
+                          onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }}
                         />
                       </div>
                       <div>
                         <p className="text-[10px] font-black text-[#2D4A22] uppercase tracking-tighter leading-none">{item.name}</p>
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">Qty: {item.quantity}</p>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">{t('checkout.qty')}: {item.quantity}</p>
                       </div>
                     </div>
                     <span className="text-xs font-black text-[#2D4A22]">${(item.price * item.quantity).toFixed(2)}</span>
@@ -422,15 +430,15 @@ const Checkout = () => {
 
               <div className="space-y-4 pt-6 border-t border-gray-200">
                 <div className="flex justify-between text-[11px] font-bold text-gray-400 uppercase tracking-widest">
-                  <span>Subtotal</span>
+                  <span>{t('checkout.subtotal')}</span>
                   <span className="text-[#2D4A22]">${subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-[11px] font-bold text-gray-400 uppercase tracking-widest">
-                  <span className="italic text-[#F58220]">Delivery Fee</span>
+                  <span className="italic text-[#F58220]">{t('cart.deliveryFee')}</span>
                   <span className="text-[#2D4A22]">${delivery.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-end pt-6">
-                  <span className="text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Total Amount</span>
+                  <span className="text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">{t('checkout.totalAmount')}</span>
                   <span className="text-3xl font-black text-[#2D4A22]">${total.toFixed(2)}</span>
                 </div>
               </div>
@@ -440,7 +448,7 @@ const Checkout = () => {
                 disabled={isSubmitting}
                 className="w-full bg-[#2D4A22] text-white py-4 mt-10 font-black text-[11px] uppercase tracking-[0.4em] hover:bg-[#F58220] transition-all shadow-xl shadow-[#2D4A22]/20 active:scale-95 disabled:bg-gray-400"
               >
-                {isSubmitting ? 'Processing...' : 'Place Order Now'}
+                {isSubmitting ? t('checkout.processing') : t('checkout.placeOrder')}
               </button>
             </div>
           </div>
@@ -455,7 +463,7 @@ const Checkout = () => {
               <FaExclamationTriangle className="text-red-400" size={28} />
             </div>
             <h3 className="text-sm font-black text-[#1c2e35] uppercase tracking-tight mb-2">
-              Order Failed
+              {t('checkout.orderFailed')}
             </h3>
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide leading-relaxed mb-8">
               {orderError}
@@ -464,7 +472,7 @@ const Checkout = () => {
               onClick={() => setShowErrorModal(false)}
               className="w-full py-3 rounded-xl bg-[#2D4A22] text-white text-[11px] font-black uppercase tracking-widest hover:bg-[#F58220] transition-all"
             >
-              OK, Got It
+              {t('checkout.gotIt')}
             </button>
           </div>
         </div>
@@ -500,14 +508,14 @@ const Checkout = () => {
                       <QRCodeSVG value={qrStringValue} size={200} level="M" />
                     ) : (
                       <p className="text-[9px] font-bold text-gray-300 uppercase text-center px-4">
-                        {khqrError ? (khqrErrorMsg ?? 'Failed — please retry') : 'Generating QR...'}
+                        {khqrError ? (khqrErrorMsg ?? t('checkout.qrFailed')) : t('checkout.generatingQr')}
                       </p>
                     )}
                   </div>
                   <div className="text-center">
-                    <p className="text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Scan with any bank</p>
+                    <p className="text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">{t('checkout.scanAnyBank')}</p>
                     <p className="text-[16px] font-black text-[#F58220] tracking-tight mt-1 uppercase">
-                      Total: ${total.toFixed(2)}
+                      {t('checkout.total')}: ${total.toFixed(2)}
                     </p>
                   </div>
                   <BankBadges />
@@ -516,44 +524,44 @@ const Checkout = () => {
                 <div className="flex flex-col h-full justify-between py-1">
                   <div>
                     <h3 className="text-xl font-black text-[#245c0f] tracking-tighter uppercase leading-tight">{MERCHANT_NAME}</h3>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-5">Verified Merchant</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-5">{t('checkout.verifiedMerchant')}</p>
                   </div>
 
                   <div className="flex-1 flex flex-col items-center justify-center text-center">
                     {paymentConfirmed ? (
                       <>
                         <FaCheckCircle className="text-[#2D4A22] mb-3" size={48} />
-                        <p className="text-sm font-black text-[#2D4A22] uppercase">Payment Received!</p>
-                        <p className="text-[9px] font-bold text-gray-400 uppercase mt-1">Redirecting...</p>
+                        <p className="text-sm font-black text-[#2D4A22] uppercase">{t('checkout.paymentReceived')}</p>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase mt-1">{t('checkout.redirecting')}</p>
                       </>
                     ) : khqrError ? (
                       <>
                         <FaExclamationTriangle className="text-red-400 mb-3" size={32} />
                         <p className="text-xs font-bold text-red-400 uppercase text-center px-2 mb-4">
-                          {khqrErrorMsg ?? 'Something went wrong. Please try again.'}
+                          {khqrErrorMsg ?? t('error.generic')}
                         </p>
                         <button
                           onClick={handleRetryKhqr}
                           className="px-5 py-2 bg-[#2D4A22] text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-[#F58220] transition-all"
                         >
-                          Generate New QR
+                          {t('checkout.newQr')}
                         </button>
                       </>
                     ) : (
                       <>
                         <FaSpinner className="animate-spin text-gray-300 mb-3" size={32} />
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                          Waiting for your payment...
+                          {t('checkout.waitingPayment')}
                         </p>
                         <p className="text-[8px] font-bold text-gray-300 uppercase mt-1">
-                          Auto-detected within seconds
+                          {t('checkout.autoDetected')}
                         </p>
                       </>
                     )}
                   </div>
 
                   <p className="text-center text-[7px] font-bold text-gray-300 uppercase tracking-[0.2em] mt-4">
-                    Powered by KHQR — Cambodia's Unified QR Standard
+                    {t('checkout.poweredBy')}
                   </p>
                 </div>
               </div>

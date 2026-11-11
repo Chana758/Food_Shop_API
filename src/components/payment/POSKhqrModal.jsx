@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { generateDynamicKHQR } from '../../utils/khqr';
 import paymentService from '../../service/paymentService';
 import BankBadges from './BankBadges';
+import { useTranslation } from 'react-i18next';
 
 const EXPIRY_SECONDS = 180;
 const POLL_INTERVAL_MS = 4000;
@@ -19,6 +20,7 @@ const POLL_INTERVAL_MS = 4000;
  * @param {Function} props.onPaid - Callback triggered when payment is confirmed.
  */
 const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
+  const { t } = useTranslation();
   const [qrData, setQrData] = useState(null); 
   const [payment, setPayment] = useState(null); 
   const [status, setStatus] = useState('idle'); 
@@ -38,7 +40,7 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
 
     if (!generated) {
       setStatus('error');
-      setErrorMsg('Unable to generate the QR code. Please try again.');
+      setErrorMsg('posKhqr.qrFailed'); // translation key
       return;
     }
 
@@ -59,10 +61,7 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
     } catch (err) {
       console.error('Failed to create payment record:', err.response ?? err);
       setStatus('error');
-      setErrorMsg(
-        err.response?.data?.message ||
-          'Unable to create the payment record.'
-      );
+      setErrorMsg(err.response ? 'posKhqr.recordFailed' : 'error.network'); // translation key
     }
   }, [orderId, amount]);
 
@@ -105,7 +104,7 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
       clearInterval(countdownRef.current);
     };
 
-  }, [isOpen]);
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps -- run only when the modal opens/closes
 
   // Effect: Start polling and the countdown while waiting for payment.
   useEffect(() => {
@@ -143,13 +142,13 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
         <button
           onClick={onClose}
           className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl leading-none"
-          aria-label="Close"
+          aria-label={t('common.close')}
         >
           ✕
         </button>
 
         <h2 className="text-center text-lg font-bold text-gray-800 mb-1">
-          Scan KHQR to Pay
+          {t('posKhqr.title')}
         </h2>
 
         <p className="text-center text-2xl font-black text-primary mb-4">
@@ -161,7 +160,7 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
           <div className="flex flex-col items-center justify-center h-64 gap-3">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
             <p className="text-sm text-gray-500">
-              Generating QR code...
+              {t('checkout.generatingQr')}
             </p>
           </div>
         )}
@@ -174,7 +173,7 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
             </div>
 
             <p className="text-center text-sm text-gray-500 mt-3">
-              This QR code expires in{' '}
+              {t('posKhqr.expiresIn')}{' '}
               <span className="font-bold text-red-500">
                 {mm}:{ss}
               </span>
@@ -183,7 +182,7 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
             <div className="flex items-center justify-center gap-2 mt-2">
               <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
               <span className="text-xs text-gray-400">
-                Waiting for payment...
+                {t('checkout.waitingPayment')}
               </span>
             </div>
 
@@ -198,7 +197,7 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
               ✓
             </div>
             <p className="text-green-600 font-bold text-lg">
-              Payment Successful!
+              {t('checkout.paymentReceived')}
             </p>
           </div>
         )}
@@ -207,13 +206,13 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
         {status === 'expired' && (
           <div className="flex flex-col items-center justify-center h-64 gap-3">
             <p className="text-red-500 font-bold">
-              QR Code Expired
+              {t('posKhqr.expired')}
             </p>
             <button
               onClick={initPayment}
               className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold"
             >
-              Generate New QR Code
+              {t('checkout.newQr')}
             </button>
           </div>
         )}
@@ -222,13 +221,13 @@ const POSKhqrModal = ({ isOpen, onClose, orderId, amount, onPaid }) => {
         {status === 'error' && (
           <div className="flex flex-col items-center justify-center h-64 gap-3">
             <p className="text-red-500 font-bold text-center">
-              {errorMsg}
+              {t(errorMsg || 'error.generic')}
             </p>
             <button
               onClick={initPayment}
               className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold"
             >
-              Try Again
+              {t('error.retry')}
             </button>
           </div>
         )}

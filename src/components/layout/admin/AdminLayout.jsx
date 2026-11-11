@@ -1,42 +1,51 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
 import { useSettings } from '../../../context/SettingsContext';
 import { useAuth } from '../../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
+const PageLoader = () => (
+  <div className="flex items-center justify-center py-32">
+    <span className="h-8 w-8 rounded-full border-4 border-[#2D4A22]/20 border-t-[#F58220] animate-spin" />
+  </div>
+);
+
+// Values are translation keys (translated below with t())
 const PAGE_META = {
-  '/admin':              { title: 'Dashboard Overview',   placeholder: 'Search menu...' },
-  '/admin/dashboard':    { title: 'Dashboard Overview',   placeholder: 'Search menu...' },
-  '/admin/pos':          { title: 'POS / Sale',           placeholder: 'Search products...' },
-  '/admin/sales':        { title: 'Sale Management',      placeholder: 'Search menu...' },
-  '/admin/orders':       { title: 'Order Management',     placeholder: 'Search orders...' },
-  '/admin/delivery':     { title: 'Delivery Management',  placeholder: 'Search deliveries...' },
-  '/admin/payments':     { title: 'Payment Management',   placeholder: 'Search payments...' },
-  '/admin/favorites':    { title: 'Favorites',            placeholder: 'Search by customer or product...' },
-  '/admin/staff':        { title: 'Staff Management',     placeholder: 'Search staff...' },
-  '/admin/customers':    { title: 'Customer Management',  placeholder: 'Search customers...' },
-  '/admin/products':     { title: 'Product Management',   placeholder: 'Search products...' },
-  '/admin/categories':   { title: 'Category Management',  placeholder: 'Search categories...' },
-  '/admin/tables':       { title: 'Table Management',     placeholder: 'Search tables...' },
-  '/admin/reservations': { title: 'Reservations',         placeholder: 'Search by customer or table...' },
-  '/admin/contacts':     { title: 'Contact Messages',     placeholder: 'Search by name, email, subject...' },
-  '/admin/reviews':      { title: 'Review Management',    placeholder: 'Search by customer, product, comment...' },
-  '/admin/reports':      { title: 'Reports',              placeholder: 'Search menu...' },
-  '/admin/backup':       { title: 'Backup',               placeholder: 'Search menu...' },
-  '/admin/trash':        { title: 'Trash',                placeholder: 'Search menu...' },
-  '/admin/settings':     { title: 'Settings',             placeholder: 'Search menu...' },
+  '/admin':                { title: 'admin.page.dashboard', placeholder: 'admin.search.menu' },
+  '/admin/dashboard':      { title: 'admin.page.dashboard', placeholder: 'admin.search.menu' },
+  '/admin/pos':            { title: 'admin.page.pos', placeholder: 'admin.search.products' },
+  '/admin/sales':          { title: 'admin.page.sales', placeholder: 'admin.search.menu' },
+  '/admin/orders':         { title: 'admin.page.orders', placeholder: 'admin.search.orders' },
+  '/admin/delivery':       { title: 'admin.page.delivery', placeholder: 'admin.search.deliveries' },
+  '/admin/payments':       { title: 'admin.page.payments', placeholder: 'admin.search.payments' },
+  '/admin/favorites':      { title: 'admin.page.favorites', placeholder: 'admin.search.favorites' },
+  '/admin/staff':          { title: 'admin.page.staff', placeholder: 'admin.search.staff' },
+  '/admin/customers':      { title: 'admin.page.customers', placeholder: 'admin.search.customers' },
+  '/admin/products':       { title: 'admin.page.products', placeholder: 'admin.search.products' },
+  '/admin/categories':     { title: 'admin.page.categories', placeholder: 'admin.search.categories' },
+  '/admin/tables':         { title: 'admin.page.tables', placeholder: 'admin.search.tables' },
+  '/admin/reservations':   { title: 'admin.page.reservations', placeholder: 'admin.search.reservations' },
+  '/admin/contacts':       { title: 'admin.page.contacts', placeholder: 'admin.search.contacts' },
+  '/admin/reviews':        { title: 'admin.page.reviews', placeholder: 'admin.search.reviews' },
+  '/admin/reports':        { title: 'admin.page.reports', placeholder: 'admin.search.menu' },
+  '/admin/backup':         { title: 'admin.page.backup', placeholder: 'admin.search.menu' },
+  '/admin/trash':          { title: 'admin.page.trash', placeholder: 'admin.search.menu' },
+  '/admin/settings':       { title: 'admin.page.settings', placeholder: 'admin.search.menu' },
 };
 
 const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart'];
 
 const AdminLayout = () => {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const location = useLocation();
   const navigate = useNavigate();
-  const meta = PAGE_META[location.pathname] ?? { title: 'Admin', placeholder: 'Search menu...' };
+  const meta = PAGE_META[location.pathname] ?? { title: 'admin.page.admin', placeholder: 'admin.search.menu' };
 
   const { settings } = useSettings();
   const { logout }   = useAuth();
@@ -81,15 +90,18 @@ const AdminLayout = () => {
         }`}
       >
         <AdminHeader
-          title={meta.title}
-          placeholder={meta.placeholder}
+          title={t(meta.title)}
+          placeholder={t(meta.placeholder)}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           toggleSidebar={() => setCollapsed(prev => !prev)}
         />
 
         <main className="flex-1 overflow-y-auto">
-          <Outlet context={{ searchTerm, setSearchTerm }} />
+          {/* Admin pages are lazy-loaded (App.jsx); show a spinner while one downloads */}
+          <Suspense fallback={<PageLoader />}>
+            <Outlet context={{ searchTerm, setSearchTerm }} />
+          </Suspense>
         </main>
       </div>
     </div>

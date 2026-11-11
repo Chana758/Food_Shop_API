@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaArrowLeft } from 'react-icons/fa';
 import { authService } from '../../service/authService';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const Login = () => {
+  const { t } = useTranslation();
   const navigate  = useNavigate();
-  const { login } = useAuth(); 
+  const { login } = useAuth();
+  const justRegistered = useLocation().state?.registered;
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading]           = useState(false);
@@ -41,7 +44,11 @@ const Login = () => {
         }
       }
     } catch (err) {
-      setError(err.message || 'Invalid email or password');
+      // Show the message in the current language (the API answers in English)
+      if (err.message === 'Network Error') setError(t('error.network'));
+      else if (err.errors) setError(t('auth.checkFields'));
+      else if (err.message?.startsWith('There is a technical issue')) setError(t('auth.loginFailed'));
+      else setError(t('auth.invalidCredentials'));
     } finally {
       setLoading(false);
     }
@@ -55,20 +62,26 @@ const Login = () => {
           onClick={() => navigate('/')}
           className="flex items-center gap-2 text-[#2D4A22] font-black text-[10px] uppercase tracking-[0.3em] hover:text-[#F58220] transition-colors mb-12 group"
         >
-          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back to Home
+          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> {t('orderSuccess.backToHome')}
         </button>
 
         <div className="mb-12">
           <h1 className="text-5xl font-black text-[#2D4A22] uppercase tracking-tighter mb-4">
-            Sign <span className="text-[#F58220]">In</span>
+            {t('auth.signInA')} <span className="text-[#F58220]">{t('auth.signInB')}</span>
           </h1>
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.3em]">
-            Enter your credentials to access your account
+            {t('auth.signInSubtitle')}
           </p>
         </div>
 
         <div className="bg-white border border-gray-100 p-8 md:p-10 shadow-sm rounded-sm">
           <form onSubmit={handleSubmit} className="space-y-8">
+
+            {justRegistered && !error && (
+              <div className="bg-green-50 p-4 border-l-4 border-green-600 text-green-800 text-[10px] font-black uppercase tracking-widest">
+                {t('auth.registered')}
+              </div>
+            )}
 
             {error && (
               <div className="bg-red-50 p-4 border-l-4 border-red-500 text-red-700 text-[10px] font-black uppercase tracking-widest">
@@ -77,7 +90,7 @@ const Login = () => {
             )}
 
             <div className="space-y-3">
-              <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Email Address</label>
+              <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">{t('contact.emailAddress')}</label>
               <div className="relative group">
                 <FaEnvelope className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={14} />
                 <input
@@ -90,8 +103,8 @@ const Login = () => {
 
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Password</label>
-                <a href="#" className="text-[9px] font-black text-gray-400 hover:text-[#2D4A22] uppercase tracking-widest transition-colors">Forgot?</a>
+                <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">{t('auth.password')}</label>
+                <a href="#" className="text-[9px] font-black text-gray-400 hover:text-[#2D4A22] uppercase tracking-widest transition-colors">{t('auth.forgot')}</a>
               </div>
               <div className="relative group">
                 <FaLock className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={14} />
@@ -118,17 +131,17 @@ const Login = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Authenticating...
+                  {t('auth.signingIn')}
                 </span>
-              ) : 'Sign In Now'}
+              ) : t('auth.signInNow')}
             </button>
           </form>
 
           <div className="mt-10 pt-8 border-t border-gray-50 text-center">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              Don't have an account?{' '}
+              {t('auth.noAccount')}{' '}
               <Link to="/register" className="text-[#F58220] hover:text-[#2D4A22] font-black ml-2 transition-colors underline underline-offset-4">
-                Register Free
+                {t('auth.registerFree')}
               </Link>
             </p>
           </div>
@@ -137,7 +150,7 @@ const Login = () => {
         <div className="mt-8 flex items-center justify-center gap-4 py-4 px-6 bg-gray-50 border border-gray-100">
           <div className="w-2 h-2 rounded-full bg-[#F58220] animate-pulse" />
           <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
-            Demo: admin@foodshop.com / password123
+            {t('auth.demoLabel')}: demo-user@example.com / DemoUser@2026
           </p>
         </div>
       </div>

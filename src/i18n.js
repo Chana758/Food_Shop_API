@@ -30,8 +30,15 @@ i18n
       useSuspense: false 
     }
   });
+// <html lang> drives the Khmer font in index.css (and helps screen readers)
+const setHtmlLang = (lng) => {
+  document.documentElement.lang = lng === 'kh' ? 'km' : 'en';
+};
+setHtmlLang(i18n.language);
+
 i18n.on('languageChanged', (lng) => {
   localStorage.setItem('language', lng);
+  setHtmlLang(lng);
 });
 
 export default i18n;

@@ -5,10 +5,12 @@ import { FaArrowLeft } from 'react-icons/fa';
 import { BiLeaf } from 'react-icons/bi';
 import axiosInstance from '../../../api/axios';
 import { getImageUrl } from '../../../utils/imageUrl';
+import { useTranslation } from 'react-i18next';
 
 const PLACEHOLDER = 'https://placehold.co/400x300?text=Khmer+Fresh';
 
 const SearchResults = () => {
+  const { t } = useTranslation();
   const navigate                        = useNavigate();
   const [searchParams]                  = useSearchParams();
   const query                           = searchParams.get('q') || '';
@@ -74,7 +76,7 @@ const SearchResults = () => {
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-[#277d08] font-black text-[10px] uppercase tracking-[0.3em] hover:text-[#F58220] transition-colors group"
           >
-            <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back
+            <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> {t('common.back')}
           </button>
         </div>
 
@@ -86,7 +88,7 @@ const SearchResults = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="What are you craving today?"
+              placeholder={t('search.placeholder')}
               className="w-full pl-16 pr-10 py-4 rounded-sm border border-gray-100 bg-white focus:border-[#2D4A22] outline-none shadow-sm text-sm uppercase font-bold tracking-widest transition-all"
             />
           </form>
@@ -95,7 +97,7 @@ const SearchResults = () => {
         {/* Loading */}
         {isLoading && (
           <div className="text-center text-gray-400 font-bold tracking-widest uppercase">
-            Loading Results...
+            {t('search.loading')}
           </div>
         )}
 
@@ -107,7 +109,7 @@ const SearchResults = () => {
             {products.length > 0 && (
               <section>
                 <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mb-8 flex items-center gap-3">
-                  <span className="w-6 h-[1px] bg-[#F58220]" /> Products
+                  <span className="w-6 h-[1px] bg-[#F58220]" /> {t('search.products')}
                   <span className="text-[#F58220]">({products.length})</span>
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -135,7 +137,7 @@ const SearchResults = () => {
             {categories.length > 0 && (
               <section>
                 <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mb-8 flex items-center gap-3">
-                  <span className="w-6 h-[1px] bg-[#F58220]" /> Categories
+                  <span className="w-6 h-[1px] bg-[#F58220]" /> {t('search.categories')}
                   <span className="text-[#F58220]">({categories.length})</span>
                 </h2>
                 <div className="flex flex-wrap gap-3">
@@ -157,8 +159,8 @@ const SearchResults = () => {
         {/* No results */}
         {!isLoading && !hasResults && query && (
           <div className="text-center py-20">
-            <h3 className="text-[#2D4A22] font-black uppercase">No Matches Found</h3>
-            <p className="text-gray-400 text-xs mt-2 uppercase tracking-widest">Try a different keyword</p>
+            <h3 className="text-[#2D4A22] font-black uppercase">{t('search.noMatches')}</h3>
+            <p className="text-gray-400 text-xs mt-2 uppercase tracking-widest">{t('search.tryDifferent')}</p>
           </div>
         )}
 
@@ -166,7 +168,7 @@ const SearchResults = () => {
         {!isLoading && !query && (
           <div className="text-center py-20 opacity-40">
             <BiLeaf size={50} className="mx-auto text-gray-200 mb-4" />
-            <p className="uppercase font-bold text-gray-400 tracking-widest">Enter a keyword to search</p>
+            <p className="uppercase font-bold text-gray-400 tracking-widest">{t('search.enterKeyword')}</p>
           </div>
         )}
 

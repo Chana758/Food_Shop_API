@@ -132,7 +132,7 @@ const Features = () => {
             </div>
 
             <div className="relative z-10 inline-flex items-center gap-1.5 mt-7 -rotate-2 bg-[#c8f04a]/15 text-[#c8f04a] text-[11px] font-bold px-4 py-2 rounded-full tracking-wider transition-all duration-300 group-hover:bg-[#c8f04a] group-hover:text-[#1a3a32] w-fit">
-              100% Organic
+              {t('home.organic100')}
             </div>
           </div>
 
@@ -174,7 +174,7 @@ const Features = () => {
                 </h3>
                 <p className="text-[13px] text-[#b09d8d] leading-relaxed">{t('home.madeWithLoveDesc')}</p>
                 <span className="mt-3 inline-flex items-center gap-1.5 -rotate-2 bg-[#fde8d8] text-[#c05010] text-[11px] font-bold px-3 py-1.5 rounded-full">
-                  Family Recipes Since 1985
+                  {t('home.familyRecipes')}
                 </span>
               </div>
             </div>

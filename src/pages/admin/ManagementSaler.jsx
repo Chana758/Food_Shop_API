@@ -18,14 +18,14 @@ import { ENABLE_TEST_PAYMENT } from '../../config/khqrConfig';
 import POSKhqrModal from '../../components/payment/POSKhqrModal';
 import { useSettings } from '../../context/SettingsContext';
 import { getPublicImageUrl } from '../../utils/imageUrl';
+import tableService from '../../service/tableService';
+import i18n from '../../i18n';
+import { useTranslation } from 'react-i18next';
 
-// STATIC DATA
-const AVAILABLE_TABLES = [
-  { id: 1, name: 'Table 01' },
-  { id: 3, name: 'Table 03' },
-  { id: 5, name: 'Table 05' },
-  { id: 7, name: 'Table 07' },
-];
+// Escape text placed into the printed receipt's HTML
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+));
 
 // HELPERS
 // Images are served from the frontend's public/ folder (no more 127.0.0.1).
@@ -50,19 +50,20 @@ const CategoryIcon = ({ category, size = 18, className = '' }) => {
 // RECEIPT PRINT HELPER (Standard POS format)
 const printReceipt = ({
   cart, subtotal, discountAmt, grandTotal, paymentMethod, cashReceived, change,
-  orderType, tableId, notes, orderNo, cashierName, isTest, settings = {},
+  orderType, tableName, notes, orderNo, cashierName, isTest, settings = {},
 }) => {
-  const tableLabel = AVAILABLE_TABLES.find(t => String(t.id) === String(tableId))?.name || '';
+  const t = i18n.t.bind(i18n);
+  const tableLabel = tableName || '';
 
   const restaurantName = settings.restaurant_name || 'Khmer-Fresh';
-  const tagline        = settings.tagline || 'Authentic Traditional Food';
+  const tagline        = settings.tagline || t('admin.settings.taglinePlaceholder');
   const address         = settings.address || '';
   const phone           = settings.phone || '';
   const currency        = settings.currency || 'USD';
   const showLogo         = settings.show_logo_receipt !== false;
   const showTax           = settings.show_tax_receipt === true;
   const taxRate            = parseFloat(settings.tax_rate) || 0;
-  const footerNote          = settings.receipt_note || 'Thank you for dining with us!';
+  const footerNote          = settings.receipt_note || t('admin.settings.footerNotePlaceholder');
 
   const taxAmount = showTax && taxRate > 0
     ? Math.round((grandTotal * (taxRate / 100)) * 100) / 100
@@ -70,19 +71,19 @@ const printReceipt = ({
   const finalTotal = grandTotal + taxAmount;
 
   const paymentMethods = [
-    { id: 'cash',  label: 'Cash' },
-    { id: 'card',  label: 'Card' },
+    { id: 'cash',  label: t('paymentMethod.cash') },
+    { id: 'card',  label: t('paymentMethod.card') },
     { id: 'khqr',  label: 'KHQR' },
-    { id: 'test',  label: 'ក្លែងបង់' },
+    { id: 'test',  label: t('pos.testPay') },
   ];
   const methodLabel = paymentMethods.find(m => m.id === paymentMethod)?.label
     || (paymentMethod === 'khqr' ? 'KHQR' : paymentMethod);
 
   const html = `
-<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+<!DOCTYPE html><html lang="${i18n.language === 'kh' ? 'km' : 'en'}"><head><meta charset="UTF-8"/>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Courier New',monospace;font-size:12px;width:280px;padding:12px;}
+  body{font-family:'Courier New','Kantumruy Pro','Khmer OS',monospace;font-size:12px;width:280px;padding:12px;}
   h1{font-size:16px;text-align:center;font-weight:bold;margin-bottom:2px;}
   .sub{text-align:center;font-size:10px;color:#555;margin-bottom:2px;}
   .contact{text-align:center;font-size:9px;color:#777;margin-bottom:2px;}
@@ -105,20 +106,20 @@ const printReceipt = ({
   .table-box .value{font-size:18px;font-weight:900;}
 </style>
 </head><body>
-${showLogo ? `<h1>🍃 ${restaurantName}</h1>` : `<h1>${restaurantName}</h1>`}
-<div class="sub">${tagline}</div>
-${(address || phone) ? `<div class="contact">${[address, phone].filter(Boolean).join(' · ')}</div>` : ''}
-${isTest ? `<div class="center"><span class="test-badge">⚠ DEMO / TEST TRANSACTION</span></div>` : ''}
+${showLogo ? `<h1>🍃 ${esc(restaurantName)}</h1>` : `<h1>${esc(restaurantName)}</h1>`}
+<div class="sub">${esc(tagline)}</div>
+${(address || phone) ? `<div class="contact">${esc([address, phone].filter(Boolean).join(' · '))}</div>` : ''}
+${isTest ? `<div class="center"><span class="test-badge">⚠ ${t('pos.receipt.testBadge')}</span></div>` : ''}
 <hr/>
-<div class="row bold"><span>Receipt No.</span><span>${orderNo}</span></div>
-<div class="row"><span>Type</span><span>${orderType === 'dine-in' ? 'Dine-In' : 'Takeaway'}</span></div>
-<div class="row"><span>Date</span><span>${new Date().toLocaleString('km-KH',{hour12:false})}</span></div>
-<div class="row"><span>Cashier</span><span>${cashierName || 'Staff'}</span></div>
+<div class="row bold"><span>${t('pos.receipt.no')}</span><span>${esc(orderNo)}</span></div>
+<div class="row"><span>${t('admin.backup.type')}</span><span>${orderType === 'dine-in' ? t('orderType.dine-in') : t('orderType.takeaway')}</span></div>
+<div class="row"><span>${t('admin.common.date')}</span><span>${new Date().toLocaleString('km-KH',{hour12:false})}</span></div>
+<div class="row"><span>${t('pos.receipt.cashier')}</span><span>${esc(cashierName || t('admin.role.staff'))}</span></div>
 
 ${orderType === 'dine-in' && tableLabel ? `
 <div class="table-box">
-  <span class="label">Table No.</span>
-  <span class="value">${tableLabel.replace('Table ', '')}</span>
+  <span class="label">${t('pos.receipt.table')}</span>
+  <span class="value">${esc(tableLabel.replace(/^Table\s*/i, ''))}</span>
 </div>` : ''}
 
 <hr/>
@@ -127,30 +128,31 @@ ${cart.map(item => {
   const disc = hasDiscount(item.price, item.discount_price, item.discount_expires_at);
   return `
 <div class="row">
-  <span style="max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${item.name}</span>
+  <span style="max-width:160px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${esc(item.name)}</span>
   <span>${fmt(fp * item.qty, currency)}</span>
 </div>
 <div class="small row">
-  <span>  x${item.qty} @ ${fmt(fp, currency)}${disc ? ` (was ${fmt(item.price, currency)})` : ''}</span>
+  <span>  x${item.qty} @ ${fmt(fp, currency)}${disc ? ` (${t('pos.receipt.was')} ${fmt(item.price, currency)})` : ''}</span>
 </div>`;
 }).join('')}
 <hr/>
-<div class="row"><span>Subtotal</span><span>${fmt(subtotal, currency)}</span></div>
-${discountAmt > 0 ? `<div class="row discount"><span>Order Discount</span><span>-${fmt(discountAmt, currency)}</span></div>` : ''}
-${showTax && taxAmount > 0 ? `<div class="row tax"><span>Tax (${taxRate}%)</span><span>${fmt(taxAmount, currency)}</span></div>` : ''}
-<div class="row total"><span>TOTAL</span><span>${fmt(finalTotal, currency)}</span></div>
+<div class="row"><span>${t('checkout.subtotal')}</span><span>${fmt(subtotal, currency)}</span></div>
+${discountAmt > 0 ? `<div class="row discount"><span>${t('pos.receipt.discount')}</span><span>-${fmt(discountAmt, currency)}</span></div>` : ''}
+${showTax && taxAmount > 0 ? `<div class="row tax"><span>${t('pos.tax')} (${taxRate}%)</span><span>${fmt(taxAmount, currency)}</span></div>` : ''}
+<div class="row total"><span>${t('checkout.total')}</span><span>${fmt(finalTotal, currency)}</span></div>
 <hr/>
-<div class="row"><span>Payment</span><span>${methodLabel}</span></div>
+<div class="row"><span>${t('pos.receipt.payment')}</span><span>${esc(methodLabel)}</span></div>
 ${paymentMethod === 'cash' ? `
-<div class="row"><span>Cash</span><span>${fmt(cashReceived, currency)}</span></div>
-<div class="row change bold"><span>Change</span><span>${fmt(change, currency)}</span></div>` : ''}
-${notes ? `<hr/><div class="small">Notes: ${notes}</div>` : ''}
+<div class="row"><span>${t('paymentMethod.cash')}</span><span>${fmt(cashReceived, currency)}</span></div>
+<div class="row change bold"><span>${t('pos.change')}</span><span>${fmt(change, currency)}</span></div>` : ''}
+${notes ? `<hr/><div class="small">${t('orderHistory.note')}: ${esc(notes)}</div>` : ''}
 <hr/>
-<div class="center small">${footerNote}</div>
-${isTest ? `<div class="center small" style="margin-top:4px;color:#b45309;">This receipt is for testing only — not a real sale.</div>` : ''}
+<div class="center small">${esc(footerNote)}</div>
+${isTest ? `<div class="center small" style="margin-top:4px;color:#b45309;">${t('pos.receipt.testOnly')}</div>` : ''}
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=320,height=600');
+  if (!w) { alert(t('pos.popupBlocked')); return; } // popup blocker: the order is saved, only printing failed
   w.document.write(html);
   w.document.close();
   w.focus();
@@ -159,19 +161,21 @@ ${isTest ? `<div class="center small" style="margin-top:4px;color:#b45309;">This
 
 // MAIN COMPONENT
 const ManagementSaler = () => {
+  const { t } = useTranslation();
   const { searchTerm = '' } = useOutletContext() || {};
   const { settings } = useSettings();
 
   const currency = settings.currency || 'USD';
 
   const PAYMENT_METHODS = [
-    { id: 'cash',  label: 'Cash',   icon: LuBanknote   },
-    { id: 'card',  label: 'Card',   icon: LuCreditCard  },
-    { id: 'khqr',  label: 'KHQR',   icon: LuQrCode      },
-    ...(ENABLE_TEST_PAYMENT ? [{ id: 'test', label: 'ក្លែងបង់', icon: LuFlaskConical }] : []),
+    { id: 'cash',  label: t('paymentMethod.cash'), icon: LuBanknote   },
+    { id: 'card',  label: t('paymentMethod.card'), icon: LuCreditCard  },
+    { id: 'khqr',  label: 'KHQR',                  icon: LuQrCode      },
+    ...(ENABLE_TEST_PAYMENT ? [{ id: 'test', label: t('pos.testPay'), icon: LuFlaskConical }] : []),
   ];
 
   const [categories, setCategories] = useState([]);
+  const [tables,     setTables]     = useState([]); // real tables from the API (was a fake hard-coded list)
   const [products,   setProducts]   = useState([]);
   const [isLoading,  setIsLoading]  = useState(true);
   const [loadError,  setLoadError]  = useState(null);
@@ -203,11 +207,14 @@ const ManagementSaler = () => {
     const loadMenuData = async () => {
       setIsLoading(true); setLoadError(null);
       try {
-        const [catRes, prodRes] = await Promise.all([
+        const [catRes, prodRes, tableList] = await Promise.all([
           categoryService.getAll({ per_page: 100 }),
           productService.getAll({ per_page: 100 }),
+          tableService.getAll().catch(() => []),
         ]);
         if (!isMounted) return;
+        const tableRows = Array.isArray(tableList) ? tableList : (tableList?.data ?? []);
+        setTables(tableRows.filter(tb => tb.status !== 'inactive'));
         const catList  = catRes?.data?.data  || catRes?.data  || [];
         const prodList = prodRes?.data?.data || prodRes?.data || [];
         setCategories(Array.isArray(catList)  ? catList  : []);
@@ -288,7 +295,8 @@ const ManagementSaler = () => {
       cart, subtotal, discountAmt, grandTotal: preTaxTotal, // pass pre-tax; printReceipt re-applies from settings
       paymentMethod: methodOverride || paymentMethod,
       cashReceived: cashNum, change,
-      orderType, tableId, notes,
+      orderType, notes,
+      tableName: tables.find(tb => String(tb.id) === String(tableId))?.name,
       orderNo,
       cashierName: sessionStorage.getItem('cashierName'),
       isTest: isTestPay,
@@ -341,6 +349,7 @@ const ManagementSaler = () => {
       await paymentService.create({
         order_id: order.id,
         method: isTestPay ? 'cash' : paymentMethod,
+        paid_now: true,
         ...(isTestPay ? { transaction_ref: `DEMO-${Date.now()}` } : {}),
       });
 
@@ -348,7 +357,9 @@ const ManagementSaler = () => {
 
     } catch (err) {
       console.error('POS order failed:', err.response ?? err);
-      setPlaceError(err.response?.data?.message ?? 'Failed to save order. Please try again.');
+      const apiMessage = err.response?.data?.message ?? '';
+      const outOfStock = apiMessage.match(/^Insufficient stock for: (.+?)\.?$/);
+      setPlaceError(outOfStock ? t('checkout.outOfStock', { name: outOfStock[1] }) : !err.response ? t('error.network') : t('pos.saveFailed'));
       setIsPlacing(false);
     }
   };
@@ -381,15 +392,15 @@ const ManagementSaler = () => {
   if (isLoading) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8">
       <div className="w-12 h-12 border-4 border-amber-100 border-t-amber-500 rounded-full animate-spin shadow-md" />
-      <p className="text-xs font-black uppercase tracking-widest text-slate-400 mt-4 animate-pulse">Loading menu items...</p>
+      <p className="text-xs font-black uppercase tracking-widest text-slate-400 mt-4 animate-pulse">{t('menu.loading')}</p>
     </div>
   );
 
   if (loadError) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 text-rose-500 font-bold">
-      <p>Failed to load menu: {loadError.message}</p>
+      <p>{t('pos.loadFailed')}</p>
       <button onClick={() => window.location.reload()}
-        className="mt-4 px-5 py-2.5 bg-slate-900 text-white text-xs rounded-xl shadow-lg uppercase hover:bg-black transition-colors">Retry</button>
+        className="mt-4 px-5 py-2.5 bg-slate-900 text-white text-xs rounded-xl shadow-lg uppercase hover:bg-black transition-colors">{t('error.retry')}</button>
     </div>
   );
 
@@ -403,19 +414,19 @@ const ManagementSaler = () => {
           <div className="bg-[#111827] rounded-xl shadow-lg p-5 mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-white border border-slate-800">
             <div>
               <h1 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
-                POS Terminal <span className="text-[10px] bg-amber-400 text-slate-950 px-2 py-0.5 rounded font-black">PRO V2</span>
+                {t('pos.terminal')} <span className="text-[10px] bg-amber-400 text-slate-950 px-2 py-0.5 rounded font-black">PRO V2</span>
               </h1>
-              <p className="text-xs text-slate-400 font-medium mt-0.5">Select menu items below to generate tickets & orders seamlessly.</p>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">{t('pos.subtitle')}</p>
             </div>
             <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3 py-1.5 rounded-lg text-xs font-bold border border-emerald-500/20">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Terminal Online
+              {t('pos.online')}
             </div>
           </div>
 
           {searchTerm && (
             <div className="bg-white px-4 py-3 rounded-lg border border-slate-200 mb-4 text-xs text-slate-500 flex items-center justify-between shadow-sm">
-              <span>Found <strong className="text-slate-900 font-bold">{filtered.length}</strong> result{filtered.length !== 1 ? 's' : ''} for <span className="font-bold text-slate-900">"{searchTerm}"</span></span>
+              <span>{t('pos.found', { count: filtered.length })} <span className="font-bold text-slate-900">"{searchTerm}"</span></span>
             </div>
           )}
 
@@ -430,7 +441,7 @@ const ManagementSaler = () => {
                       : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                   }`}>
                   <CategoryIcon category={cat} size={15} className={isActive ? 'text-slate-950' : 'text-slate-400'} />
-                  {cat}
+                  {cat === 'All' ? t('status.all') : cat}
                 </button>
               );
             })}
@@ -441,8 +452,8 @@ const ManagementSaler = () => {
               <div className="w-16 h-16 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 mb-3 shadow-inner">
                 <LuSearch size={28} />
               </div>
-              <p className="text-xs font-black uppercase tracking-widest text-slate-700">No items found</p>
-              <p className="text-xs text-slate-400 mt-1">Try searching with a different keyword or category</p>
+              <p className="text-xs font-black uppercase tracking-widest text-slate-700">{t('menu.noItems')}</p>
+              <p className="text-xs text-slate-400 mt-1">{t('menu.tryAdjusting')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -505,7 +516,7 @@ const ManagementSaler = () => {
                         {product.name}
                       </h3>
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mt-0.5">
-                        {catName || 'General'}
+                        {catName || t('admin.products.general')}
                       </span>
 
                       <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-center gap-2 w-full">
@@ -536,12 +547,12 @@ const ManagementSaler = () => {
                   <LuShoppingCart size={16} />
                 </div>
                 <div>
-                  <h2 className="text-xs font-black uppercase tracking-widest">Current Order</h2>
-                  <p className="text-[9px] text-slate-400">Manage cart items & checkout</p>
+                  <h2 className="text-xs font-black uppercase tracking-widest">{t('pos.currentOrder')}</h2>
+                  <p className="text-[9px] text-slate-400">{t('pos.manageCart')}</p>
                 </div>
               </div>
               <span className="bg-amber-400 text-slate-950 text-[10px] font-black rounded px-2.5 py-1">
-                {totalItems} items
+                {t('pos.nItems', { count: totalItems })}
               </span>
             </div>
 
@@ -553,7 +564,7 @@ const ManagementSaler = () => {
                     className={`flex-1 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
                       orderType === 'dine-in' ? 'bg-[#111827] text-amber-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}>
-                    Dine-In
+                    {t('orderType.dine-in')}
                   </button>
                 )}
                 {settings.takeaway !== false && (
@@ -562,15 +573,15 @@ const ManagementSaler = () => {
                     className={`flex-1 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
                       orderType === 'takeaway' ? 'bg-[#111827] text-amber-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}>
-                    Takeaway
+                    {t('orderType.takeaway')}
                   </button>
                 )}
               </div>
               {settings.table_service !== false && orderType === 'dine-in' && (
                 <select value={tableId} onChange={e => setTableId(e.target.value)}
                   className="w-full mt-2.5 border border-slate-200 rounded-lg px-3 py-2.5 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:border-slate-900">
-                  <option value="">Select table number…</option>
-                  {AVAILABLE_TABLES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  <option value="">{t('pos.selectTable')}</option>
+                  {tables.map(tb => <option key={tb.id} value={tb.id}>{tb.name}</option>)}
                 </select>
               )}
             </div>
@@ -581,8 +592,8 @@ const ManagementSaler = () => {
                   <div className="w-14 h-14 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 mb-2">
                     <LuPackage size={26} />
                   </div>
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Cart is empty</p>
-                  <p className="text-[11px] text-slate-300 mt-1">Select menu items to begin transaction</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t('cart.empty')}</p>
+                  <p className="text-[11px] text-slate-300 mt-1">{t('pos.cartEmptySub')}</p>
                 </div>
               ) : (
                 <div className="space-y-2.5">
@@ -629,7 +640,7 @@ const ManagementSaler = () => {
             </div>
 
             <div className="p-4 border-t border-slate-100 bg-white space-y-3 shadow-md">
-              <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add kitchen or order notes..." rows={2}
+              <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('pos.notesPlaceholder')} rows={2}
                 className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-slate-900 resize-none bg-slate-50/50" />
 
               {cart.length > 0 && (
@@ -639,12 +650,12 @@ const ManagementSaler = () => {
                   </div>
                   <div className="flex flex-1 border border-slate-200 rounded-lg overflow-hidden bg-slate-50/50">
                     <button
-                      onClick={() => setDiscountType(t => t === '%' ? '$' : '%')}
+                      onClick={() => setDiscountType(d => d === '%' ? '$' : '%')}
                       className="px-3 py-1.5 bg-white text-xs font-black text-slate-600 border-r border-slate-200">
                       {discountType}
                     </button>
                     <input
-                      type="number" min="0" placeholder="Staff discount"
+                      type="number" min="0" placeholder={t('pos.staffDiscount')}
                       value={discountValue}
                       onChange={e => setDiscountValue(e.target.value)}
                       className="flex-1 px-3 py-1.5 text-xs bg-transparent focus:outline-none font-bold text-slate-900"
@@ -660,29 +671,29 @@ const ManagementSaler = () => {
               {cart.length > 0 ? (
                 <div className="space-y-1.5 text-xs bg-slate-50 p-3 rounded-lg border border-slate-200/80">
                   <div className="flex justify-between text-slate-400 font-medium">
-                    <span className="uppercase font-black tracking-wider text-[10px]">Subtotal</span>
+                    <span className="uppercase font-black tracking-wider text-[10px]">{t('checkout.subtotal')}</span>
                     <span>{fmt(subtotal, currency)}</span>
                   </div>
                   {discountAmt > 0 && (
                     <div className="flex justify-between text-rose-600 font-bold">
-                      <span className="text-[10px] uppercase tracking-wider font-black">Discount</span>
+                      <span className="text-[10px] uppercase tracking-wider font-black">{t('pos.discount')}</span>
                       <span>-{fmt(discountAmt, currency)}</span>
                     </div>
                   )}
                   {showTax && taxAmt > 0 && (
                     <div className="flex justify-between text-slate-600 font-bold">
-                      <span className="text-[10px] uppercase tracking-wider font-black">Tax ({taxRate}%)</span>
+                      <span className="text-[10px] uppercase tracking-wider font-black">{t('pos.tax')} ({taxRate}%)</span>
                       <span>{fmt(taxAmt, currency)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t border-slate-200">
-                    <span className="text-xs uppercase tracking-wider font-black text-slate-500 self-center">Total Amount</span>
+                    <span className="text-xs uppercase tracking-wider font-black text-slate-500 self-center">{t('checkout.totalAmount')}</span>
                     <span className="text-emerald-700 text-lg">{fmt(grandTotal, currency)}</span>
                   </div>
                 </div>
               ) : (
                 <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200/80">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-400">Total Amount</span>
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-400">{t('checkout.totalAmount')}</span>
                   <span className="text-base font-black text-slate-900">{fmt(0, currency)}</span>
                 </div>
               )}
@@ -693,7 +704,7 @@ const ManagementSaler = () => {
                 className={`w-full py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 ${
                   canPlace ? 'bg-[#111827] text-amber-300 hover:bg-black' : 'bg-slate-100 text-slate-300 cursor-not-allowed'
                 }`}>
-                Proceed to Checkout
+                {t('cart.proceedCheckout')}
               </button>
             </div>
           </div>
@@ -708,7 +719,7 @@ const ManagementSaler = () => {
             <div className="bg-[#111827] text-white px-5 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <LuBanknote size={18} className="text-amber-300" />
-                <h2 className="font-black uppercase tracking-widest text-xs">Payment & Checkout</h2>
+                <h2 className="font-black uppercase tracking-widest text-xs">{t('pos.paymentCheckout')}</h2>
               </div>
               <button onClick={() => { if (!isPlacing) setShowPayment(false); }} className="text-white/60 hover:text-white">
                 <LuX size={18} />
@@ -720,36 +731,36 @@ const ManagementSaler = () => {
                 <div className="bg-amber-50 border border-dashed border-amber-300 rounded-xl p-3 flex items-center gap-2.5 text-amber-700">
                   <LuFlaskConical size={16} className="flex-shrink-0" />
                   <p className="text-[11px] font-bold leading-snug">
-                    Demo mode — this places a real order but skips actual payment collection. Use for staff training only.
+                    {t('pos.demoMode')}
                   </p>
                 </div>
               )}
 
               <div className="bg-slate-50 rounded-xl p-4 space-y-2 text-xs border border-slate-200">
                 <div className="flex justify-between text-slate-500">
-                  <span>Items count:</span>
+                  <span>{t('pos.itemsCount')}:</span>
                   <span className="font-bold text-slate-900">{totalItems} units</span>
                 </div>
                 {discountAmt > 0 && (
                   <div className="flex justify-between text-rose-600 font-bold">
-                    <span>Discount applied:</span>
+                    <span>{t('pos.discountApplied')}:</span>
                     <span>-{fmt(discountAmt, currency)}</span>
                   </div>
                 )}
                 {showTax && taxAmt > 0 && (
                   <div className="flex justify-between text-slate-600 font-bold">
-                    <span>Tax ({taxRate}%):</span>
+                    <span>{t('pos.tax')} ({taxRate}%):</span>
                     <span>{fmt(taxAmt, currency)}</span>
                   </div>
                 )}
                 <div className="border-t border-slate-200 pt-2 flex justify-between font-black text-slate-900 text-base">
-                  <span>Grand Total</span>
+                  <span>{t('cart.grandTotal')}</span>
                   <span className="text-emerald-700">{fmt(grandTotal, currency)}</span>
                 </div>
               </div>
 
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Select Payment Method</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">{t('pos.selectMethod')}</p>
                 <div className={`grid gap-2 ${ENABLE_TEST_PAYMENT ? 'grid-cols-2' : 'grid-cols-3'}`}>
                   {PAYMENT_METHODS.map(m => {
                     const Icon = m.icon;
@@ -771,7 +782,7 @@ const ManagementSaler = () => {
               {paymentMethod === 'cash' && (
                 <div className="space-y-3">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Cash Received</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">{t('pos.cashReceived')}</p>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-base">
                         {currency === 'KHR' ? '៛' : currency === 'THB' ? '฿' : '$'}
@@ -792,12 +803,12 @@ const ManagementSaler = () => {
                     <div className={`rounded-xl p-3.5 text-center transition-all ${cashNum >= grandTotal ? 'bg-emerald-50 border border-emerald-200' : 'bg-rose-50 border border-rose-200'}`}>
                       {cashNum >= grandTotal ? (
                         <>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Change Due</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">{t('pos.changeDue')}</p>
                           <p className="text-2xl font-black text-emerald-700">{fmt(change, currency)}</p>
                         </>
                       ) : (
                         <>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-rose-600">Remaining Balance</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-rose-600">{t('pos.remaining')}</p>
                           <p className="text-2xl font-black text-rose-600">{fmt(grandTotal - cashNum, currency)}</p>
                         </>
                       )}
@@ -808,20 +819,20 @@ const ManagementSaler = () => {
 
               {paymentMethod === 'card' && (
                 <div className="bg-sky-50 border border-sky-100 rounded-xl p-4 text-center text-xs text-sky-700 font-bold">
-                  Please process card settlement on terminal.
+                  {t('pos.cardHint')}
                 </div>
               )}
 
               {paymentMethod === 'khqr' && (
                 <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-center text-xs text-amber-800 font-bold flex items-center gap-2.5">
                   <LuQrCode size={20} className="flex-shrink-0" />
-                  <span>Tap "Generate QR" below to show a live KHQR code for the customer to scan with their banking app.</span>
+                  <span>{t('pos.khqrHint')}</span>
                 </div>
               )}
 
               {paymentMethod === 'test' && (
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center text-xs text-slate-500 font-bold">
-                  No payment collection needed — clicking confirm will simulate a successful cash payment.
+                  {t('pos.testHint')}
                 </div>
               )}
 
@@ -840,12 +851,12 @@ const ManagementSaler = () => {
                   'bg-slate-100 text-slate-300 cursor-not-allowed'
                 }`}>
                 {placed
-                  ? <><LuCheck size={16} /> Order Successfully Placed!</>
+                  ? <><LuCheck size={16} /> {t('pos.placed')}</>
                   : isPlacing
-                  ? <><FaSpinner className="animate-spin" size={16} /> Saving Order...</>
+                  ? <><FaSpinner className="animate-spin" size={16} /> {t('pos.saving')}</>
                   : isKhqrPay
-                  ? <><LuQrCode size={16} /> Generate QR & Wait for Payment</>
-                  : <><LuPrinter size={16} /> {isTestPay ? 'Confirm Demo & Print' : 'Confirm & Print Receipt'}</>}
+                  ? <><LuQrCode size={16} /> {t('pos.generateQr')}</>
+                  : <><LuPrinter size={16} /> {isTestPay ? t('pos.confirmDemo') : t('pos.confirmPrint')}</>}
               </button>
             </div>
           </div>

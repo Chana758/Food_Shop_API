@@ -6,6 +6,7 @@ import {
   LuClock3, LuShieldCheck, LuShieldAlert
 } from 'react-icons/lu';
 import { useAdminReview } from '../../hooks/useReview';
+import { useTranslation } from 'react-i18next';
 
 /*
   Palette matched to the Khmer-Fresh admin (see Dashboard / Contacts /
@@ -49,6 +50,7 @@ const Stars = ({ rating, size = 14 }) => (
 
 // ── component ───
 const ReviewManagement = () => {
+  const { t, i18n } = useTranslation();
   const { searchTerm: search } = useOutletContext() ?? { searchTerm: '' };
 
   const [filter, setFilter]       = useState('all');
@@ -76,27 +78,27 @@ const ReviewManagement = () => {
   const handleApprove = async (id) => {
     try {
       await approveReview(id);
-      showMsg('success', 'Review approved!');
+      showMsg('success', t('admin.reviews.approved'));
     } catch {
-      showMsg('error', 'Failed to approve review.');
+      showMsg('error', t('admin.reviews.approveFailed'));
     }
   };
 
   const handleReject = async (id) => {
     try {
       await rejectReview(id);
-      showMsg('success', 'Review rejected!');
+      showMsg('success', t('admin.reviews.rejected'));
     } catch {
-      showMsg('error', 'Failed to reject review.');
+      showMsg('error', t('admin.reviews.rejectFailed'));
     }
   };
 
   const handleDelete = async (id) => {
     try {
       await deleteReview(id);
-      showMsg('success', 'Review deleted!');
+      showMsg('success', t('admin.reviews.deleted'));
     } catch {
-      showMsg('error', 'Failed to delete review.');
+      showMsg('error', t('admin.reviews.deleteFailed'));
     }
   };
 
@@ -107,10 +109,10 @@ const ReviewManagement = () => {
   const rejectedReviews = stats?.rejected ?? reviews.filter(r => r.status === 'rejected').length;
 
   const statCards = [
-    { label: 'TOTAL REVIEWS', value: totalReviews,    fill: 'ink',    sub: 'Active tracking' },
-    { label: 'PENDING',       value: pendingReviews,  fill: 'chili',  sub: 'Requires action' },
-    { label: 'APPROVED',      value: approvedReviews, fill: 'herb',   sub: 'Published reviews' },
-    { label: 'REJECTED',      value: rejectedReviews, fill: 'maroon', sub: 'Declined reviews' },
+    { label: t('admin.reviews.total'),  value: totalReviews,    fill: 'ink',    sub: t('admin.reviews.totalSub') },
+    { label: t('status.pending'),       value: pendingReviews,  fill: 'chili',  sub: t('admin.reviews.pendingSub') },
+    { label: t('status.approved'),      value: approvedReviews, fill: 'herb',   sub: t('admin.reviews.approvedSub') },
+    { label: t('status.rejected'),      value: rejectedReviews, fill: 'maroon', sub: t('admin.reviews.rejectedSub') },
   ];
 
   return (
@@ -128,8 +130,8 @@ const ReviewManagement = () => {
       {/* ── STATS CARDS — bold solid fills ── */}
       <div className={`${CARD} p-5 space-y-4`}>
         <div>
-          <h2 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">Review performance report</h2>
-          <p className="text-xs font-semibold text-[#8B9296] mt-0.5">Daily, monthly, and yearly review metrics with actionable data</p>
+          <h2 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">{t('admin.reviews.reportTitle')}</h2>
+          <p className="text-xs font-semibold text-[#8B9296] mt-0.5">{t('admin.reviews.reportSub')}</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -151,7 +153,7 @@ const ReviewManagement = () => {
       {/* Filter Bar */}
       <div className={`${CARD} p-5 flex flex-wrap gap-3 items-center`}>
         <span className="text-xs font-black uppercase tracking-wider text-[#5B6B6F] flex items-center gap-1.5 mr-2">
-          <LuFilter size={15} /> Filter:
+          <LuFilter size={15} /> {t('admin.common.filter')}:
         </span>
         <div className="flex gap-2 flex-wrap flex-1">
           {FILTERS.map(f => (
@@ -160,11 +162,11 @@ const ReviewManagement = () => {
               onClick={() => setFilter(f)}
               className={`px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border ${filter === f ? 'bg-[#1E2A2E] text-white border-[#1E2A2E] shadow-xs' : 'bg-[#FBF9F5] text-[#5B6B6F] border-[#E8E3D8] hover:bg-[#F3F0E9]'}`}
             >
-              {f}
+              {t(`status.${f}`)}
             </button>
           ))}
         </div>
-        <button onClick={refetch} className="p-2.5 bg-[#FBF9F5] hover:bg-[#F3F0E9] border border-[#E8E3D8] rounded-lg transition-colors cursor-pointer text-[#5B6B6F] font-bold" title="Refresh">
+        <button onClick={refetch} className="p-2.5 bg-[#FBF9F5] hover:bg-[#F3F0E9] border border-[#E8E3D8] rounded-lg transition-colors cursor-pointer text-[#5B6B6F] font-bold" title={t('admin.common.refresh')}>
           <LuRefreshCw size={15} />
         </button>
       </div>
@@ -174,23 +176,23 @@ const ReviewManagement = () => {
         <div className="px-6 py-4 border-b border-[#EFEBE2] flex justify-between items-center bg-[#FBF9F5]">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#3F7D58]"></span>
-            <h3 className="text-xs font-black uppercase tracking-wider text-[#1E2A2E]">All Reviews</h3>
+            <h3 className="text-xs font-black uppercase tracking-wider text-[#1E2A2E]">{t('admin.reviews.all')}</h3>
           </div>
           <span className="text-xs bg-[#EFEBE2] text-[#1E2A2E] px-3 py-1 rounded-full font-black">
-            {filtered.length} records
+            {t('admin.common.records', { count: filtered.length })}
           </span>
         </div>
 
         {loading ? (
           <div className="p-16 text-center text-[#8B9296] font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2">
-            <LuRefreshCw className="animate-spin" size={16} /> Loading reviews...
+            <LuRefreshCw className="animate-spin" size={16} /> {t('product.loadingReviews')}
           </div>
         ) : error ? (
-          <div className="p-16 text-center text-[#B5453B] font-bold text-sm">{error}</div>
+          <div className="p-16 text-center text-[#B5453B] font-bold text-sm">{t('admin.common.loadFailed')}</div>
         ) : filtered.length === 0 ? (
           <div className="p-16 text-center space-y-2">
             <LuStar size={40} className="text-[#E3DFD3] mx-auto" />
-            <p className="text-[#9AA0A0] font-black text-xs uppercase tracking-wider">No reviews found</p>
+            <p className="text-[#9AA0A0] font-black text-xs uppercase tracking-wider">{t('admin.reviews.none')}</p>
           </div>
         ) : (
           <div className="divide-y divide-[#EFEBE2]">
@@ -200,14 +202,14 @@ const ReviewManagement = () => {
                   <div className="flex items-center gap-3 flex-wrap">
                     <Stars rating={r.rating} />
                     <span className={`px-3 py-0.5 rounded-full text-[11px] font-black uppercase border whitespace-nowrap ${STATUS_STYLES[r.status] ?? STATUS_STYLES.pending}`}>
-                      {r.status}
+                      {t(`status.${r.status}`, r.status)}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-4 text-xs text-[#8B9296] flex-wrap font-semibold">
                     <span className="flex items-center gap-1.5">
                       <LuUser size={14} className="text-[#9AA0A0]" />
-                      <span className="font-bold text-[#1E2A2E]">{r.user?.name || 'Guest'}</span>
+                      <span className="font-bold text-[#1E2A2E]">{r.user?.name || t('nav.guest')}</span>
                     </span>
                     <span className="flex items-center gap-1.5">
                       <LuPackage size={14} className="text-[#9AA0A0]" />
@@ -215,7 +217,7 @@ const ReviewManagement = () => {
                     </span>
                     <span className="flex items-center gap-1.5 text-[#9AA0A0]">
                       <LuClock size={14} />
-                      {new Date(r.created_at).toLocaleDateString()}
+                      {new Date(r.created_at).toLocaleDateString(i18n.language === 'kh' ? 'km-KH' : 'en-US')}
                     </span>
                   </div>
 
@@ -228,12 +230,12 @@ const ReviewManagement = () => {
 
                 <div className="flex gap-1.5 flex-shrink-0">
                   {r.status !== 'approved' && (
-                    <ActionBtn color="herb" icon={<LuCheck size={14}/>} title="Approve" onClick={() => handleApprove(r.id)} />
+                    <ActionBtn color="herb" icon={<LuCheck size={14}/>} title={t('admin.reviews.approve')} onClick={() => handleApprove(r.id)} />
                   )}
                   {r.status !== 'rejected' && (
-                    <ActionBtn color="chili" icon={<LuX size={14}/>} title="Reject" onClick={() => handleReject(r.id)} />
+                    <ActionBtn color="chili" icon={<LuX size={14}/>} title={t('admin.reviews.reject')} onClick={() => handleReject(r.id)} />
                   )}
-                  <ActionBtn color="neutral" icon={<LuTrash2 size={14}/>} title="Delete" onClick={() => handleDelete(r.id)} />
+                  <ActionBtn color="neutral" icon={<LuTrash2 size={14}/>} title={t('common.delete')} onClick={() => { if (window.confirm(t('admin.reviews.confirmDelete'))) handleDelete(r.id); }} />
                 </div>
               </div>
             ))}

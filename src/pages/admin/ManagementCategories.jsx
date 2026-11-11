@@ -6,7 +6,8 @@ import {
   LuPlus, LuPencil, LuTrash, LuShapes, LuImage, LuFolder, LuSave
 } from "react-icons/lu";
 import { categoryService } from "../../service/categoryService";
-import { getPublicImageUrl } from '../../utils/imageUrl';
+import { getPublicImageUrl, getImageUrl } from '../../utils/imageUrl';
+import { useTranslation } from 'react-i18next';
 /*
   Palette matched to the Khmer-Fresh admin (see Dashboard / Contacts /
   Delivery): Ink #1E2A2E · Gold #D99A3D · Herb #3F7D58 · Sky #3B6E91 ·
@@ -17,6 +18,7 @@ const CARD = "bg-white rounded-2xl border border-[#E8E3D8] shadow-[0_1px_3px_rgb
 const PAGE_BG = "var(--page-bg)";
 
 const ManagementCategories = () => {
+  const { t } = useTranslation();
   const { searchTerm = "" } = useOutletContext() || {};
 
   const [categories, setCategories]   = useState([]);
@@ -29,7 +31,7 @@ const ManagementCategories = () => {
 
   const ITEMS_PER_PAGE = 6;
 
-  useEffect(() => { fetchCategories(); }, []);
+  useEffect(() => { fetchCategories(); }, []); // eslint-disable-line react-hooks/exhaustive-deps -- load once
   useEffect(() => { setCurrentPage(1); }, [searchTerm]);
 
   const fetchCategories = async () => {
@@ -39,20 +41,20 @@ const ManagementCategories = () => {
       const data   = result?.data?.data || result?.data || result || [];
       setCategories(Array.isArray(data) ? data : []);
     } catch {
-      toast.error("Failed to load categories");
+      toast.error(t('admin.categories.loadFailed'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this category?")) return;
+    if (!window.confirm(t('admin.categories.confirmDelete'))) return;
     try {
       await categoryService.delete(id);
-      toast.success("Category deleted");
+      toast.success(t('admin.categories.deleted'));
       fetchCategories();
     } catch {
-      toast.error("Failed to delete");
+      toast.error(t('admin.categories.deleteFailed'));
     }
   };
 
@@ -73,11 +75,11 @@ const ManagementCategories = () => {
         data.append("_method", "PUT");
         await categoryService.update(formData.id, data);
       }
-      toast.success("Saved successfully!");
+      toast.success(t('admin.common.saved'));
       setIsModalOpen(false);
       fetchCategories();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Something went wrong");
+      toast.error(error.response?.status === 422 ? t('admin.categories.invalid') : t('error.generic'));
     } finally {
       setIsSaving(false);
     }
@@ -97,22 +99,22 @@ const ManagementCategories = () => {
   // of the same admin instead of a generic slate/emerald/blue screen.
   const statCards = [
     {
-      title: "Total Categories",
-      label: "All categories",
+      title: t('admin.categories.total'),
+      label: t('admin.categories.all'),
       val: categories.length,
       icon: LuShapes,
       fill: "ink",
     },
     {
-      title: "With Media",
-      label: "Contains image",
+      title: t('admin.categories.withMedia'),
+      label: t('admin.categories.containsImage'),
       val: categories.filter(c => c.image).length,
       icon: LuImage,
       fill: "sky",
     },
     {
-      title: "Filtered",
-      label: "Search results",
+      title: t('admin.categories.filtered'),
+      label: t('admin.categories.searchResults'),
       val: filteredData.length,
       icon: LuFolder,
       fill: "gold",
@@ -132,8 +134,8 @@ const ManagementCategories = () => {
       {/* ── HEADER & ADD BUTTON ── */}
       <div className={`${CARD} p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4`}>
         <div>
-          <h1 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">Category Management</h1>
-          <p className="text-xs text-[#8B9296] font-semibold mt-0.5">Manage and organize your restaurant menu categories</p>
+          <h1 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">{t('admin.page.categories')}</h1>
+          <p className="text-xs text-[#8B9296] font-semibold mt-0.5">{t('admin.categories.subtitle')}</p>
         </div>
         <button
           onClick={() => {
@@ -143,7 +145,7 @@ const ManagementCategories = () => {
           }}
           className="bg-[#1E2A2E] text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#2A3B3F] transition cursor-pointer shadow-sm whitespace-nowrap flex items-center gap-2"
         >
-          <LuPlus size={15} /> Add New Category
+          <LuPlus size={15} /> {t('admin.categories.addNew')}
         </button>
       </div>
 
@@ -174,19 +176,19 @@ const ManagementCategories = () => {
           <thead className="bg-[#FBF9F5] text-[#8B9296] text-[11px] font-black uppercase tracking-wider border-b border-[#EFEBE2]">
             <tr>
               <th className="px-5 py-3 w-16">#</th>
-              <th className="px-5 py-3 w-48">Name</th>
-              <th className="px-5 py-3 w-32">Image</th>
-              <th className="px-5 py-3">Description</th>
-              <th className="px-5 py-3 text-center w-28">Actions</th>
+              <th className="px-5 py-3 w-48">{t('admin.common.name')}</th>
+              <th className="px-5 py-3 w-32">{t('admin.common.image')}</th>
+              <th className="px-5 py-3">{t('admin.common.description')}</th>
+              <th className="px-5 py-3 text-center w-28">{t('admin.common.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EFEBE2]">
             {loading ? (
-              <tr><td colSpan="5" className="text-center py-12 text-xs font-bold text-[#9AA0A0] uppercase tracking-widest">Loading...</td></tr>
+              <tr><td colSpan="5" className="text-center py-12 text-xs font-bold text-[#9AA0A0] uppercase tracking-widest">{t('common.loading')}</td></tr>
             ) : currentItems.length === 0 ? (
               <tr>
                 <td colSpan="5" className="text-center py-12 text-[#9AA0A0] font-bold text-xs uppercase tracking-wider">
-                  No categories found {searchTerm && `for "${searchTerm}"`}
+                  {searchTerm ? t('admin.common.noMatch', { term: searchTerm }) : t('admin.categories.none')}
                 </td>
               </tr>
             ) : (
@@ -201,25 +203,28 @@ const ManagementCategories = () => {
                       src={getPublicImageUrl(cat.image,'https://placehold.co/400x300')}
                       className="w-16 h-10 object-cover rounded-md border border-[#E8E3D8] bg-[#FBF9F5] shadow-2xs"
                       alt={cat.name}
-                      onError={e => e.target.src = "https://placehold.co/100x100"}
+                      onError={e => {
+                        const backendUrl = getImageUrl(cat.image, 'https://placehold.co/100x100');
+                        e.target.src = e.target.src === backendUrl ? 'https://placehold.co/100x100' : backendUrl;
+                      }}
                     />
                   </td>
                   <td className="px-5 py-3.5 text-[#5B6B6F] text-xs font-medium max-w-xs truncate">
-                    {cat.description || "No description"}
+                    {cat.description || t('category.noDescription')}
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex justify-center gap-1.5">
                       <button
                         onClick={() => { setIsAddMode(false); setFormData(cat); setIsModalOpen(true); }}
                         className="p-2 bg-white border border-[#E8E3D8] hover:bg-[#FBF9F5] text-[#5B6B6F] rounded-lg cursor-pointer transition shadow-2xs"
-                        title="Edit"
+                        title={t('common.edit')}
                       >
                         <LuPencil size={13} />
                       </button>
                       <button
                         onClick={() => handleDelete(cat.id)}
                         className="p-2 bg-white border border-[#EBC7C1] hover:bg-[#F5E1DE] text-[#B5453B] rounded-lg cursor-pointer transition shadow-2xs"
-                        title="Delete"
+                        title={t('common.delete')}
                       >
                         <LuTrash size={13} />
                       </button>
@@ -260,16 +265,16 @@ const ManagementCategories = () => {
                 <LuPlus size={16} />
               </div>
               <h2 className="text-xs font-black uppercase text-[#1E2A2E] tracking-wider">
-                {isAddMode ? "Add New Category" : "Edit Category"}
+                {isAddMode ? t('admin.categories.addNew') : t('admin.categories.edit')}
               </h2>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[10px] font-black uppercase text-[#8B9296] mb-1">Category Name *</label>
+                <label className="block text-[10px] font-black uppercase text-[#8B9296] mb-1">{t('admin.categories.name')} *</label>
                 <input
                   className="w-full p-2.5 rounded-lg border border-[#E8E3D8] font-bold focus:outline-[#1E2A2E] bg-[#FBF9F5]"
-                  placeholder="e.g. Main Dish"
+                  placeholder={t('admin.categories.namePlaceholder')}
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                   required
@@ -277,20 +282,20 @@ const ManagementCategories = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-[#8B9296] mb-1">Slug (optional)</label>
+                <label className="block text-[10px] font-black uppercase text-[#8B9296] mb-1">{t('admin.categories.slug')}</label>
                 <input
                   className="w-full p-2.5 rounded-lg border border-[#E8E3D8] font-bold focus:outline-[#1E2A2E] bg-[#FBF9F5]"
-                  placeholder="e.g. main-dish"
+                  placeholder="main-dish"
                   value={formData.slug}
                   onChange={e => setFormData({ ...formData, slug: e.target.value })}
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-[#8B9296] mb-1">Description</label>
+                <label className="block text-[10px] font-black uppercase text-[#8B9296] mb-1">{t('admin.common.description')}</label>
                 <textarea
                   className="w-full p-2.5 rounded-lg border border-[#E8E3D8] font-bold focus:outline-[#1E2A2E] bg-[#FBF9F5]"
-                  placeholder="Category description..."
+                  placeholder={t('admin.categories.descPlaceholder')}
                   rows={2}
                   value={formData.description}
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -298,15 +303,15 @@ const ManagementCategories = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-[#8B9296] mb-1">Category Image</label>
+                <label className="block text-[10px] font-black uppercase text-[#8B9296] mb-1">{t('admin.categories.image')}</label>
                 <div className="border-2 border-dashed border-[#E8E3D8] p-3 rounded-lg text-center bg-[#FBF9F5]">
                   {!isAddMode && formData.image && !(formData.image instanceof File) && (
                     <div className="mb-2">
-                      <p className="text-[10px] text-[#9AA0A0] mb-1 font-semibold">Current Image:</p>
+                      <p className="text-[10px] text-[#9AA0A0] mb-1 font-semibold">{t('admin.common.currentImage')}:</p>
                       <img
-                        src={`http://127.0.0.1:8000/storage/${formData.image}`}
+                        src={getImageUrl(formData.image)}
                         className="w-16 h-10 object-cover mx-auto rounded border border-[#E8E3D8]"
-                        alt="Current"
+                        alt={t('admin.common.currentImage')}
                       />
                     </div>
                   )}
@@ -326,14 +331,14 @@ const ManagementCategories = () => {
                 onClick={() => setIsModalOpen(false)}
                 className="flex-1 py-2.5 border border-[#E8E3D8] rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-[#FBF9F5] cursor-pointer text-[#5B6B6F] transition"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
                 className="flex-1 py-2.5 bg-[#1E2A2E] text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-[#2A3B3F] cursor-pointer transition shadow-sm flex items-center justify-center gap-1.5"
               >
-                {isSaving ? "Saving..." : <><LuSave size={13} /> Save</>}
+                {isSaving ? t('admin.common.saving') : <><LuSave size={13} /> {t('common.save')}</>}
               </button>
             </div>
           </form>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Facebook, Instagram, Twitter, MapPin, Phone, Mail, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   const { t } = useTranslation();
@@ -14,18 +15,18 @@ const Footer = () => {
         <div className="flex flex-col lg:flex-row justify-between items-center pb-16 border-b border-white/10 mb-16 gap-8">
           <div className="max-w-md text-center lg:text-left">
             <h2 className="text-3xl font-black uppercase tracking-tighter mb-2">
-              Join Our <span className="text-orange-500">Green</span> List
+              {t('footer.joinOur')} <span className="text-orange-500">{t('footer.green')}</span> {t('footer.list')}
             </h2>
-            <p className="text-gray-400 text-sm font-medium">Get exclusive offers and fresh recipes delivered to your inbox.</p>
+            <p className="text-gray-400 text-sm font-medium">{t('footer.newsletterDesc')}</p>
           </div>
           <div className="w-full lg:w-auto flex flex-col sm:flex-row">
             <input 
               type="email" 
-              placeholder="Your email address" 
+              placeholder={t('footer.emailPlaceholder')} 
               className="bg-white/5 border border-white/10 px-6 py-4 outline-none focus:bg-white/10 transition-all sm:w-80 text-sm"
             />
             <button className="bg-[#2d5a27] hover:bg-orange-600 text-white px-8 py-4 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all">
-              Subscribe <ArrowRight size={16} />
+              {t('footer.subscribe')} <ArrowRight size={16} />
             </button>
           </div>
         </div>
@@ -52,12 +53,12 @@ const Footer = () => {
                   KHMER-<span className="text-[#4a8c44]">FRESH</span>
                 </span>
                 <span className="text-[8px] font-bold tracking-[0.2em] text-orange-500 uppercase">
-                  Authentic Taste
+                  {t('nav.authenticTaste')}
                 </span>
               </div>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed font-medium">
-              Bringing the true essence of Cambodia with our authentic recipes, crafted from local organic ingredients for your healthy lifestyle.
+              {t('footer.brandDesc')}
             </p>
             <div className="flex space-x-3 pt-2">
               {[Facebook, Instagram, Twitter].map((Icon, index) => (
@@ -70,14 +71,21 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-white font-black uppercase tracking-widest text-xs mb-8 border-l-4 border-orange-500 pl-4">Discover</h3>
+            <h3 className="text-white font-black uppercase tracking-widest text-xs mb-8 border-l-4 border-orange-500 pl-4">{t('footer.discover')}</h3>
             <ul className="space-y-4">
-              {['Home', 'Menu', 'About Us', 'Contact', 'Service', 'Reservation'].map((item) => (
-                <li key={item}>
-                  <a href={`#${item.toLowerCase()}`} className="text-gray-400 hover:text-orange-500 text-sm font-bold uppercase tracking-widest flex items-center group transition-all">
+              {[
+                { label: t('nav.home'),        to: '/' },
+                { label: t('nav.menu'),        to: '/menu' },
+                { label: t('footer.aboutUs'),  to: '/about' },
+                { label: t('nav.contact'),     to: '/contact' },
+                { label: t('nav.service'),     to: '/service' },
+                { label: t('nav.reservation'), to: '/reservation' },
+              ].map((item) => (
+                <li key={item.to}>
+                  <Link to={item.to} className="text-gray-400 hover:text-orange-500 text-sm font-bold uppercase tracking-widest flex items-center group transition-all">
                     <span className="w-0 group-hover:w-4 h-[2px] bg-orange-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
-                    {item}
-                  </a>
+                    {item.label}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -85,9 +93,9 @@ const Footer = () => {
 
           {/* Support */}
           <div>
-            <h3 className="text-white font-black uppercase tracking-widest text-xs mb-8 border-l-4 border-orange-500 pl-4">Support</h3>
+            <h3 className="text-white font-black uppercase tracking-widest text-xs mb-8 border-l-4 border-orange-500 pl-4">{t('footer.support')}</h3>
             <ul className="space-y-4">
-              {['Help Center', 'Terms of Service', 'Privacy Policy', 'FAQs', 'Delivery Info'].map((item) => (
+              {[t('footer.helpCenter'), t('footer.terms'), t('footer.privacyPolicy'), t('footer.faqs'), t('footer.deliveryInfo')].map((item) => (
                 <li key={item}>
                   <a href="#" className="text-gray-400 hover:text-orange-500 text-sm font-bold uppercase tracking-widest flex items-center group transition-all">
                     <span className="w-0 group-hover:w-4 h-[2px] bg-orange-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
@@ -100,12 +108,12 @@ const Footer = () => {
 
           {/* Contact Info- */}
           <div className="space-y-6">
-            <h3 className="text-white font-black uppercase tracking-widest text-xs mb-8 border-l-4 border-orange-500 pl-4">Contact</h3>
+            <h3 className="text-white font-black uppercase tracking-widest text-xs mb-8 border-l-4 border-orange-500 pl-4">{t('nav.contact')}</h3>
             <div className="space-y-4">
               <div className="flex items-start space-x-4 group cursor-pointer">
                 <MapPin className="w-5 h-5 text-orange-500 shrink-0" />
                 <span className="text-gray-400 text-sm font-medium leading-tight group-hover:text-white transition-colors">
-                  123 Street, Norodom Blvd,<br />Phnom Penh, Cambodia
+                  {t('footer.addressLine1')}<br />{t('footer.addressLine2')}
                 </span>
               </div>
               <div className="flex items-center space-x-4 group cursor-pointer">
@@ -124,12 +132,12 @@ const Footer = () => {
         {/* --- Bottom Bar --- */}
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">
-            © 2026 KHMER-FRESH. ALL RIGHTS RESERVED.
+            © {new Date().getFullYear()} KHMER-FRESH. {t('footer.allRightsReserved')}.
           </p>
           <div className="flex space-x-8 text-[10px] font-black uppercase tracking-[0.2em]">
-            <a href="#" className="text-gray-500 hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="text-gray-500 hover:text-white transition-colors">Terms</a>
-            <a href="#" className="text-gray-500 hover:text-white transition-colors">Cookies</a>
+            <a href="#" className="text-gray-500 hover:text-white transition-colors">{t('footer.privacy')}</a>
+            <a href="#" className="text-gray-500 hover:text-white transition-colors">{t('footer.termsShort')}</a>
+            <a href="#" className="text-gray-500 hover:text-white transition-colors">{t('footer.cookies')}</a>
           </div>
         </div>
       </div>

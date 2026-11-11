@@ -14,7 +14,7 @@ export const useNotification = () => {
       const res = await notificationService.getAll();
       setNotifications(res.data?.data?.data ?? []); // Laravel paginator: data.data
       setUnreadCount(res.data?.meta?.unread_count ?? 0);
-    } catch (err) {
+    } catch {
       setError('Failed to load notifications.');
     } finally {
       setLoading(false);

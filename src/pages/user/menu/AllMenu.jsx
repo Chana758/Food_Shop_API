@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useProducts } from '../../../hooks/useProducts';
 import { useCategories } from '../../../hooks/useCategories';
@@ -9,6 +9,7 @@ import { IoSearch } from 'react-icons/io5';
 import Toast from '../../../components/common/Toast';
 import ErrorState from '../../../components/common/ErrorState';
 import { getImageUrl } from '../../../utils/imageUrl';
+import { getFinalPrice, hasDiscount as hasValidDiscount } from '../../../utils/priceUtils';
 
 const PRICE_RANGES = [
   { id: 'all',    labelKey: 'menu.allPrices' },
@@ -23,16 +24,18 @@ const FETCH_ALL_PER_PAGE = 100;
 const AllMenu = () => {
   const { t }        = useTranslation();
   const navigate     = useNavigate();
+  const [searchParams] = useSearchParams();
+  const categoryParam  = Number(searchParams.get('category')) || null;
 
   const [searchTerm,       setSearchTerm]       = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(categoryParam ?? 'all');
   const [priceRange,       setPriceRange]       = useState('all');
   const [sortBy,           setSortBy]           = useState('name');
   const [currentPage,      setCurrentPage]      = useState(1);
   const [showToast,        setShowToast]        = useState(false);
   const [toastMessage,     setToastMessage]     = useState('');
 
-  const { favorites, isFavorite, toggleFavorite } = useFavorite();
+  const { isFavorite, toggleFavorite } = useFavorite();
 
   // Fetch ALL products at once
   const {
@@ -116,12 +119,18 @@ const AllMenu = () => {
     if (!sessionStorage.getItem('currentUser')) { navigate('/login'); return; }
 
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const idx  = cart.findIndex(i => i.id === item.id);
+    const idx  = cart.findIndex(i => i.id === item.id && i.type === 'product');
     if (idx > -1) cart[idx].quantity += 1;
-    else cart.push({ ...item, quantity: 1, type: 'product' });
+    else cart.push({
+      ...item,
+      price: getFinalPrice(item.price, item.discount_price, item.discount_expires_at),
+      originalPrice: Number(item.price),
+      quantity: 1,
+      type: 'product',
+    });
     localStorage.setItem('cart', JSON.stringify(cart));
 
-    setToastMessage(`${item.name} added to cart!`);
+    setToastMessage(t('favorites.addedToCartMsg', { name: item.name }));
     setShowToast(true);
     window.dispatchEvent(new Event('cartUpdated'));
   };
@@ -129,7 +138,7 @@ const AllMenu = () => {
   // Loading
   if (productsLoading || categoriesLoading) return (
     <div className="text-center py-40 font-bold text-gray-400 animate-pulse">
-      Loading menu...
+      {t('menu.loading')}
     </div>
   );
 
@@ -149,10 +158,10 @@ const AllMenu = () => {
       {/* Page Title */}
       <div className="mb-10 border-l-4 border-[#2D4A22] pl-4">
         <h1 className="text-3xl font-bold text-[#2D4A22]">
-          OUR <span className="text-[#F58220]">MENU</span>
+          {t('menu.titleA')} <span className="text-[#F58220]">{t('menu.titleB')}</span>
         </h1>
         <p className="text-gray-500 text-sm font-medium">
-          {t('menu.subtitle') || 'Fresh and Organic Products'}
+          {t('menu.subtitle')}
         </p>
       </div>
 
@@ -274,7 +283,8 @@ const AllMenu = () => {
               currentItems.map(item => {
                 const price = parseFloat(item.price || 0);
                 const discount = parseFloat(item.discount_price || 0);
-                const hasDiscount = discount > 0 && discount < price;
+                // also checks discount_expires_at, same as the server
+                const hasDiscount = hasValidDiscount(item.price, item.discount_price, item.discount_expires_at);
                 const discountPercent = hasDiscount ? Math.round(((price - discount) / price) * 100) : 0;
 
                 const fav = isFavorite(item.id);

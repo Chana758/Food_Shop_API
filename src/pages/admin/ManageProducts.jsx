@@ -8,7 +8,10 @@ import {
 import { categoryService } from '../../service/categoryService';
 import { productService }  from '../../service/productService';
 import { hasDiscount, getFinalPrice, getDiscountPercent, getDiscountExpiryLabel, fmt } from '../../utils/priceUtils';
+import { apiErrorMessage } from '../../utils/apiError';
+import i18n from '../../i18n';
 import { getPublicImageUrl } from '../../utils/imageUrl';
+import { useTranslation } from 'react-i18next';
 
 const FONT_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
 const CARD = "bg-white rounded-xl border border-[#E8E3D8] shadow-[0_1px_3px_rgba(30,42,46,0.05)]";
@@ -18,9 +21,9 @@ const LOW_STOCK_THRESHOLD = 10;
 
 const getStockBadge = (qty) => {
   const quantity = Number(qty) || 0;
-  if (quantity <= 0)                    return { label: 'Out of Stock',           className: 'bg-[#B5453B] text-white font-black' };
-  if (quantity <= LOW_STOCK_THRESHOLD)  return { label: `Low Stock: ${quantity}`, className: 'bg-[#D99A3D] text-white font-black' };
-  return                                       { label: `In Stock: ${quantity}`,  className: 'bg-[#3F7D58] text-white font-black' };
+  if (quantity <= 0)                    return { label: i18n.t('admin.products.outOfStock'),                 className: 'bg-[#B5453B] text-white font-black' };
+  if (quantity <= LOW_STOCK_THRESHOLD)  return { label: i18n.t('admin.products.lowStockN', { count: quantity }), className: 'bg-[#D99A3D] text-white font-black' };
+  return                                       { label: i18n.t('admin.products.inStockN', { count: quantity }),  className: 'bg-[#3F7D58] text-white font-black' };
 };
 
 const STAT_FILL = {
@@ -45,6 +48,7 @@ const toDatetimeLocalValue = (iso) => {
 };
 
 const ManageProducts = () => {
+  const { t } = useTranslation();
   const { searchTerm = '' } = useOutletContext() || {};
 
   const [allProducts,  setAllProducts]  = useState([]);
@@ -79,12 +83,12 @@ const ManageProducts = () => {
         const prodList = prodRes?.data?.data || prodRes?.data || [];
         setCategories(Array.isArray(catList)  ? catList  : []);
         setAllProducts(Array.isArray(prodList) ? prodList : []);
-      } catch { toast.error('Failed to load data'); }
+      } catch { toast.error(t('admin.products.loadFailed')); }
       finally  { if (isMounted) setIsLoading(false); }
     };
     loadData();
     return () => { isMounted = false; };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- load once
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm, categoryFilter, stockFilter]);
 
@@ -93,7 +97,7 @@ const ManageProducts = () => {
       const res  = await productService.getAll({ per_page: 100 });
       const list = res?.data?.data || res?.data || [];
       setAllProducts(Array.isArray(list) ? list : []);
-    } catch { toast.error('Failed to reload products'); }
+    } catch { toast.error(t('admin.products.loadFailed')); }
   };
 
   const visibleProducts = allProducts.filter((p) => {
@@ -131,17 +135,17 @@ const ManageProducts = () => {
     try {
       if (isAddMode) { await productService.create(data); }
       else           { data.append('_method', 'PUT'); await productService.update(formData.id, data); }
-      toast.success('Saved successfully!');
+      toast.success(t('admin.common.saved'));
       setIsModalOpen(false);
       refreshProducts();
-    } catch (err) { toast.error(err.response?.data?.message || 'Error saving product'); }
+    } catch (err) { toast.error(apiErrorMessage(err, t)); }
     finally { setIsSaving(false); }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this product?')) return;
-    try { await productService.delete(id); toast.success('Product deleted'); refreshProducts(); }
-    catch { toast.error('Delete failed'); }
+    if (!window.confirm(t('admin.products.confirmDelete'))) return;
+    try { await productService.delete(id); toast.success(t('admin.products.deleted')); refreshProducts(); }
+    catch { toast.error(t('admin.categories.deleteFailed')); }
   };
 
   const openAddModal = () => {
@@ -171,7 +175,7 @@ const ManageProducts = () => {
   if (isLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8" style={{ background: PAGE_BG }}>
       <div className="w-10 h-10 border-4 border-[#E8E3D8] border-t-[#1E2A2E] rounded-full animate-spin" />
-      <p className="text-xs font-bold uppercase tracking-widest text-[#8B9296] mt-4">Loading products...</p>
+      <p className="text-xs font-bold uppercase tracking-widest text-[#8B9296] mt-4">{t('common.loading')}</p>
     </div>
   );
 
@@ -182,16 +186,16 @@ const ManageProducts = () => {
       {/* ── PRODUCT PERFORMANCE REPORT ── */}
       <div className={`${CARD} p-6 space-y-4`}>
         <div>
-          <h2 className="text-xs font-black text-[#8B9296] uppercase tracking-wider">Product performance report</h2>
-          <p style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E] mt-0.5">Daily, monthly, and yearly product metrics with actionable data</p>
+          <h2 className="text-xs font-black text-[#8B9296] uppercase tracking-wider">{t('admin.products.reportTitle')}</h2>
+          <p style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E] mt-0.5">{t('admin.products.reportSub')}</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { title: 'TOTAL PRODUCTS', val: allProducts.length, filter: 'all', desc: 'Active tracking',    fill: 'ink' },
-            { title: 'IN STOCK',       val: inStock,            filter: null,  desc: 'Available items',    fill: 'herb' },
-            { title: 'OUT OF STOCK',   val: outOfStock,         filter: 'out', desc: 'Requires restock',   fill: 'chili' },
-            { title: 'ON SALE',        val: onSale,             filter: null,  desc: 'Discounted items',   fill: 'gold' },
+            { title: t('admin.products.total'),      val: allProducts.length, filter: 'all', desc: t('admin.reviews.totalSub'),        fill: 'ink' },
+            { title: t('admin.products.inStock'),    val: inStock,            filter: null,  desc: t('admin.products.availableItems'), fill: 'herb' },
+            { title: t('admin.products.outOfStock'), val: outOfStock,         filter: 'out', desc: t('admin.products.needsRestock'),   fill: 'chili' },
+            { title: t('admin.products.onSale'),     val: onSale,             filter: null,  desc: t('admin.products.discounted'),     fill: 'gold' },
           ].map((item, i) => (
             <button key={i}
               onClick={() => item.filter && setStockFilter(item.filter)}
@@ -213,12 +217,12 @@ const ManageProducts = () => {
       {/* ── PRODUCT MANAGEMENT HEADER ── */}
       <div className={`${CARD} p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4`}>
         <div>
-          <h1 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">Product Management</h1>
-          {searchTerm && <p className="text-xs text-[#8B9296] mt-1 font-semibold">Results for "<span className="font-bold text-[#1E2A2E]">{searchTerm}</span>"</p>}
+          <h1 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">{t('admin.page.products')}</h1>
+          {searchTerm && <p className="text-xs text-[#8B9296] mt-1 font-semibold">{t('admin.products.resultsFor')} "<span className="font-bold text-[#1E2A2E]">{searchTerm}</span>"</p>}
           {stockFilter !== 'all' && (
             <p className="text-xs text-[#8B9296] mt-1 font-semibold">
-              Filtered: <span className="font-bold text-[#1E2A2E] capitalize">{stockFilter === 'out' ? 'Out of Stock' : 'Low Stock'}</span>
-              <button onClick={() => setStockFilter('all')} className="ml-2 text-xs underline text-[#5B6B6F] hover:text-[#1E2A2E] cursor-pointer font-bold">clear</button>
+              {t('admin.categories.filtered')}: <span className="font-bold text-[#1E2A2E] capitalize">{stockFilter === 'out' ? t('admin.products.outOfStock') : t('admin.products.lowStock')}</span>
+              <button onClick={() => setStockFilter('all')} className="ml-2 text-xs underline text-[#5B6B6F] hover:text-[#1E2A2E] cursor-pointer font-bold">{t('common.clear')}</button>
             </p>
           )}
         </div>
@@ -236,7 +240,7 @@ const ManageProducts = () => {
             <button key={i} onClick={() => setCategoryFilter(isAll ? 'all' : name)}
               className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider whitespace-nowrap transition cursor-pointer border
                 ${isActive ? 'bg-[#1E2A2E] text-white border-[#1E2A2E] shadow-sm' : 'bg-white border-[#E8E3D8] text-[#5B6B6F] hover:bg-[#FBF9F5] hover:text-[#1E2A2E]'}`}>
-              {isAll ? 'All Categories' : name}
+              {isAll ? t('menu.backToCategories') : name}
             </button>
           );
         })}
@@ -245,7 +249,7 @@ const ManageProducts = () => {
       {/* ── PRODUCT GRID ── */}
       {visibleProducts.length === 0 ? (
         <div className={`${CARD} p-16 text-center text-[#9AA0A0] font-bold text-xs uppercase tracking-wider`}>
-          {searchTerm ? `No products found for "${searchTerm}"` : 'No products match this filter'}
+          {searchTerm ? t('admin.common.noMatch', { term: searchTerm }) : t('admin.products.noneFilter')}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -285,7 +289,7 @@ const ManageProducts = () => {
                   </div>
 
                   <div className="p-4 pt-3">
-                    <span className="text-[10px] text-[#3F7D58] font-bold uppercase tracking-wider block">{p.category?.name || 'General'}</span>
+                    <span className="text-[10px] text-[#3F7D58] font-bold uppercase tracking-wider block">{p.category?.name || t('admin.products.general')}</span>
                     <h3 className="font-black text-sm text-[#1E2A2E] line-clamp-1 mt-0.5">{p.name}</h3>
                   </div>
                 </div>
@@ -302,10 +306,10 @@ const ManageProducts = () => {
                     )}
                   </div>
                   <div className="flex gap-1.5">
-                    <button onClick={() => openEditModal(p)} className="p-2 bg-[#FBF9F5] border border-[#E8E3D8] hover:bg-[#F3F0E9] text-[#5B6B6F] rounded-lg cursor-pointer transition-colors shadow-2xs" title="Edit">
+                    <button onClick={() => openEditModal(p)} className="p-2 bg-[#FBF9F5] border border-[#E8E3D8] hover:bg-[#F3F0E9] text-[#5B6B6F] rounded-lg cursor-pointer transition-colors shadow-2xs" title={t('common.edit')}>
                       <FaEdit size={13} />
                     </button>
-                    <button onClick={() => handleDelete(p.id)} className="p-2 bg-[#FBF9F5] border border-[#EBC7C1] hover:bg-[#F5E1DE] text-[#B5453B] rounded-lg cursor-pointer transition-colors shadow-2xs" title="Delete">
+                    <button onClick={() => handleDelete(p.id)} className="p-2 bg-[#FBF9F5] border border-[#EBC7C1] hover:bg-[#F5E1DE] text-[#B5453B] rounded-lg cursor-pointer transition-colors shadow-2xs" title={t('common.delete')}>
                       <FaTrash size={13} />
                     </button>
                   </div>
@@ -343,10 +347,10 @@ const ManageProducts = () => {
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#EFEAE0] bg-white flex-shrink-0">
               <div>
                 <h2 style={FONT_SERIF} className="text-lg font-semibold text-[#1E2A2E]">
-                  {isAddMode ? 'Add New Product' : 'Edit Product'}
+                  {isAddMode ? t('admin.products.addNew') : t('admin.products.edit')}
                 </h2>
                 <p className="text-[11px] text-[#8B9296] font-semibold mt-0.5">
-                  {isAddMode ? 'Fill in the details to create a new menu item' : `Editing "${formData.name || 'product'}"`}
+                  {isAddMode ? t('admin.products.addSub') : t('admin.products.editing', { name: formData.name || '' })}
                 </p>
               </div>
               <button
@@ -363,26 +367,26 @@ const ManageProducts = () => {
 
               {/* SECTION 1 — Basic Info */}
               <section>
-                <h3 className={SECTION_TITLE}><FaInfoCircle size={11} /> Basic Information</h3>
+                <h3 className={SECTION_TITLE}><FaInfoCircle size={11} /> {t('admin.products.basicInfo')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <label className={FIELD_LABEL}>Product Name *</label>
-                    <input className={FIELD_INPUT} placeholder="e.g. Amok Trey"
+                    <label className={FIELD_LABEL}>{t('admin.products.name')} *</label>
+                    <input className={FIELD_INPUT} placeholder={t('admin.products.namePlaceholder')}
                       value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
                   </div>
 
                   <div className="col-span-2">
-                    <label className={FIELD_LABEL}>Category *</label>
+                    <label className={FIELD_LABEL}>{t('menu.category')} *</label>
                     <select className={FIELD_INPUT} value={formData.category_id}
                       onChange={e => setFormData({ ...formData, category_id: e.target.value })} required>
-                      <option value="">Select a category…</option>
+                      <option value="">{t('admin.products.selectCategory')}</option>
                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
 
                   <div className="col-span-2">
-                    <label className={FIELD_LABEL}>Description</label>
-                    <textarea className={`${FIELD_INPUT} resize-none`} placeholder="Short description shown to customers…" rows={3}
+                    <label className={FIELD_LABEL}>{t('admin.common.description')}</label>
+                    <textarea className={`${FIELD_INPUT} resize-none`} placeholder={t('admin.products.descPlaceholder')} rows={3}
                       value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                   </div>
                 </div>
@@ -390,10 +394,10 @@ const ManageProducts = () => {
 
               {/* SECTION 2 — Pricing & Discount */}
               <section>
-                <h3 className={SECTION_TITLE}><FaDollarSign size={11} /> Pricing & Discount</h3>
+                <h3 className={SECTION_TITLE}><FaDollarSign size={11} /> {t('admin.products.pricing')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={FIELD_LABEL}>Original Price *</label>
+                    <label className={FIELD_LABEL}>{t('admin.products.originalPrice')} *</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8B9296] font-bold text-sm">$</span>
                       <input type="number" step="0.01" className={`${FIELD_INPUT} pl-6`} placeholder="0.00"
@@ -402,16 +406,16 @@ const ManageProducts = () => {
                   </div>
 
                   <div>
-                    <label className={FIELD_LABEL}>Discount Price</label>
+                    <label className={FIELD_LABEL}>{t('admin.products.discountPrice')}</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8B9296] font-bold text-sm">$</span>
-                      <input type="number" step="0.01" className={`${FIELD_INPUT} pl-6`} placeholder="Optional"
+                      <input type="number" step="0.01" className={`${FIELD_INPUT} pl-6`} placeholder={t('admin.common.optional')}
                         value={formData.discount_price} onChange={e => setFormData({ ...formData, discount_price: e.target.value })} />
                     </div>
                   </div>
 
                   <div className="col-span-2">
-                    <label className={FIELD_LABEL}>Discount Expires At</label>
+                    <label className={FIELD_LABEL}>{t('admin.products.discountExpires')}</label>
                     <input
                       type="datetime-local"
                       className={`${FIELD_INPUT} ${!formData.discount_price ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -420,7 +424,7 @@ const ManageProducts = () => {
                       disabled={!formData.discount_price}
                     />
                     {!formData.discount_price && (
-                      <p className="text-[10px] text-[#B0AA9C] mt-1.5 ml-0.5">Set a discount price first to enable an expiry date.</p>
+                      <p className="text-[10px] text-[#B0AA9C] mt-1.5 ml-0.5">{t('admin.products.expiryHint')}</p>
                     )}
                   </div>
 
@@ -448,10 +452,10 @@ const ManageProducts = () => {
 
               {/* SECTION 3 — Inventory */}
               <section>
-                <h3 className={SECTION_TITLE}><FaBoxOpen size={11} /> Inventory & Details</h3>
+                <h3 className={SECTION_TITLE}><FaBoxOpen size={11} /> {t('admin.products.inventory')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={FIELD_LABEL}>Stock Quantity *</label>
+                    <label className={FIELD_LABEL}>{t('admin.products.stockQty')} *</label>
                     <input type="number" className={FIELD_INPUT} placeholder="0"
                       value={formData.stock_quantity} onChange={e => setFormData({ ...formData, stock_quantity: e.target.value })} required />
                     <p className="text-[10px] text-[#8B9296] mt-1.5 ml-0.5 font-semibold">≤ {LOW_STOCK_THRESHOLD} triggers Low Stock warning</p>
@@ -459,13 +463,13 @@ const ManageProducts = () => {
 
                   <div>
                     <label className={FIELD_LABEL}>SKU</label>
-                    <input className={FIELD_INPUT} placeholder="Optional"
+                    <input className={FIELD_INPUT} placeholder={t('admin.common.optional')}
                       value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} />
                   </div>
 
                   <div>
-                    <label className={FIELD_LABEL}>Prep Time (minutes)</label>
-                    <input type="number" className={FIELD_INPUT} placeholder="Optional"
+                    <label className={FIELD_LABEL}>{t('admin.products.prepTime')}</label>
+                    <input type="number" className={FIELD_INPUT} placeholder={t('admin.common.optional')}
                       value={formData.prep_time} onChange={e => setFormData({ ...formData, prep_time: e.target.value })} />
                   </div>
 
@@ -474,12 +478,12 @@ const ManageProducts = () => {
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" className="w-4 h-4 rounded accent-[#1E2A2E]" checked={formData.is_active == 1}
                           onChange={e => setFormData({ ...formData, is_active: e.target.checked ? 1 : 0 })} />
-                        <span className="text-xs font-bold text-[#3A4548]">Active</span>
+                        <span className="text-xs font-bold text-[#3A4548]">{t('status.active')}</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" className="w-4 h-4 rounded accent-[#1E2A2E]" checked={formData.is_featured == 1}
                           onChange={e => setFormData({ ...formData, is_featured: e.target.checked ? 1 : 0 })} />
-                        <span className="text-xs font-bold text-[#3A4548]">Featured</span>
+                        <span className="text-xs font-bold text-[#3A4548]">{t('home.featured')}</span>
                       </label>
                     </div>
                   </div>
@@ -488,31 +492,31 @@ const ManageProducts = () => {
 
               {/* SECTION 4 — Media */}
               <section>
-                <h3 className={SECTION_TITLE}><FaImage size={11} /> Product Image</h3>
+                <h3 className={SECTION_TITLE}><FaImage size={11} /> {t('admin.products.image')}</h3>
                 <div className="flex items-start gap-4">
                   {!isAddMode && formData.image_path && (
                     <div className="flex-shrink-0">
                       <img
                         src={getPublicImageUrl(formData.image_path)}
                         className="w-20 h-20 object-cover rounded-xl border border-[#E8E3D8] shadow-sm"
-                        alt="Current"
+                        alt={t('admin.common.currentImage')}
                       />
-                      <p className="text-[9px] text-[#8B9296] font-bold uppercase text-center mt-1">Current</p>
+                      <p className="text-[9px] text-[#8B9296] font-bold uppercase text-center mt-1">{t('admin.products.current')}</p>
                     </div>
                   )}
                   <div className="flex-1">
-                    <label className={FIELD_LABEL}>{isAddMode ? 'Upload Image' : 'Replace Image'}</label>
+                    <label className={FIELD_LABEL}>{isAddMode ? t('admin.products.uploadImage') : t('admin.products.replaceImage')}</label>
                     <label className="flex items-center justify-center gap-2 w-full p-4 rounded-lg border-2 border-dashed border-[#E8E3D8] bg-[#FBF9F5] hover:bg-[#F3F0E9] hover:border-[#D9D2C3] transition cursor-pointer">
                       <FaImage size={14} className="text-[#8B9296]" />
                       <span className="text-xs font-bold text-[#5B6B6F]">
-                        {formData.image instanceof File ? formData.image.name : 'Click to choose a file…'}
+                        {formData.image instanceof File ? formData.image.name : t('admin.products.chooseFile')}
                       </span>
                       <input
                         type="file" accept="image/*" className="hidden"
                         onChange={e => setFormData({ ...formData, image: e.target.files[0] })}
                       />
                     </label>
-                    <p className="text-[10px] text-[#B0AA9C] mt-1.5 ml-0.5">JPG, PNG or WEBP — recommended 800×600px</p>
+                    <p className="text-[10px] text-[#B0AA9C] mt-1.5 ml-0.5">{t('admin.products.imageHint')}</p>
                   </div>
                 </div>
               </section>
@@ -522,12 +526,12 @@ const ManageProducts = () => {
             <div className="flex gap-3 px-6 py-4 border-t border-[#EFEAE0] bg-[#FBF9F5] flex-shrink-0">
               <button type="button" onClick={() => setIsModalOpen(false)}
                 className="flex-1 py-3 border border-[#E8E3D8] bg-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-[#F3F0E9] cursor-pointer text-[#5B6B6F] transition">
-                Cancel
+                {t('common.cancel')}
               </button>
               <button type="submit" disabled={isSaving}
                 className="flex-1 py-3 bg-[#1E2A2E] text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-[#2A3B3F] cursor-pointer transition shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 {isSaving && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-                {isSaving ? 'Saving...' : (isAddMode ? 'Create Product' : 'Save Changes')}
+                {isSaving ? t('admin.common.saving') : (isAddMode ? t('admin.products.create') : t('admin.common.saveChanges'))}
               </button>
             </div>
           </form>

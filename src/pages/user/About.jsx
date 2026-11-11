@@ -26,7 +26,7 @@ const About = () => {
 
   // រក្សាទិន្នន័យក្រុមការងារ (keep all old data)
   const teamMembers = [
-    { name: "CHANNA", role: "General Manager", image: channaImage, delay: "0" },
+    { name: "CHANNA", role: t('about.generalManager'), image: channaImage, delay: "0" },
     { name: "Sarina", role: t('about.headChef'), image: senngImage, delay: "200" },
     { name: "VIZA", role: t('about.pastryChef'), image: vizaImage, delay: "400" }
   ];
@@ -38,7 +38,7 @@ const About = () => {
         {/* --- Header Section (Old Data + New Style) --- */}
         <div data-aos="fade-down" className="mb-16 border-l-8 border-[#2D4A22] pl-6">
           <h1 className="text-4xl md:text-5xl font-black text-[#2D4A22] uppercase tracking-tighter">
-            {t('about.title')} <span className="text-[#F58220]">History</span>
+            {t('about.title')} <span className="text-[#F58220]">{t('about.history')}</span>
           </h1>
           <p className="text-gray-500 font-medium mt-2 uppercase text-xs tracking-[0.3em]">
             {t('about.subtitle')}
@@ -52,11 +52,11 @@ const About = () => {
           <div className="grid lg:grid-cols-12 gap-12 items-center relative z-10">
             {/* Left Side: Bold Text Heading */}
             <div className="lg:col-span-5" data-aos="fade-right">
-              <span className="text-[#F58220] font-black text-sm uppercase tracking-[0.4em] mb-4 block">Since 2025</span>
+              <span className="text-[#F58220] font-black text-sm uppercase tracking-[0.4em] mb-4 block">{t('about.since')}</span>
               <h2 className="text-6xl md:text-7xl font-black text-[#2D4A22] uppercase leading-[0.9] tracking-tighter">
-                {t('about.ourStory').split(' ')[0]} <br />
-                <span className="text-gray-200 outline-text italic">Journey</span> <br />
-                Story.
+                {t('about.storyWord1')} <br />
+                <span className="text-gray-200 outline-text italic">{t('about.storyWord2')}</span> <br />
+                {t('about.storyWord3')}
               </h2>
             </div>
 
@@ -172,7 +172,7 @@ const About = () => {
             {t('about.ctaSubtitle')}
           </p>
           <Link
-            to="/MenuFood"
+            to="/menu"
             className="inline-flex items-center gap-4 px-12 py-5 bg-[#2D4A22] text-white font-black text-xs uppercase tracking-[0.4em] hover:bg-[#F58220] transition-all duration-300 shadow-2xl group"
           >
             {t('about.browseMenu')} <FaArrowRight className="group-hover:translate-x-2 transition-transform" />

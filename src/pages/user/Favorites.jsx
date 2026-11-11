@@ -5,6 +5,7 @@ import useFavorite from '../../hooks/useFavorite';
 import Toast from '../../components/common/Toast';
 import { getImageUrl } from '../../utils/imageUrl';
 import { getFinalPrice, hasDiscount } from '../../utils/priceUtils';
+import { useTranslation } from 'react-i18next';
 
 // Adapters: your helpers take (price, discount_price, discount_expires_at)
 const finalPrice = (p) => getFinalPrice(p?.price, p?.discount_price, p?.discount_expires_at);
@@ -16,6 +17,7 @@ const isLoggedIn = () =>
   !!(localStorage.getItem('currentUser') || sessionStorage.getItem('currentUser'));
 
 const Favorites = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { favorites, loading, error, toggleFavorite } = useFavorite();
   const [showToast, setShowToast] = useState(false);
@@ -40,20 +42,20 @@ const Favorites = () => {
     }
 
     localStorage.setItem('cart', JSON.stringify(cart));
-    setToastMsg(`${item.name} added to cart!`);
+    setToastMsg(t('favorites.addedToCartMsg', { name: item.name }));
     setShowToast(true);
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
   if (loading) return (
     <div className="min-h-screen pt-32 flex items-center justify-center text-gray-400 font-bold animate-pulse">
-      Loading favorites...
+      {t('favorites.loading')}
     </div>
   );
 
   if (error) return (
     <div className="min-h-screen pt-32 flex items-center justify-center text-red-400 font-bold">
-      {error}
+      {t('favorites.loadFailed')}
     </div>
   );
 
@@ -67,16 +69,16 @@ const Favorites = () => {
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-[#2D4A22] font-black text-[10px] uppercase tracking-[0.3em] hover:text-[#F58220] transition-colors mb-6 group"
           >
-            <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back
+            <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> {t('common.back')}
           </button>
           <div className="flex items-center gap-3">
             <FaHeart className="text-red-500" size={24} />
             <h1 className="text-3xl font-black text-[#2D4A22] uppercase tracking-tighter">
-              My <span className="text-[#F58220]">Favorites</span>
+              {t('favorites.titleA')} <span className="text-[#F58220]">{t('favorites.titleB')}</span>
             </h1>
           </div>
           <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-2">
-            {favorites.length} {favorites.length === 1 ? 'item' : 'items'} saved
+            {t('favorites.savedCount', { count: favorites.length })}
           </p>
         </div>
 
@@ -85,16 +87,16 @@ const Favorites = () => {
           <div className="text-center py-24 border border-dashed border-gray-200">
             <FaHeart className="text-gray-200 mx-auto mb-6" size={48} />
             <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">
-              No favorites yet
+              {t('favorites.empty')}
             </h2>
             <p className="text-xs text-gray-400 mb-8">
-              Browse our menu and add items you love
+              {t('favorites.emptyDesc')}
             </p>
             <Link
               to="/menu"
               className="px-8 py-3 bg-[#2D4A22] text-white font-black text-[10px] uppercase tracking-[0.3em] hover:bg-[#F58220] transition-colors"
             >
-              Browse Menu
+              {t('cart.browseMenu')}
             </Link>
           </div>
         ) : (
@@ -122,7 +124,7 @@ const Favorites = () => {
                   <button
                     onClick={() => toggleFavorite(item, navigate)}
                     className="absolute top-3 right-3 w-8 h-8 bg-white border border-gray-100 flex items-center justify-center hover:bg-red-50 transition-colors shadow-sm"
-                    title="Remove from favorites"
+                    title={t('favorites.remove')}
                   >
                     <FaTrash className="text-red-400" size={11} />
                   </button>
@@ -141,7 +143,7 @@ const Favorites = () => {
                     </h3>
                   </Link>
                   <p className="text-xs text-gray-400 line-clamp-2 mb-4 flex-1">
-                    {item.description || 'Authentic Khmer taste'}
+                    {item.description || t('favorites.defaultDesc')}
                   </p>
 
                   {/* Price + Cart */}
@@ -160,7 +162,7 @@ const Favorites = () => {
                       onClick={() => addToCart(item)}
                       className="flex items-center gap-2 bg-[#2D4A22] text-white px-4 py-2 text-[10px] font-black uppercase hover:bg-[#F58220] transition-colors"
                     >
-                      <FaShoppingCart size={10} /> Add
+                      <FaShoppingCart size={10} /> {t('menu.add')}
                     </button>
                   </div>
                 </div>

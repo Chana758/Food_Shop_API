@@ -1,20 +1,23 @@
 // src/api/axios.js
 import axios from 'axios';
+import { API_URL, wakeServer, isServerWaking, markServerAwake } from './serverWake';
 
 const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "https://food-shop-backend-xivl.onrender.com/api",
+    baseURL: API_URL,
     headers: {
         Accept: 'application/json',
     },
-    // Render free tier can take a while to wake up, so allow more time
+    // Normal requests. While the free server is waking up, requests wait for
+    // the wake-up ping first (see the request interceptor), so 20 s is enough.
     timeout: 20000,
 });
 
 /* ───────────── Auto-retry (GET only) ─────────────
    Temporary 5xx errors, timeouts and network blips are retried silently
-   so the customer usually never sees them. */
-const MAX_RETRIES = 1;
-const RETRY_DELAY_MS = 1200;
+   so the customer usually never sees them. Before retrying we wait until
+   the server answers /ping, which covers Render's cold start. */
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const shouldRetry = (error) => {
@@ -29,9 +32,29 @@ const shouldRetry = (error) => {
     return (isNetworkOrTimeout || isServerError) && (config.__retryCount || 0) < MAX_RETRIES;
 };
 
+// Requests to these endpoints answer 401 for a wrong password;
+// that must not log the user out or reload the page.
+const AUTH_ENDPOINTS = ['/login', '/register'];
+const isAuthRequest = (config) =>
+    AUTH_ENDPOINTS.some((path) => (config?.url || '').endsWith(path));
+
+const clearSession = () => {
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('currentUser');
+};
+
+const goToLogin = () => {
+    if (window.location.pathname !== '/login') window.location.href = '/login';
+};
+
 // Request interceptor
 axiosInstance.interceptors.request.use(
-    (config) => {
+    async (config) => {
+        // Server is still starting (Render free plan): wait for it instead
+        // of letting this request time out.
+        if (isServerWaking()) await wakeServer();
+
         // Get token
         const token = sessionStorage.getItem('access_token');
 
@@ -54,15 +77,22 @@ axiosInstance.interceptors.request.use(
 
 // Response interceptor
 axiosInstance.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        markServerAwake();
+        return response;
+    },
     async (error) => {
 
         // Silent retry for temporary failures
         if (shouldRetry(error)) {
             error.config.__retryCount = (error.config.__retryCount || 0) + 1;
+            // No answer at all usually means the server is asleep: wake it first
+            if (!error.response) await wakeServer({ force: true });
             await sleep(RETRY_DELAY_MS * error.config.__retryCount);
             return axiosInstance(error.config);
         }
+
+        if (error.response) markServerAwake();
 
         // Handle 403
         if (error.response?.status === 403) {
@@ -70,25 +100,22 @@ axiosInstance.interceptors.response.use(
 
             // Blocked account
             if (message.toLowerCase().includes('blocked')) {
-                alert('Your account has been blocked by the administrator.');
+                const isKhmer = (localStorage.getItem('language') || 'en') === 'kh';
+                alert(isKhmer
+                    ? 'គណនីរបស់អ្នកត្រូវបានបិទដោយអ្នកគ្រប់គ្រង។'
+                    : 'Your account has been blocked by the administrator.');
 
-                sessionStorage.removeItem('access_token');
-                sessionStorage.removeItem('user');
-                sessionStorage.removeItem('currentUser');
-
-                window.location.href = '/login';
+                clearSession();
+                goToLogin();
             } else {
                 console.warn('Unauthorized access to this resource:', message);
             }
         }
 
-        // Handle 401
-        if (error.response?.status === 401) {
-            sessionStorage.removeItem('access_token');
-            sessionStorage.removeItem('user');
-            sessionStorage.removeItem('currentUser');
-
-            window.location.href = '/login';
+        // Handle 401 (expired or invalid token), but not a failed login attempt
+        if (error.response?.status === 401 && !isAuthRequest(error.config)) {
+            clearSession();
+            goToLogin();
         }
 
         return Promise.reject(error);

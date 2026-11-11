@@ -7,6 +7,7 @@ import {
   LuCamera, LuImage, LuX as LuClose
 } from 'react-icons/lu';
 import axiosInstance from '../../api/axios';
+import { useTranslation } from 'react-i18next';
 
 const PAGE_SIZE = 8;
 
@@ -14,7 +15,8 @@ const FONT_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
 const CARD = "bg-white rounded-2xl border border-[#E8E3D8] shadow-[0_1px_3px_rgba(30,42,46,0.05)]";
 const PAGE_BG = "var(--page-bg)";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
+// fall back to the live backend (was 127.0.0.1, so delivery photos were broken on Vercel)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://food-shop-backend-xivl.onrender.com';
 const STORAGE_BASE = `${API_BASE_URL.replace(/\/$/, '')}/storage/`;
 
 const DELIVERY_STATUSES = [
@@ -68,6 +70,7 @@ const ReportStatCard = ({ icon, fill, badge, title, value, sub }) => {
 };
 
 const DeliveryManagement = () => {
+  const { t } = useTranslation();
   const { searchTerm: search } = useOutletContext() ?? { searchTerm: '' };
 
   const [orders,  setOrders]  = useState([]);
@@ -110,11 +113,11 @@ const DeliveryManagement = () => {
       setRiders(ridersRes.data.data ?? []);
     } catch (err) {
       console.error('DeliveryManagement fetch error:', err);
-      showToast('Failed to load delivery data.', 'error');
+      showToast(t('admin.delivery.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { setCurrentPage(1); }, [filter, search]);
@@ -131,12 +134,12 @@ const DeliveryManagement = () => {
       await axiosInstance.put(`/admin/orders/${assignModal.order.id}/assign-rider`, {
         rider_id: selectedRider,
       });
-      showToast('Rider assigned successfully.');
+      showToast(t('admin.delivery.assigned'));
       setAssignModal(null);
       setSelectedRider('');
       fetchData();
     } catch (err) {
-      showToast(err.response?.data?.message ?? 'Failed to assign rider.', 'error');
+      showToast(err.response?.data?.message?.includes('busy') ? t('admin.delivery.riderBusy') : t('admin.delivery.assignFailed'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -150,11 +153,11 @@ const DeliveryManagement = () => {
     if (!file) { setProofFile(null); setProofPreview(null); return; }
 
     if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
-      setProofError('Please upload a JPG or PNG image.');
+      setProofError(t('admin.delivery.proofType'));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setProofError('Image must be under 5MB.');
+      setProofError(t('admin.delivery.proofSize'));
       return;
     }
 
@@ -193,13 +196,14 @@ const DeliveryManagement = () => {
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
 
-      showToast('Delivery status updated.');
+      showToast(t('admin.delivery.statusUpdated'));
       setStatusModal(null);
       setSelectedStatus('');
       clearProof();
       fetchData();
     } catch (err) {
-      const msg = err.response?.data?.message ?? 'Failed to update status.';
+      const apiMessage = err.response?.data?.message ?? '';
+      const msg = apiMessage.includes('photo') ? t('admin.delivery.photoRequired') : t('admin.delivery.statusFailed');
       if (selectedStatus === 'delivered') setProofError(msg);
       showToast(msg, 'error');
     } finally {
@@ -249,8 +253,8 @@ const DeliveryManagement = () => {
       <div className={`${CARD} p-6 space-y-5`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">Delivery performance report</h1>
-            <p className="text-xs font-semibold text-[#8B9296] mt-0.5">Daily, monthly, and yearly delivery metrics with actionable data</p>
+            <h1 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">{t('admin.delivery.reportTitle')}</h1>
+            <p className="text-xs font-semibold text-[#8B9296] mt-0.5">{t('admin.delivery.reportSub')}</p>
           </div>
           <div className="flex bg-[#FBF9F5] p-1 rounded-xl border border-[#E8E3D8]">
             {['Daily', 'Monthly', 'Yearly'].map(tab => (
@@ -259,18 +263,18 @@ const DeliveryManagement = () => {
                 onClick={() => setTimeTab(tab)}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${timeTab === tab ? 'bg-[#1E2A2E] text-white shadow-xs' : 'text-[#5B6B6F] hover:text-[#1E2A2E]'}`}
               >
-                {tab}
+                {t(`admin.delivery.tab.${tab}`)}
               </button>
             ))}
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <ReportStatCard icon={<LuPackage size={16} />} fill="ink" badge="Total" title="Delivery Orders" value={totalDeliveryOrders} sub="Active tracking" />
-          <ReportStatCard icon={<LuCircleCheck size={16} />} fill="herb" badge="Success" title="Delivered" value={deliveredCount} sub="Completed successfully" />
-          <ReportStatCard icon={<LuBike size={16} />} fill="sky" badge="Live" title="Active Deliveries" value={activeDeliveriesCount} sub="In progress" />
-          <ReportStatCard icon={<LuClock size={16} />} fill="chili" badge="Pending" title="Unassigned" value={unassignedCount} sub="Requires rider" />
-          <ReportStatCard icon={<LuMapPin size={16} />} fill="plum" badge="Performance" title="Completion Rate" value={`${completionRate}%`} sub="Overall efficiency" />
+          <ReportStatCard icon={<LuPackage size={16} />} fill="ink" badge={t('admin.common.total')} title={t('admin.delivery.orders')} value={totalDeliveryOrders} sub={t('admin.reviews.totalSub')} />
+          <ReportStatCard icon={<LuCircleCheck size={16} />} fill="herb" badge={t('admin.backup.result.Success')} title={t('deliveryStatus.delivered')} value={deliveredCount} sub={t('admin.delivery.completedOk')} />
+          <ReportStatCard icon={<LuBike size={16} />} fill="sky" badge={t('admin.delivery.live')} title={t('admin.delivery.active')} value={activeDeliveriesCount} sub={t('admin.delivery.inProgress')} />
+          <ReportStatCard icon={<LuClock size={16} />} fill="chili" badge={t('status.pending')} title={t('deliveryStatus.unassigned')} value={unassignedCount} sub={t('admin.delivery.needsRider')} />
+          <ReportStatCard icon={<LuMapPin size={16} />} fill="plum" badge={t('admin.delivery.performance')} title={t('admin.delivery.completionRate')} value={`${completionRate}%`} sub={t('admin.delivery.efficiency')} />
         </div>
       </div>
 
@@ -281,9 +285,9 @@ const DeliveryManagement = () => {
           <div className="flex items-center justify-between border-b border-[#EFEBE2] pb-3">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#C1653D] inline-block"></span>
-              <h2 className="text-xs font-black uppercase tracking-wider text-[#1E2A2E]">Delivery Status Overview</h2>
+              <h2 className="text-xs font-black uppercase tracking-wider text-[#1E2A2E]">{t('admin.delivery.overview')}</h2>
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FBF9F5] border border-[#E8E3D8] px-2.5 py-1 rounded-lg text-[#5B6B6F]">Live Filter</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FBF9F5] border border-[#E8E3D8] px-2.5 py-1 rounded-lg text-[#5B6B6F]">{t('admin.delivery.liveFilter')}</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -298,7 +302,7 @@ const DeliveryManagement = () => {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-white/20 text-white">
-                      {s.icon} {s.label}
+                      {s.icon} {t(`deliveryStatus.${s.value}`)}
                     </span>
                   </div>
                   <p className="text-2xl font-black text-white tracking-tight">{counts[s.value] ?? 0}</p>
@@ -312,21 +316,21 @@ const DeliveryManagement = () => {
           <div className="flex items-center justify-between border-b border-[#EFEBE2] pb-3">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#3F7D58] inline-block"></span>
-              <h2 className="text-xs font-black uppercase tracking-wider text-[#1E2A2E]">Quick Actions & Filters</h2>
+              <h2 className="text-xs font-black uppercase tracking-wider text-[#1E2A2E]">{t('admin.delivery.quickActions')}</h2>
             </div>
-            <button onClick={fetchData} className="p-1.5 bg-[#FBF9F5] hover:bg-[#F3F0E9] border border-[#E8E3D8] rounded-lg text-[#5B6B6F] cursor-pointer" title="Refresh">
+            <button onClick={fetchData} className="p-1.5 bg-[#FBF9F5] hover:bg-[#F3F0E9] border border-[#E8E3D8] rounded-lg text-[#5B6B6F] cursor-pointer" title={t('admin.common.refresh')}>
               <LuRefreshCw size={14} />
             </button>
           </div>
 
           <div className="space-y-3 py-2">
-            <span className="text-[10px] font-black uppercase tracking-wider text-[#8B9296] block">Filter:</span>
+            <span className="text-[10px] font-black uppercase tracking-wider text-[#8B9296] block">{t('admin.common.filter')}:</span>
             <div className="flex flex-wrap gap-1.5">
               <button
                 onClick={() => setFilter('all')}
                 className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border ${filter === 'all' ? 'bg-[#1E2A2E] text-white border-[#1E2A2E]' : 'bg-[#FBF9F5] text-[#5B6B6F] border-[#E8E3D8] hover:bg-[#F3F0E9]'}`}
               >
-                All
+                {t('status.all')}
               </button>
               {DELIVERY_STATUSES.map(s => (
                 <button
@@ -334,15 +338,15 @@ const DeliveryManagement = () => {
                   onClick={() => setFilter(s.value)}
                   className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer border ${filter === s.value ? 'bg-[#1E2A2E] text-white border-[#1E2A2E]' : 'bg-[#FBF9F5] text-[#5B6B6F] border-[#E8E3D8] hover:bg-[#F3F0E9]'}`}
                 >
-                  {s.label}
+                  {t(`deliveryStatus.${s.value}`)}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="bg-[#FBF9F5] rounded-xl p-3 border border-[#E8E3D8] text-[11px] font-semibold text-[#5B6B6F] flex items-center justify-between">
-            <span>Showing filtered active database view</span>
-            <span className="font-black text-[#2F6844]">{filteredOrders.length} orders</span>
+            <span>{t('admin.delivery.filteredView')}</span>
+            <span className="font-black text-[#2F6844]">{t('admin.delivery.nOrders', { count: filteredOrders.length })}</span>
           </div>
         </div>
 
@@ -352,39 +356,39 @@ const DeliveryManagement = () => {
       <div className={`${CARD} overflow-hidden`}>
         <div className="px-6 py-4 border-b border-[#EFEBE2] flex items-center justify-between bg-[#FBF9F5]">
           <h2 className="text-xs font-black text-[#1E2A2E] uppercase tracking-widest flex items-center gap-2">
-            All Delivery Orders
+            {t('admin.delivery.all')}
             <span className="px-2 py-0.5 rounded-md bg-[#E4F0E7] text-[#2F6844] border border-[#C7E0CD] text-[10px]">
               {filteredOrders.length}
             </span>
           </h2>
           {filter !== 'all' && (
             <button onClick={() => setFilter('all')} className="text-[10px] font-black text-[#9AA0A0] hover:text-[#1E2A2E] uppercase tracking-widest cursor-pointer">
-              Clear Filter ×
+              {t('admin.delivery.clearFilter')} ×
             </button>
           )}
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-20 text-[#8B9296] font-bold text-xs uppercase tracking-widest gap-2">
-            <LuRefreshCw className="animate-spin" size={16} /> Loading database records...
+            <LuRefreshCw className="animate-spin" size={16} /> {t('common.loading')}
           </div>
         ) : filteredOrders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-[#C4C0B4] space-y-2">
             <LuBike size={40} />
-            <p className="text-xs font-black uppercase tracking-widest text-[#9AA0A0]">No delivery orders found</p>
+            <p className="text-xs font-black uppercase tracking-widest text-[#9AA0A0]">{t('admin.delivery.none')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[10px] font-black text-[#8B9296] uppercase tracking-widest border-b border-[#EFEBE2] bg-[#FBF9F5]">
-                  <th className="px-6 py-3.5 text-left">Order</th>
-                  <th className="px-6 py-3.5 text-left">Customer</th>
-                  <th className="px-6 py-3.5 text-left">Address</th>
-                  <th className="px-6 py-3.5 text-left">Rider</th>
-                  <th className="px-6 py-3.5 text-left">Status</th>
-                  <th className="px-6 py-3.5 text-left">Total</th>
-                  <th className="px-6 py-3.5 text-left">Actions</th>
+                  <th className="px-6 py-3.5 text-left">{t('admin.payments.order')}</th>
+                  <th className="px-6 py-3.5 text-left">{t('admin.common.customer')}</th>
+                  <th className="px-6 py-3.5 text-left">{t('contact.address')}</th>
+                  <th className="px-6 py-3.5 text-left">{t('orderHistory.rider')}</th>
+                  <th className="px-6 py-3.5 text-left">{t('admin.common.status')}</th>
+                  <th className="px-6 py-3.5 text-left">{t('checkout.total')}</th>
+                  <th className="px-6 py-3.5 text-left">{t('admin.common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EFEBE2]">
@@ -431,13 +435,13 @@ const DeliveryManagement = () => {
                             <p className="text-[10px] text-[#9AA0A0] font-bold">{rider.phone}</p>
                           </div>
                         ) : (
-                          <span className="text-[10px] font-black text-[#C4C0B4] uppercase tracking-wider">No rider</span>
+                          <span className="text-[10px] font-black text-[#C4C0B4] uppercase tracking-wider">{t('admin.delivery.noRider')}</span>
                         )}
                       </td>
 
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase border ${meta.color}`}>
-                          {meta.icon} {meta.label}
+                          {meta.icon} {t(`deliveryStatus.${meta.value}`)}
                         </span>
                         {/* proof thumbnail link when delivered with proof on file */}
                         {order.delivery_status === 'delivered' && order.delivery_proof && (
@@ -447,7 +451,7 @@ const DeliveryManagement = () => {
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-[9px] font-black text-[#3B6E91] uppercase mt-1 hover:underline"
                           >
-                            <LuImage size={11} /> View proof
+                            <LuImage size={11} /> {t('admin.delivery.viewProof')}
                           </a>
                         )}
                       </td>
@@ -465,7 +469,7 @@ const DeliveryManagement = () => {
                               onClick={() => { setAssignModal({ order }); setSelectedRider(order.rider_id ?? ''); }}
                               className="px-3 py-1.5 rounded-lg bg-[#E3EDF3] text-[#2E5975] border border-[#C9DCE8] text-[10px] font-black uppercase hover:bg-[#D5E3EC] transition-all cursor-pointer"
                             >
-                              {rider ? 'Re-assign' : 'Assign Rider'}
+                              {rider ? t('admin.delivery.reassign') : t('admin.delivery.assignRider')}
                             </button>
                           )}
 
@@ -478,7 +482,7 @@ const DeliveryManagement = () => {
                               }}
                               className="px-3 py-1.5 rounded-lg bg-[#FBEDD9] text-[#8A5A12] border border-[#F1D9AE] text-[10px] font-black uppercase hover:bg-[#F6E2C0] transition-all flex items-center gap-1 cursor-pointer"
                             >
-                              Update <LuChevronDown size={11} />
+                              {t('admin.delivery.update')} <LuChevronDown size={11} />
                             </button>
                           )}
 
@@ -500,7 +504,7 @@ const DeliveryManagement = () => {
         {!loading && filteredOrders.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-3.5 border-t border-[#EFEBE2] bg-[#FBF9F5]">
             <p className="text-[11px] font-bold text-[#8B9296] uppercase tracking-wider">
-              Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredOrders.length)} of {filteredOrders.length}
+              {t('admin.common.showingRange', { from: (safePage - 1) * PAGE_SIZE + 1, to: Math.min(safePage * PAGE_SIZE, filteredOrders.length), total: filteredOrders.length })}
             </p>
             <div className="flex items-center gap-1.5">
               <button
@@ -552,14 +556,14 @@ const DeliveryManagement = () => {
       {assignModal && (
         <ModalOverlay onClose={() => setAssignModal(null)}>
           <h3 className="text-base font-black text-[#1E2A2E] tracking-tight mb-1">
-            Assign Rider — Order #{assignModal.order.id}
+            {t('admin.delivery.assignRider')} — {t('orderSuccess.orderNo', { id: assignModal.order.id })}
           </h3>
           <p className="text-[11px] text-[#9AA0A0] uppercase mb-5 font-bold">
             {assignModal.order.customer_name} · {assignModal.order.delivery_address}
           </p>
 
           <label className="text-[10px] font-black text-[#5B6B6F] uppercase tracking-wider mb-2 block">
-            Select Rider
+            {t('admin.delivery.selectRider')}
           </label>
 
           <div className="space-y-2 mb-6 max-h-64 overflow-y-auto">
@@ -590,7 +594,7 @@ const DeliveryManagement = () => {
                     </div>
                   </div>
                   <span className={`text-[10px] font-black uppercase tracking-wider ${meta.color}`}>
-                    ● {meta.text}
+                    ● {t(`status.${r.status}`, meta.text)}
                   </span>
                 </label>
               );
@@ -599,21 +603,21 @@ const DeliveryManagement = () => {
 
           {riders.length === 0 && (
             <div className="flex items-center gap-2 text-[#8A5A12] text-xs font-bold mb-4 bg-[#FBEDD9] p-3 rounded-lg border border-[#F1D9AE]">
-              <LuCircleAlert size={14} /> No riders registered.
+              <LuCircleAlert size={14} /> {t('admin.delivery.noRiders')}
             </div>
           )}
           {riders.length > 0 && riders.every(r => r.status !== 'available') && (
             <div className="flex items-center gap-2 text-[#8C3327] text-xs font-bold mb-4 bg-[#F5E1DE] p-3 rounded-lg border border-[#EBC7C1]">
-              <LuCircleAlert size={14} /> No riders currently available — all busy or offline.
+              <LuCircleAlert size={14} /> {t('admin.delivery.noneAvailable')}
             </div>
           )}
 
           <div className="flex gap-3">
             <button onClick={() => setAssignModal(null)} className="flex-1 py-3 rounded-xl border border-[#E8E3D8] text-xs font-black text-[#5B6B6F] hover:bg-[#FBF9F5] transition-all cursor-pointer uppercase">
-              Cancel
+              {t('common.cancel')}
             </button>
             <button onClick={handleAssignRider} disabled={!selectedRider || submitting} className="flex-1 py-3 rounded-xl bg-[#1E2A2E] text-white text-xs font-black uppercase tracking-wide hover:bg-[#2A3B3F] transition-all disabled:opacity-40 cursor-pointer shadow-xs">
-              {submitting ? 'Assigning...' : 'Assign'}
+              {submitting ? t('admin.delivery.assigning') : t('admin.delivery.assign')}
             </button>
           </div>
         </ModalOverlay>
@@ -623,14 +627,14 @@ const DeliveryManagement = () => {
       {statusModal && (
         <ModalOverlay onClose={() => { setStatusModal(null); clearProof(); }}>
           <h3 className="text-base font-black text-[#1E2A2E] tracking-tight mb-1">
-            Update Status — Order #{statusModal.order.id}
+            {t('admin.delivery.updateStatus')} — {t('orderSuccess.orderNo', { id: statusModal.order.id })}
           </h3>
           <p className="text-[11px] text-[#9AA0A0] uppercase mb-5 font-bold">
-            Rider: {statusModal.order.rider?.name ?? 'Unassigned'}
+            {t('orderHistory.rider')}: {statusModal.order.rider?.name ?? t('deliveryStatus.unassigned')}
           </p>
 
           <label className="text-[10px] font-black text-[#5B6B6F] uppercase tracking-wider mb-3 block">
-            Delivery Status
+            {t('admin.delivery.status')}
           </label>
           <div className="space-y-2 mb-5">
             {DELIVERY_STATUSES.map(s => (
@@ -646,7 +650,7 @@ const DeliveryManagement = () => {
                   className="accent-[#1E2A2E] w-4 h-4"
                 />
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase border ${s.color}`}>
-                  {s.icon} {s.label}
+                  {s.icon} {t(`deliveryStatus.${s.value}`)}
                 </span>
               </label>
             ))}
@@ -656,22 +660,22 @@ const DeliveryManagement = () => {
           {selectedStatus === 'delivered' && (
             <div className="mb-6 p-4 rounded-xl border border-[#E8E3D8] bg-[#FBF9F5]">
               <label className="text-[10px] font-black text-[#5B6B6F] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <LuCamera size={13} /> Delivery photo proof
+                <LuCamera size={13} /> {t('admin.delivery.photoProof')}
               </label>
 
               {statusModal.order.delivery_proof && !proofFile && (
                 <p className="text-[10px] font-bold text-[#2F6844] mb-2 flex items-center gap-1">
-                  <LuCircleCheck size={12} /> Photo already on file for this order.
+                  <LuCircleCheck size={12} /> {t('admin.delivery.photoOnFile')}
                 </p>
               )}
 
               {proofPreview ? (
                 <div className="relative inline-block">
-                  <img src={proofPreview} alt="Delivery proof preview" className="w-32 h-32 object-cover rounded-lg border border-[#E8E3D8]" />
+                  <img src={proofPreview} alt={t('admin.delivery.photoProof')} className="w-32 h-32 object-cover rounded-lg border border-[#E8E3D8]" />
                   <button
                     onClick={clearProof}
                     className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#B5453B] text-white flex items-center justify-center cursor-pointer shadow-sm"
-                    title="Remove photo"
+                    title={t('admin.delivery.removePhoto')}
                   >
                     <LuClose size={12} />
                   </button>
@@ -682,7 +686,7 @@ const DeliveryManagement = () => {
                   className="w-full py-4 rounded-lg border-2 border-dashed border-[#C4C0B4] text-[#8B9296] text-xs font-bold uppercase tracking-wider hover:border-[#1E2A2E] hover:text-[#1E2A2E] transition-all cursor-pointer flex flex-col items-center gap-1.5"
                 >
                   <LuCamera size={18} />
-                  {statusModal.order.delivery_proof ? 'Replace photo' : 'Upload photo'}
+                  {statusModal.order.delivery_proof ? t('admin.delivery.replacePhoto') : t('admin.delivery.uploadPhoto')}
                 </button>
               )}
 
@@ -702,14 +706,14 @@ const DeliveryManagement = () => {
 
           <div className="flex gap-3">
             <button onClick={() => { setStatusModal(null); clearProof(); }} className="flex-1 py-3 rounded-xl border border-[#E8E3D8] text-xs font-black text-[#5B6B6F] hover:bg-[#FBF9F5] transition-all cursor-pointer uppercase">
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleUpdateStatus}
               disabled={!selectedStatus || submitting}
               className="flex-1 py-3 rounded-xl bg-[#1E2A2E] text-white text-xs font-black uppercase tracking-wide hover:bg-[#2A3B3F] transition-all disabled:opacity-40 cursor-pointer shadow-xs"
             >
-              {submitting ? 'Updating...' : 'Update'}
+              {submitting ? t('admin.delivery.updating') : t('admin.delivery.update')}
             </button>
           </div>
         </ModalOverlay>

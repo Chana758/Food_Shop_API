@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useBackup from '../../hooks/useBackup';
+import { useTranslation } from 'react-i18next';
 
 const Icon = ({ d, size = 18, color = 'currentColor' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -79,6 +80,7 @@ const Btn = ({ label, icon, variant = 'primary', onClick, disabled }) => {
 };
 
 const Backup = () => {
+  const { t } = useTranslation();
   const {
     history, loading, running,
     schedule, savingSchedule,
@@ -98,18 +100,18 @@ const Backup = () => {
   const handleRunBackup = async () => {
     try {
       await runBackup();
-      showToast('Database backup generated successfully!');
+      showToast(t('admin.backup.generated'));
     } catch {
-      showToast('Backup generation failed', 'error');
+      showToast(t('admin.backup.generateFailed'), 'error');
     }
   };
 
   const handleSaveSchedule = async () => {
     try {
       await saveSchedule(localSchedule);
-      showToast('Schedule saved successfully!');
-    } catch (err) {
-      showToast(err?.response?.data?.message || 'Failed to save schedule', 'error');
+      showToast(t('admin.backup.scheduleSaved'));
+    } catch {
+      showToast(t('admin.backup.scheduleFailed'), 'error');
     }
   };
 
@@ -117,17 +119,17 @@ const Backup = () => {
     try {
       await downloadBackup(fileName);
     } catch {
-      showToast('Download failed', 'error');
+      showToast(t('admin.backup.downloadFailed'), 'error');
     }
   };
 
   const handleDelete = async (fileName) => {
-    if (!window.confirm(`Are you sure you want to delete ${fileName}?`)) return;
+    if (!window.confirm(t('admin.backup.confirmDelete', { name: fileName }))) return;
     try {
       await deleteBackup(fileName);
-      showToast('Backup deleted successfully.');
+      showToast(t('admin.backup.deleted'));
     } catch {
-      showToast('Failed to delete backup file', 'error');
+      showToast(t('admin.backup.deleteFailed'), 'error');
     }
   };
 
@@ -158,19 +160,19 @@ const Backup = () => {
             <Icon d={I.database} size={20} color="#fff" />
           </div>
           <div>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#1e292b', letterSpacing: '0.04em' }}>BACKUP & RECOVERY</h2>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#1e292b', letterSpacing: '0.04em' }}>{t('admin.backup.title')}</h2>
             <p style={{ margin: '4px 0 0', fontSize: 12, fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Protect your data — schedule automatic backups or run one now
+              {t('admin.backup.subtitle')}
             </p>
           </div>
         </div>
-        <Btn label={running ? 'Backing up…' : 'Run Backup Now'} icon="database" variant="green" onClick={handleRunBackup} disabled={running} />
+        <Btn label={running ? t('admin.backup.backingUp') : t('admin.backup.runNow')} icon="database" variant="green" onClick={handleRunBackup} disabled={running} />
       </div>
 
       {running && (
         <div style={{ marginBottom: 20, background: '#ffffff', borderRadius: 10, padding: '14px 20px', border: '1px solid #e7e2db' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12, fontWeight: 600, color: '#475569' }}>
-            <span>Backing up database via server command…</span><span>Please wait</span>
+            <span>{t('admin.backup.running')}</span><span>{t('admin.backup.pleaseWait')}</span>
           </div>
           <div style={{ height: 6, background: '#f1f5f9', borderRadius: 3, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: '70%', background: '#78b78a', borderRadius: 3 }} />
@@ -179,59 +181,59 @@ const Backup = () => {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
-        <StatCard icon={I.check} cardBg="#2d6a4f" title="Last Backup" subtitle="Status: Successful"
-          value={history.length > 0 ? history[0].date : 'No backups yet'}
+        <StatCard icon={I.check} cardBg="#2d6a4f" title={t('admin.backup.last')} subtitle={t('admin.backup.lastSub')}
+          value={history.length > 0 ? history[0].date : t('admin.backup.noneYet')}
           valueSub={history.length > 0 ? history[0].size : '0 MB'} />
-        <StatCard icon={I.clock} cardBg="#1e292b" title="Next Scheduled" subtitle="Auto backup"
-          value="Tomorrow" valueSub={`${schedule.time} · ${schedule.frequency}`} />
-        <StatCard icon={I.folder} cardBg="#3b82f6" title="Total Backups" subtitle="Stored on server"
-          value={`${history.length} files`} valueSub="Active storage" />
+        <StatCard icon={I.clock} cardBg="#1e292b" title={t('admin.backup.next')} subtitle={t('admin.backup.auto')}
+          value={t('admin.backup.tomorrow')} valueSub={`${schedule.time} · ${t(`admin.backup.freq.${schedule.frequency}`, schedule.frequency)}`} />
+        <StatCard icon={I.folder} cardBg="#3b82f6" title={t('admin.backup.total')} subtitle={t('admin.backup.storedOnServer')}
+          value={t('admin.backup.files', { count: history.length })} valueSub={t('admin.backup.activeStorage')} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-        <Card title="Auto Backup Schedule" subtitle="Set how often backups run automatically" icon={I.clock} iconBg="#f59e0b">
+        <Card title={t('admin.backup.scheduleTitle')} subtitle={t('admin.backup.scheduleSub')} icon={I.clock} iconBg="#f59e0b">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 16 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>Frequency</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>{t('admin.backup.frequency')}</label>
               <select value={localSchedule.frequency} onChange={e => setLocalSchedule({ ...localSchedule, frequency: e.target.value })} style={select}>
-                <option value="hourly">Every Hour</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
+                <option value="hourly">{t('admin.backup.freq.hourly')}</option>
+                <option value="daily">{t('admin.backup.freq.daily')}</option>
+                <option value="weekly">{t('admin.backup.freq.weekly')}</option>
+                <option value="monthly">{t('admin.backup.freq.monthly')}</option>
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>Run at (time)</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>{t('admin.backup.runAt')}</label>
               <input type="time" value={localSchedule.time} onChange={e => setLocalSchedule({ ...localSchedule, time: e.target.value })} style={select} />
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>Keep last N backups</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>{t('admin.backup.keepLast')}</label>
               <select value={localSchedule.keep} onChange={e => setLocalSchedule({ ...localSchedule, keep: Number(e.target.value) })} style={select}>
-                <option value={3}>3 backups</option>
-                <option value={7}>7 backups</option>
-                <option value={14}>14 backups</option>
-                <option value={30}>30 backups</option>
+                <option value={3}>{t('admin.backup.nBackups', { count: 3 })}</option>
+                <option value={7}>{t('admin.backup.nBackups', { count: 7 })}</option>
+                <option value={14}>{t('admin.backup.nBackups', { count: 14 })}</option>
+                <option value={30}>{t('admin.backup.nBackups', { count: 30 })}</option>
               </select>
             </div>
-            <Btn label={savingSchedule ? 'Saving…' : 'Save Schedule'} icon="check" variant="green" onClick={handleSaveSchedule} disabled={savingSchedule} />
+            <Btn label={savingSchedule ? t('admin.common.saving') : t('admin.backup.saveSchedule')} icon="check" variant="green" onClick={handleSaveSchedule} disabled={savingSchedule} />
           </div>
         </Card>
 
-        <Card title="Storage & Security" subtitle="Where and how your backups are stored" icon={I.shield} iconBg="#8b5cf6">
+        <Card title={t('admin.backup.storageTitle')} subtitle={t('admin.backup.storageSub')} icon={I.shield} iconBg="#8b5cf6">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
             {[
-              { label: 'Storage Location', value: 'Laravel Storage Disk' },
-              { label: 'Encryption',       value: 'AES-256 enabled' },
-              { label: 'Compression',      value: 'gzip (.zip)' },
-              { label: 'Backup Format',    value: 'SQL dump (.sql/.zip)' },
-              { label: 'Cloud Sync',       value: 'Not configured' },
+              { label: t('admin.backup.location'),    value: t('admin.backup.locationValue') },
+              { label: t('admin.backup.encryption'),  value: 'AES-256' },
+              { label: t('admin.backup.compression'), value: 'gzip (.zip)' },
+              { label: t('admin.backup.format'),      value: 'SQL dump (.sql/.zip)' },
+              { label: t('admin.backup.cloudSync'),   value: t('admin.backup.notConfigured') },
             ].map(r => (
               <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f1eeeb' }}>
                 <span style={{ fontSize: 12, color: '#64748b', fontWeight: 500 }}>{r.label}</span>
                 <span style={{ fontSize: 12, color: '#1e292b', fontWeight: 700 }}>{r.value}</span>
               </div>
             ))}
-            <Btn label="Configure Cloud Sync" icon="cloud" variant="outline" onClick={() => showToast('Cloud sync feature is optional', 'info')} />
+            <Btn label={t('admin.backup.configureCloud')} icon="cloud" variant="outline" onClick={() => showToast(t('admin.backup.cloudOptional'), 'info')} />
           </div>
         </Card>
       </div>
@@ -239,43 +241,43 @@ const Backup = () => {
       <div style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #e7e2db', boxShadow: '0 1px 3px rgba(0,0,0,.03)', padding: '22px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#1e292b' }}>Backup History</h3>
-            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#94a3b8' }}>All backups managed via server API</p>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#1e292b' }}>{t('admin.backup.history')}</h3>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#94a3b8' }}>{t('admin.backup.historySub')}</p>
           </div>
-          <Btn label="Refresh List" icon="refresh" variant="outline" onClick={fetchBackups} />
+          <Btn label={t('admin.common.refresh')} icon="refresh" variant="outline" onClick={fetchBackups} />
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #e7e2db' }}>
-              {['File Name', 'Type', 'Size', 'Date', 'Status', 'Actions'].map(h => (
+              {[t('admin.backup.fileName'), t('admin.backup.type'), t('admin.backup.size'), t('admin.common.date'), t('admin.common.status'), t('admin.common.actions')].map(h => (
                 <th key={h} style={{ textAlign: 'left', padding: '0 12px 10px 0', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>Loading backups...</td></tr>
+              <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>{t('common.loading')}</td></tr>
             ) : history.length === 0 ? (
-              <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>No backup files found.</td></tr>
+              <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>{t('admin.backup.noFiles')}</td></tr>
             ) : (
               history.map(b => (
                 <tr key={b.id || b.name} style={{ borderBottom: '1px solid #f8f6f3' }}>
                   <td style={{ padding: '12px 12px 12px 0', color: '#1e292b', fontWeight: 600, fontFamily: 'monospace', fontSize: 11 }}>{b.name}</td>
                   <td style={{ paddingRight: 12 }}>
-                    <span style={{ background: b.type === 'Auto' ? '#eff6ff' : '#f0fdf4', color: b.type === 'Auto' ? '#3b82f6' : '#16a34a', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4 }}>{b.type}</span>
+                    <span style={{ background: b.type === 'Auto' ? '#eff6ff' : '#f0fdf4', color: b.type === 'Auto' ? '#3b82f6' : '#16a34a', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4 }}>{t(`admin.backup.kind.${b.type}`, b.type)}</span>
                   </td>
                   <td style={{ color: '#64748b', paddingRight: 12 }}>{b.size}</td>
                   <td style={{ color: '#64748b', paddingRight: 12, fontSize: 12 }}>{b.date}</td>
                   <td style={{ paddingRight: 12 }}>
-                    <span style={{ background: b.status === 'Success' ? '#eaf7ee' : '#fee2e2', color: b.status === 'Success' ? '#16a34a' : '#dc2626', fontSize: 10, fontWeight: 700, padding: '2.5px 8px', borderRadius: 4 }}>{b.status}</span>
+                    <span style={{ background: b.status === 'Success' ? '#eaf7ee' : '#fee2e2', color: b.status === 'Success' ? '#16a34a' : '#dc2626', fontSize: 10, fontWeight: 700, padding: '2.5px 8px', borderRadius: 4 }}>{t(`admin.backup.result.${b.status}`, b.status)}</span>
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => handleDownload(b.name)} style={{ padding: '5px 10px', fontSize: 11, fontWeight: 600, borderRadius: 6, border: '1px solid #dcd6ce', background: '#fff', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Icon d={I.download} size={12} color="#475569" /> Download
+                        <Icon d={I.download} size={12} color="#475569" /> {t('admin.backup.download')}
                       </button>
                       <button onClick={() => handleDelete(b.name)} style={{ padding: '5px 10px', fontSize: 11, fontWeight: 600, borderRadius: 6, border: 'none', background: '#fee2e2', color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Icon d={I.trash} size={12} color="#dc2626" /> Delete
+                        <Icon d={I.trash} size={12} color="#dc2626" /> {t('common.delete')}
                       </button>
                     </div>
                   </td>

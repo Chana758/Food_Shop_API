@@ -22,7 +22,7 @@ const Benner = () => {
       {/* Background image */}
       <img
         src={Amok}
-        alt="Banner Background"
+        alt={t('banner.imageAlt')}
         className="absolute inset-0 w-full h-full object-cover object-center"
       />
 
@@ -36,15 +36,15 @@ const Benner = () => {
         {/* Eyebrow label */}
         <p className="text-[#E3A73A] text-[10px] sm:text-[11px] font-semibold tracking-[0.25em] sm:tracking-[0.35em] uppercase flex items-center gap-2 sm:gap-3" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
           <span className="w-5 sm:w-6 h-[1px] bg-[#E3A73A]"></span>
-          Fresh From The Khmer-Fresh Market
+          {t('banner.eyebrow')}
         </p>
 
         {/* Heading */}
         <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-[68px] font-bold text-white leading-[1.08] tracking-tight uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-          Discover Food Taste <br />
-          Our{' '}
+          {t('banner.titleLine1')} <br />
+          {t('banner.titleOur')}{' '}
           <span className="relative inline-block text-[#E3A73A]">
-            Best
+            {t('banner.titleBest')}
             <svg
               className="absolute left-0 -bottom-1.5 w-full"
               height="12"
@@ -55,14 +55,13 @@ const Benner = () => {
               <path d="M2 9 C 30 2, 90 2, 118 9" stroke="#E3A73A" strokeWidth="5" fill="none" strokeLinecap="round" />
             </svg>
           </span>{' '}
-          Healthy & <br />
-          Tasty.
+          {t('banner.titleHealthy')} <br />
+          {t('banner.titleTasty')}
         </h1>
 
         {/* Description */}
         <p className="text-white/85 text-xs sm:text-sm md:text-base max-w-md sm:max-w-lg leading-relaxed font-normal">
-          This is a type of restaurant which typically serves food and drink,
-          in light refreshments such as baked goods or snacks.
+          {t('banner.description')}
         </p>
 
         {/* Action buttons */}
@@ -70,7 +69,7 @@ const Benner = () => {
 
           <Link to="/menu" className="flex-1 sm:flex-none">
             <button className="w-full sm:w-auto group px-6 sm:px-8 py-3.5 bg-[#2F5233] text-white rounded-full font-semibold flex items-center justify-center gap-2 hover:bg-[#E3A73A] hover:text-[#17242A] transition-all duration-300 shadow-lg active:scale-95 uppercase text-[11.5px] sm:text-[13px] tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-              Explore Menu
+              {t('button.exploreMenu')}
               <FaArrowRight size={11} className="transition-transform duration-300 group-hover:translate-x-1" />
             </button>
           </Link>
@@ -78,7 +77,7 @@ const Benner = () => {
           <Link to="/search" className="flex-1 sm:flex-none">
             <button className="w-full sm:w-auto px-6 sm:px-8 py-3.5 bg-transparent border border-white/40 text-white rounded-full font-semibold flex items-center justify-center gap-2 hover:border-white hover:bg-white/10 transition-all duration-300 uppercase text-[11.5px] sm:text-[13px] tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               <IoSearch size={15} />
-              Search Dishes
+              {t('banner.searchDishes')}
             </button>
           </Link>
 
@@ -93,7 +92,7 @@ const Benner = () => {
           </defs>
           <text fill="#C1502E" fontSize="8.2" fontWeight="600" letterSpacing="2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
             <textPath href="#stampCircle" startOffset="0%">
-              · 100% ORGANIC · FRESH DAILY
+              {t('banner.stamp')}
             </textPath>
           </text>
         </svg>

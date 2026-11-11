@@ -5,10 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { menu } from '../../../data';
 import axiosInstance from '../../../api/axios';
 import { IoSearch, IoCloseSharp, IoHomeOutline, IoFastFoodOutline, IoInformationCircleOutline, IoCallOutline, IoGlobeOutline } from "react-icons/io5";
-import { FaRegHeart, FaRegUser, FaBars, FaLeaf, FaSignOutAlt, FaChevronRight } from "react-icons/fa";
+import { FaRegHeart, FaRegUser, FaBars, FaLeaf, FaSignOutAlt, FaChevronRight, FaHistory } from "react-icons/fa";
 import { HiOutlineShoppingCart } from "react-icons/hi";
 import LanguageSwitcher from '../../common/LanguageSwitcher';
 import { useAuth } from '../../../context/AuthContext';
+import { authService } from '../../../service/authService';
 
 
 const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Work+Sans:wght@400;500;600;700&display=swap');`;
@@ -85,6 +86,7 @@ const Navbar = () => {
 
   // Handle user logout and clear local storage details
   const handleLogout = () => {
+    authService.logout(); // revoke the token on the server (fire and forget)
     authLogout();
     localStorage.removeItem('cart');
     localStorage.removeItem('favorites');
@@ -105,7 +107,7 @@ const Navbar = () => {
           <div className="flex items-center gap-4">
             <p className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Welcome to Khmer-Fresh Organic Market
+              {t('nav.welcome')}
             </p>
             <div className="h-3 w-[1px] bg-white/15"></div>
             <p className="text-[#E3A73A] font-semibold flex items-center gap-1.5"><IoCallOutline size={13} /> +855 972 321294</p>
@@ -114,7 +116,7 @@ const Navbar = () => {
           <div className="flex items-center gap-3 bg-white/[0.06] hover:bg-white/10 border border-white/10 rounded-full pl-3 pr-1 py-0.5 transition-colors">
             <div className="flex items-center gap-1.5 text-white/80 text-[11px] font-bold tracking-wider uppercase">
               <IoGlobeOutline size={13} className="text-[#E3A73A]" />
-              <span>Language:</span>
+              <span>{t('nav.language')}:</span>
             </div>
             <div className="scale-90">
               <LanguageSwitcher />
@@ -151,7 +153,7 @@ const Navbar = () => {
             </div>
 
             <span className="text-[8px] font-bold text-[#C1502E] tracking-[0.2em] uppercase text-center">
-              Authentic Taste
+              {t('nav.authenticTaste')}
             </span>
           </div>
         </Link>
@@ -213,13 +215,17 @@ const Navbar = () => {
                   <span className="w-6 h-6 rounded-full bg-[#2F5233] text-white group-hover:bg-white group-hover:text-[#2F5233] text-[10px] font-bold flex items-center justify-center transition-colors">
                     {currentUser.name?.charAt(0).toUpperCase() || 'U'}
                   </span>
-                  <span className="text-[#17242A] group-hover:text-white font-semibold text-[13px] transition-colors">{currentUser.name || 'Guest'}</span>
+                  <span className="text-[#17242A] group-hover:text-white font-semibold text-[13px] transition-colors">{currentUser.name || t('nav.guest')}</span>
                 </button>
                 <div className={`absolute right-0 top-full pt-3 z-50 transition-all duration-300 ${openUserDropdown ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}`}>
                   <div className="bg-white shadow-2xl rounded-xl py-1 w-52 border border-black/5 overflow-hidden">
                     <div className="px-4 py-3 border-b border-black/5 bg-[#F6F1E3]/60">
                       <p className="text-[11px] text-[#17242A]/50 truncate">{currentUser.email}</p>
                     </div>
+                    <Link to="/order-history" onClick={() => setOpenUserDropdown(false)}
+                      className="w-full text-left px-4 py-3 hover:bg-[#2F5233] hover:text-white text-[#17242A] transition-colors flex items-center gap-2 font-semibold text-sm">
+                      <FaHistory size={13} /> {t('nav.orderHistory')}
+                    </Link>
                     <button onClick={handleLogout}
                       className="w-full text-left px-4 py-3 hover:bg-[#C1502E] hover:text-white text-[#C1502E] transition-colors flex items-center gap-2 font-semibold text-sm">
                       <FaSignOutAlt size={13} /> {t('nav.logout')}
@@ -275,7 +281,7 @@ const Navbar = () => {
           </div>
           <div className="relative z-10 uppercase">
             <h2 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>KHMER-FRESH</h2>
-            <p className="text-[#E3A73A] text-[10px] font-semibold mt-1 tracking-[0.25em]">Authentic Taste</p>
+            <p className="text-[#E3A73A] text-[10px] font-semibold mt-1 tracking-[0.25em]">{t('nav.authenticTaste')}</p>
           </div>
         </div>
 
@@ -306,10 +312,20 @@ const Navbar = () => {
                   )}
                 </Link>
               </li>
+              {currentUser && (
+                <li>
+                  <Link to="/order-history"
+                    className={`flex items-center gap-4 px-4 py-3.5 rounded-lg font-semibold transition-all border-l-[3px] ${location.pathname === '/order-history' ? 'bg-[#2F5233]/10 border-[#2F5233] text-[#2F5233]' : 'border-transparent text-[#17242A]/60 hover:bg-[#2F5233]/5'}`}
+                    onClick={() => setOpenSidebar(false)}>
+                    <FaHistory size={16} />
+                    <span className="text-[13.5px] uppercase tracking-wide">{t('nav.orderHistory')}</span>
+                  </Link>
+                </li>
+              )}
             </ul>
 
             <div className="mt-6 pt-5 border-t border-black/5 px-2 flex justify-between items-center">
-              <span className="text-[10px] font-semibold text-[#17242A]/40 uppercase tracking-[0.2em]">Language</span>
+              <span className="text-[10px] font-semibold text-[#17242A]/40 uppercase tracking-[0.2em]">{t('nav.language')}</span>
               <div className="scale-90"><LanguageSwitcher /></div>
             </div>
           </div>
@@ -344,7 +360,7 @@ const Navbar = () => {
       {/* Search Overlay */}
       <div className={`w-full z-[120] absolute top-0 left-0 bg-[#F6F1E3] border-b-2 border-[#2F5233] transition-all duration-500 ${openSearch ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}`}>
         <div className="w-full px-6 py-12 flex flex-col items-center relative">
-          <p className="text-[10px] font-semibold text-[#C1502E] tracking-[0.3em] uppercase mb-3">Search the market</p>
+          <p className="text-[10px] font-semibold text-[#C1502E] tracking-[0.3em] uppercase mb-3">{t('nav.searchTitle')}</p>
           <form onSubmit={(e) => { e.preventDefault(); if (searchInput.trim()) { navigate(`/search?q=${encodeURIComponent(searchInput)}`); setSearchInput(''); setOpenSearch(false); } }} className="relative w-full max-w-2xl">
             <IoSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-2xl text-[#2F5233]" />
             <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)}

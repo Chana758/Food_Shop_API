@@ -46,10 +46,10 @@ const Service = () => {
         {/* --- Header Section (ស៊ីគ្នាជាមួយ About) --- */}
         <div data-aos="fade-down" className="mb-20 border-l-8 border-[#2D4A22] pl-6 relative">
           <h1 className="text-4xl md:text-5xl font-black text-[#2D4A22] uppercase tracking-tighter">
-            {t('service.title')} <span className="text-[#F58220]">Solutions</span>
+            {t('service.title')} <span className="text-[#F58220]">{t('service.solutions')}</span>
           </h1>
           <p className="text-gray-500 font-medium mt-2 uppercase text-xs tracking-[0.3em]">
-            Professional • Healthy • Organic Service
+            {t('service.tagline')}
           </p>
           <BiLeaf className="absolute -top-10 right-0 text-[#2D4A22]/5" size={200} />
         </div>
@@ -91,13 +91,13 @@ const Service = () => {
         {/* --- Trust Badge Section --- */}
         <div className="mt-24 py-12 border-t border-gray-100 flex flex-wrap justify-center gap-12 opacity-50 grayscale hover:grayscale-0 transition-all duration-1000">
              <div className="flex items-center gap-2 font-black text-[#2D4A22] uppercase tracking-widest text-xs">
-                <BiLeaf size={24}/> Certified Organic
+                <BiLeaf size={24}/> {t('service.certifiedOrganic')}
              </div>
              <div className="flex items-center gap-2 font-black text-[#2D4A22] uppercase tracking-widest text-xs">
-                <FaStar size={20}/> 5-Star Service
+                <FaStar size={20}/> {t('service.fiveStar')}
              </div>
              <div className="flex items-center gap-2 font-black text-[#2D4A22] uppercase tracking-widest text-xs">
-                <FaMotorcycle size={24}/> Real-time Tracking
+                <FaMotorcycle size={24}/> {t('service.tracking')}
              </div>
         </div>
 

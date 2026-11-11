@@ -16,6 +16,9 @@ export default function useBackup() {
         try {
             const { data } = await backupService.getBackups();
             if (data?.status === 'success') setHistory(data.data);
+        } catch (err) {
+            // was unhandled (uncaught promise rejection when the API failed)
+            console.error('Failed to fetch backups:', err);
         } finally {
             setLoading(false);
         }

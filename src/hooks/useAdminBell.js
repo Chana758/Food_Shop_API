@@ -46,8 +46,9 @@ const useAdminBell = () => {
         next.push({
           id:    'payments',
           type:  'payment',
-          title: `${pendingPayments} Pending Payment${pendingPayments > 1 ? 's' : ''}`,
-          sub:   'KHQR receipts awaiting confirmation',
+          // translated in AdminHeader: t(titleKey, { count }) / t(subKey)
+          titleKey: 'admin.bell.pendingPayments',
+          subKey:   'admin.bell.pendingPaymentsSub',
           link:  '/admin/payments',
           color: 'text-yellow-700',
           bg:    'bg-yellow-50',
@@ -60,8 +61,8 @@ const useAdminBell = () => {
         next.push({
           id:    'delivery',
           type:  'delivery',
-          title: `${unassignedDeliveries} Unassigned Deliver${unassignedDeliveries > 1 ? 'ies' : 'y'}`,
-          sub:   'Delivery orders waiting for a rider',
+          titleKey: 'admin.bell.unassignedDeliveries',
+          subKey:   'admin.bell.unassignedDeliveriesSub',
           link:  '/admin/delivery',
           color: 'text-orange-700',
           bg:    'bg-orange-50',
@@ -74,8 +75,8 @@ const useAdminBell = () => {
         next.push({
           id:    'reservations',
           type:  'reservation',
-          title: `${pendingReservations} Pending Reservation${pendingReservations > 1 ? 's' : ''}`,
-          sub:   'Table bookings awaiting confirmation',
+          titleKey: 'admin.bell.pendingReservations',
+          subKey:   'admin.bell.pendingReservationsSub',
           link:  '/admin/reservations',
           color: 'text-blue-700',
           bg:    'bg-blue-50',
@@ -88,8 +89,8 @@ const useAdminBell = () => {
         next.push({
           id:    'contacts',
           type:  'contact',
-          title: `${unreadContacts} Unread Message${unreadContacts > 1 ? 's' : ''}`,
-          sub:   'Customer contact messages to review',
+          titleKey: 'admin.bell.unreadMessages',
+          subKey:   'admin.bell.unreadMessagesSub',
           link:  '/admin/contacts',
           color: 'text-purple-700',
           bg:    'bg-purple-50',

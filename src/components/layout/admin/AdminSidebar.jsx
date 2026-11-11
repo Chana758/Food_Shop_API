@@ -7,6 +7,20 @@ import {
   LuTrendingUp, LuHeart, LuBike, LuCalendarDays, LuMail, LuStar,
 } from 'react-icons/lu';
 import { useAuth } from '../../../context/AuthContext';
+import { authService } from '../../../service/authService';
+import { useTranslation } from 'react-i18next';
+
+// section label (English id) -> translation key
+const SECTION_KEY = {
+  'Overview': 'overview',
+  'Operations': 'operations',
+  'Engagement': 'engagement',
+  'Catalog': 'catalog',
+  'People & reports': 'peopleReports',
+  'System': 'system',
+};
+// menu item -> translation key (last part of its path)
+const itemKey = (item) => `admin.nav.${item.path.split('/').pop()}`;
 
 
 const FONT_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
@@ -113,11 +127,13 @@ const NAV_SECTIONS = [
 ];
 
 const AdminSidebar = ({ collapsed }) => {
+  const { t } = useTranslation();
   const location  = useLocation();
   const { user, logout } = useAuth();
   const userRole  = user?.role?.toLowerCase() || 'staff';
 
   const handleLogout = () => {
+    authService.logout(); // revoke the token on the server too
     logout();
     window.location.href = '/login';
   };
@@ -142,7 +158,7 @@ const AdminSidebar = ({ collapsed }) => {
               Khmer-Fresh
             </h1>
             <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#D99A3D]">
-              Authentic Taste
+              {t('nav.authenticTaste')}
             </p>
             <KramaAccent />
           </div>
@@ -158,7 +174,7 @@ const AdminSidebar = ({ collapsed }) => {
             <div key={section.label} className="mb-5 last:mb-1">
               {!collapsed && (
                 <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#65757A]">
-                  {section.label}
+                  {t(`admin.section.${SECTION_KEY[section.label]}`)}
                 </p>
               )}
               <div className="space-y-0.5">
@@ -169,7 +185,7 @@ const AdminSidebar = ({ collapsed }) => {
                     <Link
                       key={item.name}
                       to={item.path}
-                      title={collapsed ? item.name : undefined}
+                      title={collapsed ? t(itemKey(item)) : undefined}
                       className={`group relative flex items-center gap-3 py-2 rounded-lg transition-colors duration-150
                         ${collapsed ? 'px-0 justify-center' : 'px-2'}
                         ${isActive
@@ -187,7 +203,7 @@ const AdminSidebar = ({ collapsed }) => {
                       </span>
                       {!collapsed && (
                         <span className={`text-[13.5px] ${isActive ? 'font-semibold' : 'font-medium'}`}>
-                          {item.name}
+                          {t(itemKey(item))}
                         </span>
                       )}
                     </Link>
@@ -203,13 +219,13 @@ const AdminSidebar = ({ collapsed }) => {
       <div className={`border-t border-[#32444A] ${collapsed ? 'p-3' : 'p-4'}`}>
         <button
           onClick={handleLogout}
-          title={collapsed ? 'Logout' : undefined}
+          title={collapsed ? t('nav.logout') : undefined}
           className={`flex items-center w-full rounded-lg text-[#9AA5A3]
             hover:bg-[#3A2422] hover:text-[#E39187] transition-colors group
             ${collapsed ? 'justify-center py-2.5 px-0' : 'gap-3 px-3 py-2.5'}`}
         >
           <LuLogOut size={17} className="group-hover:-translate-x-0.5 transition-transform" />
-          {!collapsed && <span className="text-[13.5px] font-medium">Logout</span>}
+          {!collapsed && <span className="text-[13.5px] font-medium">{t('nav.logout')}</span>}
         </button>
       </div>
     </div>

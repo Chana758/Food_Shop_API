@@ -5,6 +5,16 @@
    the `dark_mode` setting. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Khmer language (i18n.js sets <html lang="km">).
+   The design's Latin fonts (Space Grotesk, Work Sans, JetBrains Mono) have no
+   Khmer letters, so use Kantumruy Pro (it has Latin letters too). Wide letter
+   spacing breaks up Khmer words, so turn it off. */
+html[lang="km"] body,
+html[lang="km"] body *:not(svg):not(svg *) {
+  font-family: 'Kantumruy Pro', sans-serif !important;
+  letter-spacing: normal !important;
+}
+
 :root {
   /* Fallback defaults — immediately overwritten by SettingsContext.jsx
      on mount, once real settings load from the API. Having sane

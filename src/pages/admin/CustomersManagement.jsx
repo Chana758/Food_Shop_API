@@ -5,11 +5,14 @@ import {
   LuPlus, LuPencil, LuTrash, LuUsers, LuUserCheck, LuUserX, LuSave, LuEye, LuX,
   LuChevronLeft, LuChevronRight,
 } from "react-icons/lu";
+import { apiErrorMessage } from '../../utils/apiError';
 import axiosInstance from '../../api/axios';
+import { useTranslation } from 'react-i18next';
 
 const PAGE_SIZE = 8;
 
 const CustomersManagement = () => {
+  const { t } = useTranslation();
   const { searchTerm = '' } = useOutletContext() || {};
 
   const [customerList, setCustomerList] = useState([]);
@@ -29,14 +32,14 @@ const CustomersManagement = () => {
       const response = await axiosInstance.get('/admin/customers');
       const data = response?.data?.data || response?.data || [];
       setCustomerList(Array.isArray(data) ? data : []);
-    } catch (error) {
-      toast.error("Failed to load customers");
+    } catch {
+      toast.error(t('admin.customers.loadFailed'));
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchCustomers(); }, []);
+  useEffect(() => { fetchCustomers(); }, []); // eslint-disable-line react-hooks/exhaustive-deps -- load once
 
   // Reset to page 1 whenever the search term changes
   useEffect(() => { setCurrentPage(1); }, [searchTerm]);
@@ -63,11 +66,11 @@ const CustomersManagement = () => {
     setIsSaving(true);
     try {
       await axiosInstance.put(`/admin/customers/${formData.id}`, formData);
-      toast.success("Customer updated successfully!");
+      toast.success(t('admin.customers.updated'));
       setIsEditModalOpen(false);
       fetchCustomers();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Error updating customer");
+      toast.error(apiErrorMessage(error, t));
     } finally {
       setIsSaving(false);
     }
@@ -78,12 +81,12 @@ const CustomersManagement = () => {
     setIsSaving(true);
     try {
       await axiosInstance.post('/admin/customers', formData);
-      toast.success("Customer added successfully!");
+      toast.success(t('admin.customers.added'));
       setIsAddModalOpen(false);
       setFormData({ name: '', email: '', phone: '', password: '' });
       fetchCustomers();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Error adding customer");
+      toast.error(apiErrorMessage(error, t));
     } finally {
       setIsSaving(false);
     }
@@ -91,28 +94,28 @@ const CustomersManagement = () => {
 
   const toggleStatus = async (customer) => {
     const actionName = customer.status === 'blocked' ? 'unblock' : 'block';
-    if (window.confirm(`Are you sure you want to ${actionName} this customer?`)) {
+    if (window.confirm(t(`admin.customers.confirm_${actionName}`))) {
       try {
         setCustomerList(prevList => prevList.map(item =>
           item.id === customer.id ? { ...item, status: item.status === 'blocked' ? 'active' : 'blocked' } : item
         ));
         await axiosInstance.put(`/admin/customers/${customer.id}/toggle-status`, {});
-        toast.success(`Customer ${actionName}ed successfully`);
-      } catch (error) {
-        toast.error("Failed to change status");
+        toast.success(t(`admin.customers.done_${actionName}`));
+      } catch {
+        toast.error(t('admin.customers.statusFailed'));
         fetchCustomers();
       }
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("WARNING: Are you sure you want to delete this customer?")) {
+    if (window.confirm(t('admin.customers.confirmDelete'))) {
       try {
         await axiosInstance.delete(`/admin/customers/${id}`);
-        toast.success("Customer deleted successfully");
+        toast.success(t('admin.customers.deleted'));
         fetchCustomers();
-      } catch (error) { 
-        toast.error("Delete failed"); 
+      } catch (error) {
+        toast.error(apiErrorMessage(error, t, 'admin.categories.deleteFailed'));
       }
     }
   };
@@ -127,8 +130,8 @@ const CustomersManagement = () => {
       {/* ── HEADER & ADD BUTTON ── */}
       <div className="bg-white rounded-xl border-2 border-slate-300 p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-sm font-black text-slate-900 uppercase tracking-wide">Customer Management</h1>
-          <p className="text-xs text-slate-500 font-semibold mt-0.5">View and manage registered clients</p>
+          <h1 className="text-sm font-black text-slate-900 uppercase tracking-wide">{t('admin.page.customers')}</h1>
+          <p className="text-xs text-slate-500 font-semibold mt-0.5">{t('admin.customers.subtitle')}</p>
         </div>
         <button
           onClick={() => {
@@ -137,7 +140,7 @@ const CustomersManagement = () => {
           }}
           className="bg-slate-900 text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition cursor-pointer shadow-sm whitespace-nowrap flex items-center gap-2"
         >
-          <LuPlus size={15} /> Add Customer
+          <LuPlus size={15} /> {t('admin.customers.add')}
         </button>
       </div>
 
@@ -145,30 +148,30 @@ const CustomersManagement = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           {
-            title: "Total Customers",
-            label: "All registered clients",
+            title: t('admin.customers.total'),
+            label: t('admin.customers.allRegistered'),
             val: customerList.length,
             icon: LuUsers,
             card: "bg-slate-900",
-            badge: "TOTAL",
+            badge: t('admin.common.total'),
             badgeText: "text-slate-300",
           },
           {
-            title: "Active",
-            label: "Active accounts",
+            title: t('status.active'),
+            label: t('admin.customers.activeAccounts'),
             val: activeCount,
             icon: LuUserCheck,
             card: "bg-emerald-700",
-            badge: "STATUS",
+            badge: t('admin.common.status'),
             badgeText: "text-emerald-100",
           },
           {
-            title: "Blocked",
-            label: "Restricted accounts",
+            title: t('status.blocked'),
+            label: t('admin.customers.restricted'),
             val: blockedCount,
             icon: LuUserX,
             card: "bg-rose-700",
-            badge: "STATUS",
+            badge: t('admin.common.status'),
             badgeText: "text-rose-100",
           },
         ].map((item, i) => (
@@ -194,19 +197,19 @@ const CustomersManagement = () => {
           <thead className="bg-slate-50 text-slate-600 text-[11px] font-black uppercase tracking-wider border-b-2 border-slate-300">
             <tr>
               <th className="px-5 py-3 w-16">No.</th>
-              <th className="px-5 py-3">Name</th>
-              <th className="px-5 py-3">Email</th>
-              <th className="px-5 py-3 w-32">Status</th>
-              <th className="px-5 py-3 text-center w-48">Actions</th>
+              <th className="px-5 py-3">{t('admin.common.name')}</th>
+              <th className="px-5 py-3">{t('auth.email')}</th>
+              <th className="px-5 py-3 w-32">{t('admin.common.status')}</th>
+              <th className="px-5 py-3 text-center w-48">{t('admin.common.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
             {loading ? (
-              <tr><td colSpan="5" className="text-center py-12 text-xs font-bold text-slate-500 uppercase tracking-widest">Loading...</td></tr>
+              <tr><td colSpan="5" className="text-center py-12 text-xs font-bold text-slate-500 uppercase tracking-widest">{t('common.loading')}</td></tr>
             ) : filteredCustomers.length === 0 ? (
               <tr>
                 <td colSpan="5" className="text-center py-12 text-slate-500 font-bold text-xs uppercase tracking-wider">
-                  {searchTerm ? `No customers match "${searchTerm}"` : 'No customers found.'}
+                  {searchTerm ? t('admin.common.noMatch', { term: searchTerm }) : t('admin.customers.none')}
                 </td>
               </tr>
             ) : (
@@ -223,7 +226,7 @@ const CustomersManagement = () => {
                         ? 'bg-rose-50 text-rose-700 border-rose-200' 
                         : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                     }`}>
-                      {c.status || 'active'}
+                      {t(`status.${c.status || 'active'}`, c.status)}
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
@@ -231,14 +234,14 @@ const CustomersManagement = () => {
                       <button
                         onClick={() => setViewData(c)}
                         className="p-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg cursor-pointer transition shadow-2xs"
-                        title="View Details"
+                        title={t('admin.common.viewDetails')}
                       >
                         <LuEye size={13} />
                       </button>
                       <button
                         onClick={() => openEditModal(c)}
                         className="p-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg cursor-pointer transition shadow-2xs"
-                        title="Edit"
+                        title={t('common.edit')}
                       >
                         <LuPencil size={13} />
                       </button>
@@ -250,12 +253,12 @@ const CustomersManagement = () => {
                             : 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
                         }`}
                       >
-                        {c.status === 'blocked' ? 'Unblock' : 'Block'}
+                        {c.status === 'blocked' ? t('admin.customers.unblock') : t('admin.customers.block')}
                       </button>
                       <button
                         onClick={() => handleDelete(c.id)}
                         className="p-2 bg-white border border-rose-300 hover:bg-rose-50 text-rose-600 rounded-lg cursor-pointer transition shadow-2xs"
-                        title="Delete"
+                        title={t('common.delete')}
                       >
                         <LuTrash size={13} />
                       </button>
@@ -271,7 +274,7 @@ const CustomersManagement = () => {
         {!loading && filteredCustomers.length > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3.5 border-t-2 border-slate-200 bg-slate-50">
             <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredCustomers.length)} of {filteredCustomers.length}
+              {t('admin.common.showingRange', { from: (safePage - 1) * PAGE_SIZE + 1, to: Math.min(safePage * PAGE_SIZE, filteredCustomers.length), total: filteredCustomers.length })}
             </p>
             <div className="flex items-center gap-1.5">
               <button
@@ -324,34 +327,34 @@ const CustomersManagement = () => {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center p-4 z-50">
           <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl border-2 border-slate-300 space-y-4">
             <div className="flex justify-between items-center pb-2 border-b border-slate-200">
-              <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">Customer Details</h2>
+              <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">{t('admin.customers.details')}</h2>
               <button onClick={() => setViewData(null)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                 <LuX size={16} />
               </button>
             </div>
             <div className="space-y-3 text-xs">
               <div>
-                <span className="text-[10px] font-black uppercase text-slate-400">Full Name</span>
+                <span className="text-[10px] font-black uppercase text-slate-400">{t('auth.fullName')}</span>
                 <p className="font-bold text-slate-900 mt-0.5">{viewData.name}</p>
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase text-slate-400">Email Address</span>
+                <span className="text-[10px] font-black uppercase text-slate-400">{t('contact.emailAddress')}</span>
                 <p className="font-bold text-slate-900 mt-0.5">{viewData.email}</p>
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase text-slate-400">Phone Number</span>
-                <p className="font-bold text-slate-900 mt-0.5">{viewData.phone || 'N/A'}</p>
+                <span className="text-[10px] font-black uppercase text-slate-400">{t('auth.phoneNumber')}</span>
+                <p className="font-bold text-slate-900 mt-0.5">{viewData.phone || '—'}</p>
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase text-slate-400">Account Status</span>
-                <p className="font-bold text-slate-900 mt-0.5 uppercase">{viewData.status || 'active'}</p>
+                <span className="text-[10px] font-black uppercase text-slate-400">{t('admin.customers.accountStatus')}</span>
+                <p className="font-bold text-slate-900 mt-0.5 uppercase">{t(`status.${viewData.status || 'active'}`, viewData.status)}</p>
               </div>
             </div>
             <button
               onClick={() => setViewData(null)}
               className="w-full py-2.5 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-800 transition cursor-pointer"
             >
-              Close
+              {t('common.close')}
             </button>
           </div>
         </div>
@@ -365,33 +368,33 @@ const CustomersManagement = () => {
               <div className="p-2 bg-slate-900 text-white rounded-lg">
                 <LuPlus size={16} />
               </div>
-              <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">Add New Customer</h2>
+              <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">{t('admin.customers.addNew')}</h2>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Full Name *</label>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">{t('auth.fullName')} *</label>
                 <input
                   className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
-                  placeholder="e.g. Sam Channa"
+                  placeholder={t('auth.namePlaceholder')}
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Email *</label>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">{t('auth.email')} *</label>
                 <input
                   type="email"
                   className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
-                  placeholder="e.g. customer@example.com"
+                  placeholder="customer@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Phone</label>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">{t('auth.phoneNumber')}</label>
                 <input
                   className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
                   placeholder="e.g. 0972324523"
@@ -400,7 +403,7 @@ const CustomersManagement = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Password *</label>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">{t('auth.password')} *</label>
                 <input
                   type="password"
                   className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
@@ -418,14 +421,14 @@ const CustomersManagement = () => {
                 onClick={() => setIsAddModalOpen(false)}
                 className="flex-1 py-2.5 border-2 border-slate-300 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-100 cursor-pointer text-slate-700 transition"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
                 className="flex-1 py-2.5 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-800 cursor-pointer transition shadow-sm flex items-center justify-center gap-1.5"
               >
-                {isSaving ? "Saving..." : <><LuSave size={13} /> Create</>}
+                {isSaving ? t('admin.common.saving') : <><LuSave size={13} /> {t('admin.common.create')}</>}
               </button>
             </div>
           </form>
@@ -440,12 +443,12 @@ const CustomersManagement = () => {
               <div className="p-2 bg-slate-900 text-white rounded-lg">
                 <LuPencil size={16} />
               </div>
-              <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">Edit Customer</h2>
+              <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">{t('admin.customers.edit')}</h2>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Full Name *</label>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">{t('auth.fullName')} *</label>
                 <input
                   className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
                   value={formData.name}
@@ -454,7 +457,7 @@ const CustomersManagement = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Email *</label>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">{t('auth.email')} *</label>
                 <input
                   type="email"
                   className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
@@ -464,7 +467,7 @@ const CustomersManagement = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Phone</label>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">{t('auth.phoneNumber')}</label>
                 <input
                   className="w-full p-2.5 rounded-lg border-2 border-slate-300 font-bold focus:outline-slate-900 bg-slate-50"
                   value={formData.phone}
@@ -479,14 +482,14 @@ const CustomersManagement = () => {
                 onClick={() => setIsEditModalOpen(false)}
                 className="flex-1 py-2.5 border-2 border-slate-300 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-100 cursor-pointer text-slate-700 transition"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
                 className="flex-1 py-2.5 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-800 cursor-pointer transition shadow-sm flex items-center justify-center gap-1.5"
               >
-                {isSaving ? "Saving..." : <><LuSave size={13} /> Save</>}
+                {isSaving ? t('admin.common.saving') : <><LuSave size={13} /> {t('common.save')}</>}
               </button>
             </div>
           </form>

@@ -59,7 +59,7 @@ export const useAdminContact = () => {
       // controller returns { status, data: {...} }
       const statsPayload = statsRes?.data?.data ?? statsRes?.data ?? null;
       setStats(statsPayload);
-    } catch (err) {
+    } catch {
       setError('Failed to load contacts.');
     } finally {
       setLoading(false);

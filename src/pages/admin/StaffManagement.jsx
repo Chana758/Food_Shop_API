@@ -5,11 +5,14 @@ import {
   LuPlus, LuPencil, LuTrash, LuUsers, LuShieldCheck, LuUserCheck,
   LuSave, LuRefreshCw, LuMail, LuPhone,
 } from "react-icons/lu";
+import { apiErrorMessage } from '../../utils/apiError';
 import axiosInstance from '../../api/axios';
+import { useTranslation } from 'react-i18next';
 
 const ROLE_FILTERS = ['ALL', 'ADMIN', 'STAFF'];
 
 const StaffManagement = () => {
+  const { t } = useTranslation();
   const { searchTerm = '' } = useOutletContext() || {};
 
   const [staffList, setStaffList] = useState([]);
@@ -27,8 +30,8 @@ const StaffManagement = () => {
       const response = await axiosInstance.get('/admin/staff');
       const data = response?.data?.data || response?.data || [];
       setStaffList(Array.isArray(data) ? data : []);
-    } catch (error) {
-      toast.error("Failed to load staff list");
+    } catch {
+      toast.error(t('admin.staff.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -36,7 +39,7 @@ const StaffManagement = () => {
 
   useEffect(() => {
     fetchStaff();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- load once
 
   const openModal = (mode, staff = null) => {
     setModalMode(mode);
@@ -60,28 +63,26 @@ const StaffManagement = () => {
 
       const method = modalMode === 'EDIT' ? 'put' : 'post';
 
-      const response = await axiosInstance[method](url, dataToSave);
+      await axiosInstance[method](url, dataToSave);
 
-      toast.success(response.data.message || "Operation successful!");
+      toast.success(modalMode === 'EDIT' ? t('admin.staff.updated') : t('admin.staff.added'));
       setIsModalOpen(false);
       fetchStaff();
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Something went wrong!";
-      toast.error(errorMessage);
+      toast.error(apiErrorMessage(error, t));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleRemove = async (id) => {
-    if (!window.confirm("Are you sure you want to remove this staff member?")) return;
+    if (!window.confirm(t('admin.staff.confirmRemove'))) return;
     try {
       await axiosInstance.delete(`/admin/staff/${id}`);
-      toast.success("Staff removed successfully");
+      toast.success(t('admin.staff.removed'));
       fetchStaff();
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Something went wrong!";
-      toast.error(errorMessage);
+      toast.error(apiErrorMessage(error, t));
     }
   };
 
@@ -106,14 +107,14 @@ const StaffManagement = () => {
       {/* ── HEADER ── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-xl font-black text-slate-900">Staff Management</h1>
-          <p className="text-sm text-slate-500 font-medium mt-0.5">Manage and organize your restaurant team members</p>
+          <h1 className="text-xl font-black text-slate-900">{t('admin.page.staff')}</h1>
+          <p className="text-sm text-slate-500 font-medium mt-0.5">{t('admin.staff.subtitle')}</p>
         </div>
         <button
           onClick={() => openModal('ADD')}
           className="bg-slate-900 text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition cursor-pointer shadow-sm whitespace-nowrap flex items-center gap-2"
         >
-          <LuPlus size={15} /> Add New Staff
+          <LuPlus size={15} /> {t('admin.staff.addNew')}
         </button>
       </div>
 
@@ -121,30 +122,30 @@ const StaffManagement = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           {
-            title: "TOTAL STAFF",
-            label: "All team members",
+            title: t('admin.staff.total'),
+            label: t('admin.staff.allMembers'),
             val: staffList.length,
             icon: LuUsers,
             card: "bg-slate-900",
-            badge: "TOTAL",
+            badge: t('admin.common.total'),
             badgeText: "text-slate-300",
           },
           {
-            title: "Admins",
-            label: "System administrators",
+            title: t('admin.staff.admins'),
+            label: t('admin.staff.sysAdmins'),
             val: adminCount,
             icon: LuShieldCheck,
             card: "bg-blue-700",
-            badge: "ROLE",
+            badge: t('admin.staff.role'),
             badgeText: "text-blue-100",
           },
           {
-            title: "Active staff",
-            label: "Regular staff members",
+            title: t('admin.staff.activeStaff'),
+            label: t('admin.staff.regular'),
             val: staffCount,
             icon: LuUserCheck,
             card: "bg-emerald-700",
-            badge: "ROLE",
+            badge: t('admin.staff.role'),
             badgeText: "text-emerald-100",
           },
         ].map((item, i) => (
@@ -168,7 +169,7 @@ const StaffManagement = () => {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Filter:</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">{t('admin.common.filter')}:</span>
             {ROLE_FILTERS.map((f) => (
               <button
                 key={f}
@@ -179,14 +180,14 @@ const StaffManagement = () => {
                     : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                 }`}
               >
-                {f}
+                {f === 'ALL' ? t('status.all') : t(`admin.role.${f.toLowerCase()}`)}
               </button>
             ))}
           </div>
           <button
             onClick={fetchStaff}
             className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 transition cursor-pointer"
-            title="Refresh"
+            title={t('admin.common.refresh')}
           >
             <LuRefreshCw size={14} />
           </button>
@@ -195,19 +196,19 @@ const StaffManagement = () => {
         <div className="flex items-center justify-between px-5 py-3 bg-slate-50 border-b border-slate-200">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">All Staff</span>
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">{t('admin.staff.all')}</span>
           </div>
           <span className="text-[11px] font-bold bg-white border border-slate-200 text-slate-500 px-2.5 py-1 rounded-full">
-            {filteredStaff.length} {filteredStaff.length === 1 ? 'record' : 'records'}
+            {t('admin.common.records', { count: filteredStaff.length })}
           </span>
         </div>
 
         <div className="divide-y divide-slate-100">
           {loading ? (
-            <div className="text-center py-14 text-xs font-bold text-slate-400 uppercase tracking-widest">Loading...</div>
+            <div className="text-center py-14 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.loading')}</div>
           ) : filteredStaff.length === 0 ? (
             <div className="text-center py-14 text-slate-400 font-bold text-xs uppercase tracking-wider">
-              {searchTerm ? `No staff match "${searchTerm}"` : 'No staff found.'}
+              {searchTerm ? t('admin.common.noMatch', { term: searchTerm }) : t('admin.staff.none')}
             </div>
           ) : (
             filteredStaff.map((staff) => (
@@ -225,7 +226,7 @@ const StaffManagement = () => {
                       <LuMail size={12} /> {staff.email}
                     </span>
                     <span className="flex items-center gap-1 text-xs text-slate-500 font-medium">
-                      <LuPhone size={12} /> {staff.phone || 'N/A'}
+                      <LuPhone size={12} /> {staff.phone || '—'}
                     </span>
                   </div>
                 </div>
@@ -235,21 +236,21 @@ const StaffManagement = () => {
                     ? 'bg-blue-50 border border-blue-200 text-blue-700'
                     : 'bg-emerald-50 border border-emerald-200 text-emerald-700'
                 }`}>
-                  {staff.role}
+                  {t(`admin.role.${staff.role}`, staff.role)}
                 </span>
 
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     onClick={() => openModal('EDIT', staff)}
                     className="p-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg cursor-pointer transition"
-                    title="Edit"
+                    title={t('common.edit')}
                   >
                     <LuPencil size={13} />
                   </button>
                   <button
                     onClick={() => handleRemove(staff.id)}
                     className="p-2 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-lg cursor-pointer transition"
-                    title="Remove"
+                    title={t('admin.tables.removeBtn')}
                   >
                     <LuTrash size={13} />
                   </button>
@@ -269,16 +270,16 @@ const StaffManagement = () => {
                 <LuPlus size={16} />
               </div>
               <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">
-                {modalMode === 'ADD' ? 'Add New Staff' : 'Edit Staff'}
+                {modalMode === 'ADD' ? t('admin.staff.addNew') : t('admin.staff.edit')}
               </h2>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Full Name *</label>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">{t('auth.fullName')} *</label>
                 <input
                   className="w-full p-2.5 rounded-lg border border-slate-200 font-bold focus:outline-slate-900 bg-slate-50"
-                  placeholder="e.g. John Doe"
+                  placeholder={t('auth.namePlaceholder')}
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
@@ -286,11 +287,11 @@ const StaffManagement = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Email Address *</label>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">{t('contact.emailAddress')} *</label>
                 <input
                   type="email"
                   className="w-full p-2.5 rounded-lg border border-slate-200 font-bold focus:outline-slate-900 bg-slate-50"
-                  placeholder="e.g. john@example.com"
+                  placeholder="name@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
@@ -298,7 +299,7 @@ const StaffManagement = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Phone Number</label>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">{t('auth.phoneNumber')}</label>
                 <input
                   className="w-full p-2.5 rounded-lg border border-slate-200 font-bold focus:outline-slate-900 bg-slate-50"
                   placeholder="e.g. 0972324523"
@@ -308,20 +309,20 @@ const StaffManagement = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Role *</label>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">{t('admin.staff.role')} *</label>
                 <select
                   className="w-full p-2.5 rounded-lg border border-slate-200 font-bold focus:outline-slate-900 bg-slate-50"
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 >
-                  <option value="staff">Staff</option>
-                  <option value="admin">Admin</option>
+                  <option value="staff">{t('admin.role.staff')}</option>
+                  <option value="admin">{t('admin.role.admin')}</option>
                 </select>
               </div>
 
               {modalMode === 'ADD' && (
                 <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Password *</label>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">{t('auth.password')} *</label>
                   <input
                     type="password"
                     className="w-full p-2.5 rounded-lg border border-slate-200 font-bold focus:outline-slate-900 bg-slate-50"
@@ -339,14 +340,14 @@ const StaffManagement = () => {
                 onClick={() => setIsModalOpen(false)}
                 className="flex-1 py-2.5 border border-slate-200 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-100 cursor-pointer text-slate-700 transition"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
                 className="flex-1 py-2.5 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-800 cursor-pointer transition shadow-sm flex items-center justify-center gap-1.5"
               >
-                {isSaving ? "Saving..." : <><LuSave size={13} /> Save</>}
+                {isSaving ? t('admin.common.saving') : <><LuSave size={13} /> {t('common.save')}</>}
               </button>
             </div>
           </form>

@@ -76,11 +76,10 @@ npm install
 npm run dev
 ```
 
-By default the app uses the hosted backend. To use a local Laravel backend, create `.env.local`:
+By default the app uses the hosted backend. To use a local Laravel backend, copy the example file and fill in the values (API URL and Reverb for real-time updates):
 
-```env
-VITE_API_URL=http://127.0.0.1:8000/api
-VITE_API_BASE_URL=http://127.0.0.1:8000
+```bash
+cp .env.example .env.local
 ```
 
 ## Author

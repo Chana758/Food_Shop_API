@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 
 const Reservation = () => {
-  const { t }      = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user }   = useAuth();
   const navigate   = useNavigate();
   const { createReservation } = useReservation();
@@ -56,8 +56,8 @@ const Reservation = () => {
   // Auto-dismiss toast after 4 s
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(timer);
   }, [toast]);
 
   const handleChange = (e) =>
@@ -67,19 +67,19 @@ const Reservation = () => {
     if (!user) { navigate('/login'); return; }
 
     if (!form.table_id) {
-      setToast({ type: 'error', message: 'Please select a table.' });
+      setToast({ type: 'error', message: t('reservation.errTable') });
       return;
     }
     if (!form.date) {
-      setToast({ type: 'error', message: 'Please select a date.' });
+      setToast({ type: 'error', message: t('reservation.errDate') });
       return;
     }
     if (!form.time) {
-      setToast({ type: 'error', message: 'Please select a time (make sure AM/PM is set).' });
+      setToast({ type: 'error', message: t('reservation.errTime') });
       return;
     }
     if (!form.guest_count) {
-      setToast({ type: 'error', message: 'Please select number of guests.' });
+      setToast({ type: 'error', message: t('reservation.errGuests') });
       return;
     }
 
@@ -93,10 +93,15 @@ const Reservation = () => {
         reserved_at,
         notes: form.notes || null,
       });
-      setToast({ type: 'success', message: 'Reservation submitted! We will confirm your booking shortly.' });
+      setToast({ type: 'success', message: t('reservation.submitted') });
       setForm({ table_id: '', guest_count: '1', date: '', time: '', notes: '' });
     } catch (err) {
-      setToast({ type: 'error', message: err?.response?.data?.message || 'Failed to submit reservation.' });
+      // The API answers in English; show the common cases in the current language
+      const apiMessage = err?.response?.data?.message || '';
+      setToast({
+        type: 'error',
+        message: apiMessage.includes('already booked') ? t('reservation.errBooked') : t('reservation.errFailed'),
+      });
     } finally {
       setLoading(false);
     }
@@ -122,7 +127,7 @@ const Reservation = () => {
         <div data-aos="fade-down" className="mb-20 border-l-8 border-[#2D4A22] pl-6 relative">
           <h1 className="text-4xl md:text-5xl font-black text-[#2D4A22] uppercase tracking-tighter">
             {t('reservation.title', 'Make A Reservation')}{' '}
-            <span className="text-[#F58220]">Book Table</span>
+            <span className="text-[#F58220]">{t('reservation.bookTable')}</span>
           </h1>
           <p className="text-gray-500 font-medium mt-2 uppercase text-xs tracking-[0.3em]">
             {t('reservation.subtitle', 'Book your table in advance and enjoy a wonderful dining experience.')}
@@ -141,7 +146,7 @@ const Reservation = () => {
             {/* Table Select */}
             <div className="space-y-3 group md:col-span-2" data-aos="fade-up">
               <label className="text-[10px] font-black uppercase tracking-[0.3em] text-[#2D4A22] flex items-center gap-2">
-                <FaTable className="text-[#F58220]" size={13} /> Select Table *
+                <FaTable className="text-[#F58220]" size={13} /> {t('reservation.selectTable')} *
               </label>
               <select
                 name="table_id"
@@ -149,11 +154,11 @@ const Reservation = () => {
                 onChange={handleChange}
                 className="w-full bg-transparent border-b-2 border-gray-100 py-3 focus:border-[#2D4A22] outline-none transition-all font-medium text-gray-800 cursor-pointer appearance-none"
               >
-                <option value="">— Choose a table —</option>
+                <option value="">— {t('reservation.chooseTable')} —</option>
                 {tables.map(tbl => (
                   <option key={tbl.id} value={tbl.id}>
-                    Table {tbl.number}
-                    {tbl.capacity ? ` — Seats up to ${tbl.capacity}` : ''}
+                    {t('reservation.tableNo', { number: tbl.number })}
+                    {tbl.capacity ? ` — ${t('reservation.seatsUpTo', { count: tbl.capacity })}` : ''}
                     {tbl.location ? ` (${tbl.location})` : ''}
                   </option>
                 ))}
@@ -175,7 +180,7 @@ const Reservation = () => {
                 className="w-full bg-transparent border-b-2 border-gray-100 py-3 focus:border-[#2D4A22] outline-none transition-all font-medium text-gray-800"
               />
               <p className="text-[10px] text-gray-400 font-medium">
-                {form.date ? `Selected: ${new Date(form.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}` : ''}
+                {form.date ? `${t('reservation.selected')}: ${new Date(form.date + 'T00:00:00').toLocaleDateString(i18n.language === 'kh' ? 'km-KH' : undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}` : ''}
               </p>
             </div>
 
@@ -209,7 +214,7 @@ const Reservation = () => {
                 className="w-full bg-transparent border-b-2 border-gray-100 py-3 focus:border-[#2D4A22] outline-none transition-all font-medium text-gray-800 cursor-pointer appearance-none"
               >
                 {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-                  <option key={n} value={n}>{n} {n === 1 ? 'Person' : 'People'}</option>
+                  <option key={n} value={n}>{t('reservation.people', { count: n })}</option>
                 ))}
               </select>
             </div>
@@ -217,7 +222,7 @@ const Reservation = () => {
             {/* Notes */}
             <div className="space-y-3 md:col-span-2" data-aos="fade-up" data-aos-delay="400">
               <label className="text-[10px] font-black uppercase tracking-[0.3em] text-[#2D4A22]">
-                {t('reservation.message', 'Message')} (Optional)
+                {t('reservation.message')}
               </label>
               <textarea
                 name="notes"
@@ -233,9 +238,9 @@ const Reservation = () => {
             <div className="md:col-span-2 pt-10" data-aos="zoom-in">
               {!user && (
                 <p className="text-sm text-orange-500 font-bold mb-5">
-                  ⚠️ You must be logged in to reserve a table.{' '}
+                  ⚠️ {t('reservation.loginRequired')}{' '}
                   <button onClick={() => navigate('/login')} className="underline hover:text-[#2D4A22] transition-colors">
-                    Login here
+                    {t('auth.loginHere')}
                   </button>
                 </p>
               )}
@@ -244,7 +249,7 @@ const Reservation = () => {
                 disabled={loading}
                 className="group flex items-center justify-center gap-4 w-full md:w-max px-16 py-5 bg-[#2D4A22] text-white font-black text-xs uppercase tracking-[0.4em] hover:bg-[#F58220] transition-all duration-500 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Submitting...' : t('reservation.reserveNow', 'Reserve Now')}
+                {loading ? t('product.submitting') : t('reservation.reserveNow')}
                 {!loading && (
                   <FaArrowRight className="group-hover:translate-x-2 transition-transform duration-300" />
                 )}
@@ -257,9 +262,9 @@ const Reservation = () => {
         {/* ── Footer Info ── */}
         <div className="mt-16 grid md:grid-cols-3 gap-8 border-t border-gray-100 pt-10">
           {[
-            { label: 'Direct Line',    value: '+855 972325094' },
-            { label: 'Location',       value: 'Phnom Penh, Cambodia' },
-            { label: 'Service Hours',  value: '07:00 AM - 10:00 PM' },
+            { label: t('reservation.directLine'),   value: '+855 972325094' },
+            { label: t('reservation.location'),     value: t('footer.addressLine2') },
+            { label: t('reservation.serviceHours'), value: '07:00 AM - 10:00 PM' },
           ].map(item => (
             <div key={item.label} className="text-center md:text-left">
               <p className="text-[#2D4A22] font-black text-[10px] uppercase tracking-widest mb-1">{item.label}</p>

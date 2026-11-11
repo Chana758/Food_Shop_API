@@ -3,11 +3,12 @@ import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { LuPlus, LuUsers, LuPencil, LuX, LuTrash2, LuEye } from 'react-icons/lu';
 import useTable from '../../hooks/useTable';
+import { useTranslation } from 'react-i18next';
 
 const STATUS_STYLES = {
-  available: { label: 'Available', dot: 'bg-green-500', badge: 'bg-green-50 text-green-700 border-green-100', ring: 'border-l-green-500' },
-  occupied:  { label: 'Occupied',  dot: 'bg-red-500',   badge: 'bg-red-50 text-red-700 border-red-100',       ring: 'border-l-red-500'   },
-  reserved:  { label: 'Reserved',  dot: 'bg-orange-500',badge: 'bg-orange-50 text-orange-600 border-orange-100', ring: 'border-l-orange-500' },
+  available: { label: 'status.available', dot: 'bg-green-500', badge: 'bg-green-50 text-green-700 border-green-100', ring: 'border-l-green-500' },
+  occupied:  { label: 'status.occupied',  dot: 'bg-red-500',   badge: 'bg-red-50 text-red-700 border-red-100',       ring: 'border-l-red-500'   },
+  reserved:  { label: 'status.reserved',  dot: 'bg-orange-500',badge: 'bg-orange-50 text-orange-600 border-orange-100', ring: 'border-l-orange-500' },
 };
 
 const EMPTY_FORM = { name: '', capacity: '', status: 'available' };
@@ -27,6 +28,7 @@ const Modal = ({ title, onClose, children }) => (
 
 //  Table Form (Add / Edit) 
 const TableForm = ({ initial = EMPTY_FORM, onSubmit, onClose, submitting }) => {
+  const { t } = useTranslation();
   const [form, setForm] = useState(initial);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -39,45 +41,45 @@ const TableForm = ({ initial = EMPTY_FORM, onSubmit, onClose, submitting }) => {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <label className="text-xs font-black uppercase tracking-widest text-gray-500 block mb-1">Table Name</label>
+        <label className="text-xs font-black uppercase tracking-widest text-gray-500 block mb-1">{t('admin.tables.name')}</label>
         <input
           required
           value={form.name}
           onChange={e => set('name', e.target.value)}
-          placeholder="e.g. Table 01"
+          placeholder={t('admin.tables.namePlaceholder')}
           className="w-full border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-[#1c2e35]"
         />
       </div>
       <div>
-        <label className="text-xs font-black uppercase tracking-widest text-gray-500 block mb-1">Capacity (Seats)</label>
+        <label className="text-xs font-black uppercase tracking-widest text-gray-500 block mb-1">{t('admin.tables.capacitySeats')}</label>
         <input
           required type="number" min={1}
           value={form.capacity}
           onChange={e => set('capacity', e.target.value)}
-          placeholder="e.g. 4"
+          placeholder={t('admin.tables.capacityPlaceholder')}
           className="w-full border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-[#1c2e35]"
         />
       </div>
       <div>
-        <label className="text-xs font-black uppercase tracking-widest text-gray-500 block mb-1">Status</label>
+        <label className="text-xs font-black uppercase tracking-widest text-gray-500 block mb-1">{t('admin.common.status')}</label>
         <select
           value={form.status}
           onChange={e => set('status', e.target.value)}
           className="w-full border border-gray-200 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-[#1c2e35]"
         >
-          <option value="available">Available</option>
-          <option value="occupied">Occupied</option>
-          <option value="reserved">Reserved</option>
+          <option value="available">{t('status.available')}</option>
+          <option value="occupied">{t('status.occupied')}</option>
+          <option value="reserved">{t('status.reserved')}</option>
         </select>
       </div>
       <div className="flex gap-3 mt-2">
         <button type="button" onClick={onClose}
           className="flex-1 border border-gray-200 text-gray-500 py-2 rounded-sm text-xs font-black uppercase tracking-widest hover:bg-gray-50 cursor-pointer">
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="submit" disabled={submitting}
           className="flex-1 bg-[#1c2e35] text-white py-2 rounded-sm text-xs font-black uppercase tracking-widest hover:bg-[#2a3f32] disabled:opacity-50 cursor-pointer">
-          {submitting ? 'Saving...' : 'Save'}
+          {submitting ? t('admin.common.saving') : t('common.save')}
         </button>
       </div>
     </form>
@@ -86,6 +88,7 @@ const TableForm = ({ initial = EMPTY_FORM, onSubmit, onClose, submitting }) => {
 
 // Main Component 
 const ManageTables = () => {
+  const { t } = useTranslation();
   const { searchTerm = '' } = useOutletContext() || {};
 
   const { tables, loading, error, addTable, editTable, cycleStatus, removeTable } = useTable();
@@ -128,8 +131,8 @@ const ManageTables = () => {
     );
   });
 
-  if (loading) return <div className="p-8 text-center text-gray-400 font-bold">កំពុង load...</div>;
-  if (error)   return <div className="p-8 text-center text-red-400 font-bold">{error}</div>;
+  if (loading) return <div className="p-8 text-center text-gray-400 font-bold">{t('common.loading')}</div>;
+  if (error)   return <div className="p-8 text-center text-red-400 font-bold">{t('admin.tables.loadFailed')}</div>;
 
   return (
     <div className="p-8 min-h-screen" style={{ background: 'var(--page-bg)' }}>
@@ -137,13 +140,13 @@ const ManageTables = () => {
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-8">
         <p className="text-sm text-gray-500 font-black uppercase tracking-widest">
-          Manage dining tables and seating status
+          {t('admin.tables.subtitle')}
         </p>
         <button
           onClick={() => openModal('add')}
           className="flex items-center gap-2 bg-[#1c2e35] text-white px-5 py-3 rounded-sm text-xs font-black uppercase tracking-widest hover:bg-[#2a3f32] transition-colors cursor-pointer"
         >
-          <LuPlus size={16} /> Add Table
+          <LuPlus size={16} /> {t('admin.tables.add')}
         </button>
       </div>
 
@@ -153,7 +156,7 @@ const ManageTables = () => {
           <div key={key} className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
             <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
-              {s.label} <span className="text-[#1a2e35]">({counts[key] || 0})</span>
+              {t(s.label)} <span className="text-[#1a2e35]">({counts[key] || 0})</span>
             </span>
           </div>
         ))}
@@ -163,7 +166,7 @@ const ManageTables = () => {
       {filteredTables.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-gray-200 rounded-sm bg-white">
           <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
-            {searchTerm ? `No tables match "${searchTerm}"` : 'No tables found'}
+            {searchTerm ? t('admin.tables.noMatch', { term: searchTerm }) : t('admin.tables.none')}
           </p>
         </div>
       ) : (
@@ -193,12 +196,12 @@ const ManageTables = () => {
 
                   <div className="flex items-center gap-2 text-gray-500 mt-2">
                     <LuUsers size={15} />
-                    <span className="text-sm font-bold">{table.capacity} Seats</span>
+                    <span className="text-sm font-bold">{t('admin.tables.seats', { count: Number(table.capacity) })}</span>
                   </div>
 
                   <div className="mt-3">
                     <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${s.badge}`}>
-                      {s.label}
+                      {t(s.label)}
                     </span>
                   </div>
                 </div>
@@ -207,7 +210,7 @@ const ManageTables = () => {
                   onClick={() => cycleStatus(table.id)}
                   className="mt-1 text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-[#1a2e35] border-t border-gray-50 pt-3 text-left transition-colors cursor-pointer w-full"
                 >
-                  Change Status →
+                  {t('admin.tables.changeStatus')} →
                 </button>
               </div>
             );
@@ -217,14 +220,14 @@ const ManageTables = () => {
 
       {/* ── ADD Modal ── */}
       {modal === 'add' && (
-        <Modal title="Add Table" onClose={closeModal}>
+        <Modal title={t('admin.tables.add')} onClose={closeModal}>
           <TableForm onSubmit={handleAdd} onClose={closeModal} submitting={submitting} />
         </Modal>
       )}
 
       {/* ── EDIT Modal ── */}
       {modal === 'edit' && selected && (
-        <Modal title="Edit Table" onClose={closeModal}>
+        <Modal title={t('admin.tables.edit')} onClose={closeModal}>
           <TableForm
             initial={{ name: selected.name, capacity: selected.capacity, status: selected.status }}
             onSubmit={handleEdit}
@@ -236,12 +239,12 @@ const ManageTables = () => {
 
       {/* ── VIEW Modal ── */}
       {modal === 'view' && selected && (
-        <Modal title="Table Details" onClose={closeModal}>
+        <Modal title={t('admin.tables.details')} onClose={closeModal}>
           <div className="flex flex-col gap-4">
             {[
-              { label: 'Table Name', value: selected.name },
-              { label: 'Capacity',   value: `${selected.capacity} Seats` },
-              { label: 'Status',     value: selected.status },
+              { label: t('admin.tables.name'),     value: selected.name },
+              { label: t('admin.tables.capacity'), value: t('admin.tables.seats', { count: Number(selected.capacity) }) },
+              { label: t('admin.common.status'),   value: t(`status.${selected.status}`, selected.status) },
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between border-b border-gray-50 pb-3">
                 <span className="text-xs font-black uppercase tracking-widest text-gray-400">{label}</span>
@@ -250,7 +253,7 @@ const ManageTables = () => {
             ))}
             <button onClick={closeModal}
               className="mt-2 w-full bg-[#1c2e35] text-white py-2 rounded-sm text-xs font-black uppercase tracking-widest hover:bg-[#2a3f32] cursor-pointer">
-              Close
+              {t('common.close')}
             </button>
           </div>
         </Modal>
@@ -258,19 +261,19 @@ const ManageTables = () => {
 
       {/* ── DELETE Confirm Modal ── */}
       {modal === 'delete' && selected && (
-        <Modal title="Remove Table" onClose={closeModal}>
+        <Modal title={t('admin.tables.remove')} onClose={closeModal}>
           <p className="text-sm text-gray-500 mb-6">
-            តើអ្នកពិតជាចង់លុប <span className="font-black text-[#1a2e35]">{selected.name}</span> មែនទេ?
-            <br /><span className="text-xs text-gray-400 mt-1 block">Table នឹងត្រូវបាន deactivate (status → inactive)។</span>
+            {t('admin.tables.removeQ1')} <span className="font-black text-[#1a2e35]">{selected.name}</span>{t('admin.tables.removeQ2')}
+            <br /><span className="text-xs text-gray-400 mt-1 block">{t('admin.tables.removeNote')}</span>
           </p>
           <div className="flex gap-3">
             <button onClick={closeModal}
               className="flex-1 border border-gray-200 text-gray-500 py-2 rounded-sm text-xs font-black uppercase tracking-widest hover:bg-gray-50 cursor-pointer">
-              Cancel
+              {t('common.cancel')}
             </button>
             <button onClick={handleRemove} disabled={submitting}
               className="flex-1 bg-red-500 text-white py-2 rounded-sm text-xs font-black uppercase tracking-widest hover:bg-red-600 disabled:opacity-50 cursor-pointer">
-              {submitting ? 'Removing...' : 'Remove'}
+              {submitting ? t('admin.tables.removing') : t('admin.tables.removeBtn')}
             </button>
           </div>
         </Modal>

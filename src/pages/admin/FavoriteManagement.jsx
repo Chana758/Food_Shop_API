@@ -7,6 +7,7 @@ import {
 import axiosInstance from '../../api/axios';
 import { getImageUrl } from '../../utils/imageUrl';
 import { getFinalPrice, hasDiscount } from '../../utils/priceUtils';
+import { useTranslation } from 'react-i18next';
 
 // Adapters: helpers take (price, discount_price, discount_expires_at)
 const finalPrice = (p) => getFinalPrice(p?.price, p?.discount_price, p?.discount_expires_at);
@@ -46,6 +47,7 @@ const StatCard = ({ icon, cardBg, label, value, sub }) => (
 );
 
 const FavoriteManagement = () => {
+  const { t } = useTranslation();
   const { searchTerm = '' } = useOutletContext() || {};
 
   const [favoritesMap, setFavoritesMap] = useState({});
@@ -63,7 +65,7 @@ const FavoriteManagement = () => {
       setFavoritesMap(res.data.data ?? {});
     } catch (err) {
       console.error('Failed to fetch favorites:', err.response ?? err);
-      setError('Failed to load favorites.');
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -114,15 +116,15 @@ const FavoriteManagement = () => {
   if (loading) return (
     <div className="p-8 flex flex-col items-center justify-center min-h-[300px] gap-3">
       <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin" />
-      <p className="text-xs font-black uppercase tracking-widest text-slate-400">Loading favorites dashboard...</p>
+      <p className="text-xs font-black uppercase tracking-widest text-slate-400">{t('common.loading')}</p>
     </div>
   );
 
   if (error) return (
     <div className="p-8 text-center text-rose-500 font-bold text-xs uppercase tracking-wider">
-      {error}
+      {t('favorites.loadFailed')}
       <button onClick={fetchFavorites} className="ml-3 underline text-slate-500 hover:text-slate-900 cursor-pointer">
-        Retry
+        {t('error.retry')}
       </button>
     </div>
   );
@@ -138,20 +140,20 @@ const FavoriteManagement = () => {
 
         <div className="z-10">
           <div className="flex items-center gap-1.5 text-[#D99A3D] font-black text-[10px] uppercase tracking-widest mb-1">
-            <LuHeart size={13} className="fill-current" /> Customer Engagement
+            <LuHeart size={13} className="fill-current" /> {t('admin.section.engagement')}
           </div>
-          <h1 className="text-lg md:text-xl font-black uppercase tracking-wide">Favorites Management</h1>
+          <h1 className="text-lg md:text-xl font-black uppercase tracking-wide">{t('admin.favorites.title')}</h1>
           <p className="text-xs text-slate-300 mt-0.5 font-medium max-w-md">
-            Track and monitor what items customers love, save, and keep in their wishlists.
+            {t('admin.favorites.subtitle')}
           </p>
         </div>
 
         <button
           onClick={fetchFavorites}
           className="z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 text-xs font-black uppercase tracking-widest transition cursor-pointer shadow-2xs whitespace-nowrap"
-          title="Refresh Data"
+          title={t('admin.common.refresh')}
         >
-          <LuRefreshCw size={13} /> Refresh
+          <LuRefreshCw size={13} /> {t('admin.common.refresh')}
         </button>
       </div>
 
@@ -160,23 +162,23 @@ const FavoriteManagement = () => {
         <StatCard
           icon={<LuUsers size={18} />}
           cardBg="bg-slate-900"
-          label="Customers"
+          label={t('admin.nav.customers')}
           value={totalUsers}
-          sub="With saved items"
+          sub={t('admin.favorites.withSaved')}
         />
         <StatCard
           icon={<LuBookmarkCheck size={18} />}
           cardBg="bg-rose-700"
-          label="Total Saves"
+          label={t('admin.favorites.totalSaves')}
           value={totalFavs}
-          sub="Items wishlisted"
+          sub={t('admin.favorites.itemsWishlisted')}
         />
         <StatCard
           icon={<LuDollarSign size={18} />}
           cardBg="bg-emerald-700"
-          label="Wishlist Value"
+          label={t('admin.favorites.wishlistValue')}
           value={`$${totalValue.toFixed(2)}`}
-          sub="Combined across all customers"
+          sub={t('admin.favorites.combined')}
         />
       </div>
 
@@ -186,13 +188,13 @@ const FavoriteManagement = () => {
           onClick={expandAll}
           className="px-4 py-2.5 bg-white border-2 border-slate-300 rounded-lg text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition cursor-pointer shadow-2xs"
         >
-          Expand All
+          {t('admin.favorites.expandAll')}
         </button>
         <button
           onClick={collapseAll}
           className="px-4 py-2.5 bg-white border-2 border-slate-300 rounded-lg text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 transition cursor-pointer shadow-2xs"
         >
-          Collapse All
+          {t('admin.favorites.collapseAll')}
         </button>
       </div>
 
@@ -201,7 +203,7 @@ const FavoriteManagement = () => {
         <div className="text-center py-16 border-2 border-dashed border-slate-300 rounded-xl bg-white shadow-2xs">
           <LuHeart className="mx-auto text-slate-300 mb-2" size={40} />
           <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
-            {searchTerm ? `No results match "${searchTerm}"` : 'No favorites found'}
+            {searchTerm ? t('admin.common.noMatch', { term: searchTerm }) : t('admin.favorites.none')}
           </p>
         </div>
       ) : (
@@ -225,13 +227,13 @@ const FavoriteManagement = () => {
                     <div className="text-left">
                       <p className="font-black text-slate-900 text-xs uppercase tracking-wide">{userName}</p>
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
-                        {items.length} {items.length === 1 ? 'item' : 'items'} saved
+                        {t('favorites.savedCount', { count: items.length })}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-5">
                     <div className="text-right hidden sm:block">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Wishlist Value</p>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{t('admin.favorites.wishlistValue')}</p>
                       <p className="text-xs font-black text-emerald-700">${totalPrice.toFixed(2)}</p>
                     </div>
                     <div className="w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-300">
@@ -266,7 +268,7 @@ const FavoriteManagement = () => {
                                 userName,
                               })}
                               className="absolute top-2 right-2 w-6 h-6 bg-white border border-slate-300 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-50 hover:border-rose-300 cursor-pointer shadow-2xs"
-                              title="Remove favorite"
+                              title={t('favorites.remove')}
                             >
                               <LuTrash2 size={12} className="text-rose-600" />
                             </button>
@@ -306,7 +308,7 @@ const FavoriteManagement = () => {
       {deleting && (
         <Modal onClose={() => setDeleting(null)}>
           <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-            <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">Remove Favorite</h2>
+            <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider">{t('admin.favorites.removeTitle')}</h2>
             <button onClick={() => setDeleting(null)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
               <LuX size={16} />
             </button>
@@ -314,7 +316,7 @@ const FavoriteManagement = () => {
 
           <div className="py-4 space-y-3 text-xs">
             <p className="text-slate-700 font-bold">
-              Are you sure you want to remove <span className="font-black text-slate-900">{deleting.productName}</span> from <span className="font-black text-slate-900">{deleting.userName}</span>'s favorites?
+              {t('admin.favorites.removeQ1')} <span className="font-black text-slate-900">{deleting.productName}</span> {t('admin.favorites.removeQ2')} <span className="font-black text-slate-900">{deleting.userName}</span>{t('admin.favorites.removeQ3')}
             </p>
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-semibold">
               ⚠️ This action cannot be undone.
@@ -326,14 +328,14 @@ const FavoriteManagement = () => {
               onClick={() => setDeleting(null)}
               className="flex-1 py-2.5 border-2 border-slate-300 rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-slate-100 cursor-pointer text-slate-700 transition"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleDelete}
               disabled={submitting}
               className="flex-1 py-2.5 bg-rose-600 text-white rounded-lg font-bold text-xs uppercase tracking-wider hover:bg-rose-700 cursor-pointer transition shadow-sm disabled:opacity-50"
             >
-              {submitting ? 'Removing...' : 'Remove'}
+              {submitting ? t('admin.tables.removing') : t('admin.tables.removeBtn')}
             </button>
           </div>
         </Modal>

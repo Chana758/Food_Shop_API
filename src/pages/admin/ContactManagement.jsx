@@ -6,6 +6,7 @@ import {
   LuInbox, LuCheck, LuClock3, LuMessageSquare
 } from 'react-icons/lu';
 import { useAdminContact } from '../../hooks/useContact';
+import { useTranslation } from 'react-i18next';
 
 const FONT_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
 const CARD = "bg-white rounded-2xl border border-[#E8E3D8] shadow-[0_1px_3px_rgba(30,42,46,0.05)]";
@@ -41,6 +42,7 @@ const StatCard = ({ icon, fill, badge, title, value, sub }) => {
 };
 
 const ContactManagement = () => {
+  const { t, i18n } = useTranslation();
   const { searchTerm: search } = useOutletContext() ?? { searchTerm: '' };
 
   const [filter, setFilter]       = useState('all');
@@ -74,7 +76,7 @@ const ContactManagement = () => {
       setSelectedId(contact);
       setReplyText(contact?.reply_message || '');
     } catch {
-      showMsg('error', 'Failed to load message.');
+      showMsg('error', t('admin.contacts.loadFailed'));
     }
   };
 
@@ -83,9 +85,9 @@ const ContactManagement = () => {
     setSending(true);
     try {
       await replyContact(selected.id, { reply_message: replyText.trim() });
-      showMsg('success', 'Reply sent!');
+      showMsg('success', t('admin.contacts.replySent'));
     } catch (err) {
-      showMsg('error', err?.response?.data?.message || 'Failed to send reply.');
+      showMsg('error', err?.response?.status === 422 ? t('admin.contacts.replyEmpty') : t('admin.contacts.replyFailed'));
     } finally {
       setSending(false);
     }
@@ -95,9 +97,9 @@ const ContactManagement = () => {
     try {
       await deleteContact(id);
       if (selected?.id === id) setSelectedId(null);
-      showMsg('success', 'Message deleted!');
+      showMsg('success', t('admin.contacts.deleted'));
     } catch {
-      showMsg('error', 'Failed to delete message.');
+      showMsg('error', t('admin.contacts.deleteFailed'));
     }
   };
 
@@ -118,8 +120,8 @@ const ContactManagement = () => {
         <div className={`${CARD} p-5 space-y-4`}>
           <div className="flex justify-between items-center">
             <div>
-              <h2 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">Contact messages report</h2>
-              <p className="text-xs font-semibold text-[#8B9296]">Daily, monthly, and yearly inquiries metrics with actionable data</p>
+              <h2 style={FONT_SERIF} className="text-[16px] font-semibold text-[#1E2A2E]">{t('admin.contacts.reportTitle')}</h2>
+              <p className="text-xs font-semibold text-[#8B9296]">{t('admin.contacts.reportSub')}</p>
             </div>
           </div>
 
@@ -127,34 +129,34 @@ const ContactManagement = () => {
             <StatCard
               icon={<LuInbox size={16} />}
               fill="ink"
-              badge="Total"
-              title="Total Messages"
+              badge={t('admin.common.total')}
+              title={t('admin.contacts.total')}
               value={stats.total ?? 0}
-              sub="All customer inquiries"
+              sub={t('admin.contacts.totalSub')}
             />
             <StatCard
               icon={<LuClock3 size={16} />}
               fill="chili"
-              badge="Pending"
-              title="Unread"
+              badge={t('status.pending')}
+              title={t('status.unread')}
               value={stats.unread ?? 0}
-              sub="Requires attention"
+              sub={t('admin.contacts.unreadSub')}
             />
             <StatCard
               icon={<LuMailOpen size={16} />}
               fill="sky"
-              badge="Viewed"
-              title="Read"
+              badge={t('admin.contacts.viewed')}
+              title={t('status.read')}
               value={stats.read ?? 0}
-              sub="Opened messages"
+              sub={t('admin.contacts.readSub')}
             />
             <StatCard
               icon={<LuCheck size={16} />}
               fill="herb"
-              badge="Success"
-              title="Replied"
+              badge={t('admin.backup.result.Success')}
+              title={t('status.replied')}
               value={stats.replied ?? 0}
-              sub="Responded successfully"
+              sub={t('admin.contacts.repliedSub')}
             />
           </div>
         </div>
@@ -166,7 +168,7 @@ const ContactManagement = () => {
         <div className="col-span-12 lg:col-span-7 space-y-4">
           <div className={`${CARD} p-5 flex flex-wrap gap-3 items-center`}>
             <span className="text-xs font-black uppercase tracking-wider text-[#5B6B6F] flex items-center gap-1.5 mr-2">
-              <LuFilter size={15} /> Filter:
+              <LuFilter size={15} /> {t('admin.common.filter')}:
             </span>
             <div className="flex gap-2 flex-wrap flex-1">
               {FILTERS.map(f => (
@@ -175,11 +177,11 @@ const ContactManagement = () => {
                   onClick={() => setFilter(f)}
                   className={`px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border ${filter === f ? 'bg-[#1E2A2E] text-white border-[#1E2A2E] shadow-xs' : 'bg-[#FBF9F5] text-[#5B6B6F] border-[#E8E3D8] hover:bg-[#F3F0E9]'}`}
                 >
-                  {f}
+                  {t(`status.${f}`)}
                 </button>
               ))}
             </div>
-            <button onClick={refetch} className="p-2.5 bg-[#FBF9F5] hover:bg-[#F3F0E9] border border-[#E8E3D8] rounded-lg transition-colors cursor-pointer text-[#5B6B6F] font-bold" title="Refresh">
+            <button onClick={refetch} className="p-2.5 bg-[#FBF9F5] hover:bg-[#F3F0E9] border border-[#E8E3D8] rounded-lg transition-colors cursor-pointer text-[#5B6B6F] font-bold" title={t('admin.common.refresh')}>
               <LuRefreshCw size={15} />
             </button>
           </div>
@@ -188,23 +190,23 @@ const ContactManagement = () => {
             <div className="px-6 py-4 border-b border-[#EFEBE2] flex justify-between items-center bg-[#FBF9F5]">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#3F7D58]"></span>
-                <h3 className="text-xs font-black uppercase tracking-wider text-[#1E2A2E]">All Messages</h3>
+                <h3 className="text-xs font-black uppercase tracking-wider text-[#1E2A2E]">{t('admin.contacts.all')}</h3>
               </div>
               <span className="text-xs bg-[#EFEBE2] text-[#1E2A2E] px-3 py-1 rounded-full font-black">
-                {filtered.length} records
+                {t('admin.common.records', { count: filtered.length })}
               </span>
             </div>
 
             {loading ? (
               <div className="p-16 text-center text-[#8B9296] font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2">
-                <LuRefreshCw className="animate-spin" size={16} /> Loading messages...
+                <LuRefreshCw className="animate-spin" size={16} /> {t('common.loading')}
               </div>
             ) : error ? (
-              <div className="p-16 text-center text-[#B5453B] font-bold text-sm">{error}</div>
+              <div className="p-16 text-center text-[#B5453B] font-bold text-sm">{t('admin.common.loadFailed')}</div>
             ) : filtered.length === 0 ? (
               <div className="p-16 text-center space-y-2">
                 <LuMail size={40} className="text-[#E3DFD3] mx-auto" />
-                <p className="text-[#9AA0A0] font-black text-xs uppercase tracking-wider">No messages found</p>
+                <p className="text-[#9AA0A0] font-black text-xs uppercase tracking-wider">{t('admin.contacts.none')}</p>
               </div>
             ) : (
               <div className="divide-y divide-[#EFEBE2] max-h-[640px] overflow-y-auto">
@@ -232,16 +234,16 @@ const ContactManagement = () => {
                           {c.name}
                         </p>
                         <span className={`px-3 py-0.5 rounded-full text-[11px] font-black uppercase border ${STATUS_STYLES[c.status] ?? STATUS_STYLES.unread}`}>
-                          {c.status}
+                          {t(`status.${c.status}`, c.status)}
                         </span>
                       </div>
-                      <p className="text-xs font-bold text-[#3A4548] truncate mb-1">{c.subject || '(No subject)'}</p>
+                      <p className="text-xs font-bold text-[#3A4548] truncate mb-1">{c.subject || t('admin.contacts.noSubject')}</p>
                       <p className="text-xs font-semibold text-[#8B9296] truncate">{c.message}</p>
                     </div>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
+                      onClick={(e) => { e.stopPropagation(); if (window.confirm(t('admin.contacts.confirmDelete'))) handleDelete(c.id); }}
                       className="p-2 rounded-lg text-[#8B9296] hover:text-[#B5453B] hover:bg-[#F5E1DE] border border-transparent hover:border-[#EBC7C1] transition-colors flex-shrink-0 cursor-pointer"
-                      title="Delete"
+                      title={t('common.delete')}
                     >
                       <LuTrash2 size={15} />
                     </button>
@@ -261,18 +263,18 @@ const ContactManagement = () => {
                   <LuMessageSquare size={28} />
                 </div>
                 <p className="text-[#9AA0A0] font-bold text-xs uppercase tracking-wider">
-                  Select a message to view details
+                  {t('admin.contacts.selectOne')}
                 </p>
               </div>
             ) : (
               <div className="space-y-5">
                 <div className="flex items-start justify-between border-b border-[#EFEBE2] pb-4">
                   <div>
-                    <p className="text-[11px] font-black uppercase tracking-wider text-[#7A4F6D]">Message ID #{selected.id}</p>
-                    <h2 className="text-base font-black text-[#1E2A2E] mt-0.5">{selected.subject || '(No subject)'}</h2>
+                    <p className="text-[11px] font-black uppercase tracking-wider text-[#7A4F6D]">{t('admin.contacts.messageId', { id: selected.id })}</p>
+                    <h2 className="text-base font-black text-[#1E2A2E] mt-0.5">{selected.subject || t('admin.contacts.noSubject')}</h2>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase border whitespace-nowrap ${STATUS_STYLES[selected.status] ?? STATUS_STYLES.unread}`}>
-                    {selected.status}
+                    {t(`status.${selected.status}`, selected.status)}
                   </span>
                 </div>
 
@@ -291,12 +293,12 @@ const ContactManagement = () => {
                   )}
                   <div className="flex items-center gap-2 text-[#8B9296] pt-2 border-t border-[#E8E3D8] text-xs font-semibold">
                     <LuClock size={14} />
-                    <span>{new Date(selected.created_at).toLocaleString()}</span>
+                    <span>{new Date(selected.created_at).toLocaleString(i18n.language === 'kh' ? 'km-KH' : 'en-US')}</span>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-wider text-[#8B9296] mb-2">Message Content</p>
+                  <p className="text-[11px] font-black uppercase tracking-wider text-[#8B9296] mb-2">{t('admin.contacts.content')}</p>
                   <div className="bg-[#FBF9F5] border border-[#E8E3D8] rounded-xl p-4 text-xs font-semibold text-[#1E2A2E] leading-relaxed">
                     {selected.message}
                   </div>
@@ -305,7 +307,7 @@ const ContactManagement = () => {
                 {selected.reply_message && (
                   <div className="bg-[#E4F0E7] border border-[#C7E0CD] rounded-xl p-4 text-xs font-semibold text-[#1E4029] leading-relaxed shadow-xs">
                     <p className="text-[11px] font-black uppercase tracking-wider text-[#2F6844] mb-1.5">
-                      Your Reply {selected.repliedBy?.name ? `· ${selected.repliedBy.name}` : ''}
+                      {t('admin.contacts.yourReply')} {selected.repliedBy?.name ? `· ${selected.repliedBy.name}` : ''}
                     </p>
                     {selected.reply_message}
                   </div>
@@ -313,13 +315,13 @@ const ContactManagement = () => {
 
                 <div className="space-y-2 pt-2 border-t border-[#E8E3D8]">
                   <label className="text-[11px] font-black uppercase tracking-wider text-[#5B6B6F]">
-                    {selected.status === 'replied' ? 'Update Reply' : 'Write a Reply'}
+                    {selected.status === 'replied' ? t('admin.contacts.updateReply') : t('admin.contacts.writeReply')}
                   </label>
                   <textarea
                     rows={4}
                     value={replyText}
                     onChange={e => setReplyText(e.target.value)}
-                    placeholder="Type your response here..."
+                    placeholder={t('admin.contacts.replyPlaceholder')}
                     className="w-full border border-[#E8E3D8] rounded-xl p-3 text-xs font-semibold text-[#1E2A2E] focus:outline-none focus:ring-2 focus:ring-[#7A4F6D]/20 focus:border-[#7A4F6D] resize-none transition-all bg-white"
                   />
                   <button
@@ -327,7 +329,7 @@ const ContactManagement = () => {
                     disabled={sending || !replyText.trim()}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-[#7A4F6D] text-white text-xs font-black uppercase rounded-xl hover:bg-[#68425F] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
                   >
-                    <LuSend size={15} /> {sending ? 'Sending...' : 'Send Reply'}
+                    <LuSend size={15} /> {sending ? t('contact.sending') : t('admin.contacts.sendReply')}
                   </button>
                 </div>
               </div>

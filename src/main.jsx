@@ -5,6 +5,10 @@ import './i18n';
 import App from './App.jsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext.jsx';
+import { wakeServer } from './api/serverWake';
+
+// Start waking the free Render backend right away, before any page asks for data
+wakeServer();
 
 const queryClient = new QueryClient({
   defaultOptions: {

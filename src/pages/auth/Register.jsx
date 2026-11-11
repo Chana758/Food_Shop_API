@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaPhone, FaArrowLeft } from 'react-icons/fa';
 import { authService } from '../../service/authService';
+import { useTranslation } from 'react-i18next';
 
 const Register = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [showPassword, setShowPassword]           = useState(false);
@@ -28,7 +30,12 @@ const Register = () => {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match!');
+      setError(t('auth.passwordMismatch'));
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError(t('auth.passwordMin'));
       return;
     }
 
@@ -47,16 +54,25 @@ const Register = () => {
       const data = await authService.register(payload);
 
       if (data.status === 'success') {
-        navigate('/login', { replace: true });
+        navigate('/login', { replace: true, state: { registered: true } });
       }
 
     } catch (err) {
       // Handle Laravel validation errors (err.errors is an object of arrays)
+      // The API answers in English, so map the common cases to the current language
       if (err.errors) {
-        const firstError = Object.values(err.errors)[0][0];
-        setError(firstError);
+        const [field, messages] = Object.entries(err.errors)[0];
+        const msg = String(messages?.[0] || '');
+        if (field === 'email' && msg.includes('taken')) setError(t('auth.emailTaken'));
+        else if (field === 'email') setError(t('auth.invalidEmail'));
+        else if (field === 'password' && msg.includes('confirmation')) setError(t('auth.passwordMismatch'));
+        else if (field === 'password') setError(t('auth.passwordMin'));
+        else if (field === 'phone') setError(t('auth.invalidPhone'));
+        else setError(msg);
+      } else if (err.message === 'Network Error') {
+        setError(t('error.network'));
       } else {
-        setError(err.message || 'Registration failed. Please try again.');
+        setError(t('auth.registerFailed'));
       }
     } finally {
       setLoading(false);
@@ -72,16 +88,16 @@ const Register = () => {
           onClick={() => navigate('/')}
           className="flex items-center gap-2 text-[#2D4A22] font-black text-[10px] uppercase tracking-[0.3em] hover:text-[#F58220] transition-colors mb-10 group"
         >
-          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Back to Home
+          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> {t('orderSuccess.backToHome')}
         </button>
 
         {/* Title */}
         <div className="mb-10">
           <h1 className="text-5xl font-black text-[#2D4A22] uppercase tracking-tighter mb-4">
-            Join <span className="text-[#F58220]">Us</span>
+            {t('auth.joinA')} <span className="text-[#F58220]">{t('auth.joinB')}</span>
           </h1>
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.3em]">
-            Create a premium account to start ordering
+            {t('auth.registerSubtitle')}
           </p>
         </div>
 
@@ -98,12 +114,12 @@ const Register = () => {
 
             {/* Full Name */}
             <div className="space-y-2">
-              <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Full Name</label>
+              <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">{t('auth.fullName')}</label>
               <div className="relative group">
                 <FaUser className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={13} />
                 <input
                   type="text" name="name" value={formData.name} onChange={handleChange}
-                  placeholder="EX. JOHN DOE" required
+                  placeholder={t('auth.namePlaceholder')} required
                   className="w-full bg-transparent border-b-2 border-gray-100 py-2 pl-8 text-sm font-bold text-[#2D4A22] outline-none focus:border-[#2D4A22] transition-all"
                 />
               </div>
@@ -111,7 +127,7 @@ const Register = () => {
 
             {/* Email */}
             <div className="space-y-2">
-              <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Email Address</label>
+              <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">{t('contact.emailAddress')}</label>
               <div className="relative group">
                 <FaEnvelope className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={13} />
                 <input
@@ -124,7 +140,7 @@ const Register = () => {
 
             {/* Phone */}
             <div className="space-y-2">
-              <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Phone Number</label>
+              <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">{t('auth.phoneNumber')}</label>
               <div className="relative group">
                 <FaPhone className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={13} />
                 <input
@@ -140,13 +156,13 @@ const Register = () => {
 
               {/* Password */}
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Password</label>
+                <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">{t('auth.password')}</label>
                 <div className="relative group">
                   <FaLock className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={13} />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     name="password" value={formData.password} onChange={handleChange}
-                    placeholder="••••••" required
+                    placeholder="••••••••" required minLength={8}
                     className="w-full bg-transparent border-b-2 border-gray-100 py-2 pl-8 pr-8 text-sm font-bold text-[#2D4A22] outline-none focus:border-[#2D4A22] transition-all"
                   />
                   <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-300">
@@ -157,13 +173,13 @@ const Register = () => {
 
               {/* Confirm Password */}
               <div className="space-y-2">
-                <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">Confirm</label>
+                <label className="block text-[10px] font-black text-[#2D4A22] uppercase tracking-[0.2em]">{t('auth.confirm')}</label>
                 <div className="relative group">
                   <FaLock className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#F58220] transition-colors" size={13} />
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     name="confirmPassword" value={formData.confirmPassword} onChange={handleChange}
-                    placeholder="••••••" required
+                    placeholder="••••••••" required minLength={8}
                     className="w-full bg-transparent border-b-2 border-gray-100 py-2 pl-8 pr-8 text-sm font-bold text-[#2D4A22] outline-none focus:border-[#2D4A22] transition-all"
                   />
                   <button type="button" onClick={() => setShowConfirmPassword(p => !p)} className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-300">
@@ -198,9 +214,9 @@ const Register = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Processing...
+                  {t('auth.creatingAccount')}
                 </span>
-              ) : 'Create Account'}
+              ) : t('auth.createAccountBtn')}
             </button>
 
           </form>
@@ -208,9 +224,9 @@ const Register = () => {
           {/* Login link */}
           <div className="mt-10 pt-8 border-t border-gray-50 text-center">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              Already have an account?{' '}
+              {t('auth.haveAccount')}{' '}
               <Link to="/login" className="text-[#F58220] font-black ml-2 underline underline-offset-4 hover:text-[#2D4A22] transition-colors">
-                Sign In
+                {t('auth.signInLink')}
               </Link>
             </p>
           </div>

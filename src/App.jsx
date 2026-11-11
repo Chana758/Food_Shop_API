@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import AOS from 'aos';
@@ -35,25 +35,25 @@ import AdminRoute from './components/guards/AdminRoute';
 // ── Settings Context
 import { SettingsProvider } from './context/SettingsContext';
 
-// ── Admin Pages ─────
-import AdminDashboard       from './pages/admin/AdminDashboard';
-import ManageOrders         from './pages/admin/ManageOrders';
-import ManageProducts       from './pages/admin/ManageProducts';
-import StaffManagement      from './pages/admin/StaffManagement';
-import CustomersManagement  from './pages/admin/CustomersManagement';
-import ManageCategories     from './pages/admin/ManagementCategories';
-import ManageTables         from './pages/admin/ManageTables';
-import ManagementSaler      from './pages/admin/ManagementSaler';
-import ManageSettings       from './pages/admin/ManageSettings.jsx';
-import PaymentManagement    from './pages/admin/PaymentManagement.jsx';
-import Backup               from './pages/admin/Backup.jsx';
-import Trash                from './pages/admin/Trash.jsx';
-import Report               from './pages/admin/Report.jsx';
-import FavoriteManagement   from './pages/admin/FavoriteManagement.jsx';
-import DeliveryManagement   from './pages/admin/DeliveryManagement.jsx';
-import ReservationManagement from './pages/admin/ReservationManagement.jsx';
-import ContactManagement     from './pages/admin/ContactManagement.jsx';
-import ReviewManagement      from './pages/admin/ReviewManagement.jsx';
+// ── Admin Pages (lazy-loaded: customers never download this code) ─────
+const AdminDashboard         = lazy(() => import('./pages/admin/AdminDashboard'));
+const ManageOrders           = lazy(() => import('./pages/admin/ManageOrders'));
+const ManageProducts         = lazy(() => import('./pages/admin/ManageProducts'));
+const StaffManagement        = lazy(() => import('./pages/admin/StaffManagement'));
+const CustomersManagement    = lazy(() => import('./pages/admin/CustomersManagement'));
+const ManageCategories       = lazy(() => import('./pages/admin/ManagementCategories'));
+const ManageTables           = lazy(() => import('./pages/admin/ManageTables'));
+const ManagementSaler        = lazy(() => import('./pages/admin/ManagementSaler'));
+const ManageSettings         = lazy(() => import('./pages/admin/ManageSettings.jsx'));
+const PaymentManagement      = lazy(() => import('./pages/admin/PaymentManagement.jsx'));
+const Backup                 = lazy(() => import('./pages/admin/Backup.jsx'));
+const Trash                  = lazy(() => import('./pages/admin/Trash.jsx'));
+const Report                 = lazy(() => import('./pages/admin/Report.jsx'));
+const FavoriteManagement     = lazy(() => import('./pages/admin/FavoriteManagement.jsx'));
+const DeliveryManagement     = lazy(() => import('./pages/admin/DeliveryManagement.jsx'));
+const ReservationManagement  = lazy(() => import('./pages/admin/ReservationManagement.jsx'));
+const ContactManagement      = lazy(() => import('./pages/admin/ContactManagement.jsx'));
+const ReviewManagement       = lazy(() => import('./pages/admin/ReviewManagement.jsx'));
 
 // ── Menu Pages
 import AllMenu           from './pages/user/menu/AllMenu';
@@ -61,8 +61,8 @@ import MenuCategoryDetail from './pages/user/menu/MenuCategoryDetail';
 import ProductDetail     from './pages/user/menu/ProductDetail';
 import Category          from './pages/user/menu/Category';
 
-// ── Utils ─────
-import { initDummyUsers } from './utils/initDummyData';
+// ── Server wake-up notice (Render free plan sleeps when idle)
+import ServerWakeBanner from './components/common/ServerWakeBanner';
 
 // Scroll to top on every route change
 const ScrollToTop = () => {
@@ -152,7 +152,6 @@ const RoutesWithBoundary = () => {
 
 const App = () => {
   useEffect(() => {
-    initDummyUsers();
     AOS.init({ duration: 900, offset: 80, once: true });
   }, []);
 
@@ -160,6 +159,7 @@ const App = () => {
     <Router>
       <ScrollToTop />
       <RoutesWithBoundary />
+      <ServerWakeBanner />
     </Router>
   );
 };
